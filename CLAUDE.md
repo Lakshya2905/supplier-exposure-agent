@@ -1,0 +1,39 @@
+# Supplier Exposure Agent
+
+Agent 3 of a multi-agent supply chain system. Answers: which single points of failure in a BOM would actually stop production, ranked by how badly. Full spec is in `docs/BRIEF.md`. Read it before proposing any plan.
+
+## Commands
+
+- Install: `pip install -e ".[dev]"`
+- Test: `pytest -q`
+- Generate data: `python -m src.generate_data --seed 42`
+- Review UI: `streamlit run app.py`
+
+## Working rules
+
+- Synthetic data only. Never introduce real part numbers, real supplier names, scraped supplier data, or anything company-specific. If a realistic example is needed, generate it.
+- Build in the order listed in the brief. Finish and commit one stage before starting the next. Do not scaffold stages 4 through 8 while stage 2 is in progress.
+- Scoring dimensions stay separate. Do not collapse the five dimensions into one composite score, even if asked to "simplify the output".
+- Scoring logic lives in plain Python functions with tests. Not in prompts. The autonomy claims have to be verifiable by reading code.
+- Every ranked output carries its reasons. A number with no explanation is not a deliverable here.
+- "I cannot tell" is a valid and required output. Missing lead times, incomplete supplier lists, and missing on-hand records must surface as unknown, never as a default value.
+- Known gaps are marked `@pytest.mark.xfail(strict=True)` and listed in the README. Never delete a failing test to make CI green.
+- The sourcing verdict is an explicit lookup table with one test per row. Never nested conditionals. The per-row tests hard-code their expected verdict by hand and must not import the table, or a wrong row would be wrong in both places and the tests would agree with the bug.
+- `sourcing_list_status` gates the verdict only. It never enters scoring.
+- `annual_spend_usd` is display-only and unscored. Ranking or weighting by it is the cost optimisation agent, not this one.
+- A make part that also has suppliers is evaluated under both readings, stale-flag and genuine dual-mode. Agreement reports the verdict; disagreement goes to the exception lane, ordered by exposure under the worse reading. Do not pick a reading.
+- Missing and zero are different facts. A blank on-hand means "no record" and must never be read as zero; a recorded zero is real. The same asymmetry governs demand: partially known usage yields an upper bound flagged incomplete, not an unknown.
+- Eval floors are never produced by the generator under test. `evals/` and `tests/fixtures/` are committed and frozen; `data/` is gitignored and regenerated from a documented seed.
+- The fixture BOM is hand-authored, never generated. A fixture the generator produced would be the generator grading its own homework.
+- Governance is option 2 from the brief: a thin placeholder interface. Option 1 is unavailable, verified. The placeholder copies agent 1's reason-code vocabulary and decision-log record shape verbatim, and is not deepened otherwise. Extraction into a shared package waits until after this agent ships.
+
+## Autonomy levels (these are the product, not a detail)
+
+- Explosion, joining, exposure identification: executes automatically.
+- Correlation and concentration flagging: recommends, human confirms.
+- Recommended actions: recommends permanently, never auto-selects.
+- Supplier qualification: never. Out of scope by design.
+
+## Out of scope
+
+Cost optimisation, supplier scorecarding, negotiation support, resourcing workflow. If a change starts pulling in one of these, stop and say so instead of building it.
