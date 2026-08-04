@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "supplier-exposure-agent"
+version = "0.1.0"
+description = "Agent 3: which single points of failure in a BOM would actually stop production"
+requires-python = ">=3.11"
+dependencies = [
+    "pandas>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+# Pinned deliberately. setuptools sees a `src/` directory and switches to
+# src-layout, which would install `synthetic` as the top-level package and make
+# `python -m src.generate_data` work only because the repo root happens to be on
+# sys.path. Both commands in CLAUDE.md are hard constraints, so the layout is
+# stated rather than inferred. tests/test_cli.py proves the contract by running
+# the literal command in a subprocess.
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+xfail_strict = true

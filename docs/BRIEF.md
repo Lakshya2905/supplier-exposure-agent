@@ -68,8 +68,8 @@ The verdict is an **explicit lookup table, never nested conditionals**, with one
 | source_type | suppliers | list_status | with lead time | verdict |
 |---|---|---|---|---|
 | make | 0 | any | n/a | `made_in_house` |
-| make | 1 | any | any | **readings disagree, exception lane** |
-| make | >=2 | any | any | `multi_source` |
+| make | >=1 | any | every supplier has a lead time, and >=2 suppliers | `multi_source` |
+| make | >=1 | any | otherwise | **readings disagree, exception lane** |
 | buy | 0 | verified | n/a | `no_qualified_supplier` |
 | buy | 0 | unverified or blank | n/a | `supplier_list_unknown` |
 | buy | 1 | verified | 1 | `single_source` |
@@ -89,7 +89,16 @@ Two distinctions the table preserves that conditionals would blur:
 - *stale make flag*: the flag is out of date and the part is really bought, so external suppliers are the only sources.
 - *genuine dual-mode*: in-house capability is real and counts as a source, so sources are one plus the external count.
 
-If the two readings agree, report the verdict. If they differ, route to the **exception lane** showing both readings and the field that would resolve it. The disagreement is confined to **make with exactly one supplier**: at zero there is no external dependency to disagree about, and at two or more both readings give `multi_source`. The exception lane is ordered by exposure under the **worse** reading, so a possible single source sorts to the top.
+If the two readings agree, report the verdict. If they differ, route to the **exception lane** showing both readings and the field that would resolve it. The exception lane is ordered by exposure under the **worse** reading, so a possible single source sorts to the top.
+
+**Where the readings actually disagree**, enumerated rather than assumed:
+
+- **make with zero suppliers**: no disagreement. Nothing in the data contradicts the flag, so the flag is believed. This is the trigger condition: the dual reading exists only because supplier rows on a `make` part are a contradiction, and with no supplier rows there is no contradiction.
+- **make with exactly one supplier**: always disagrees, whatever the lead times. In-house is precisely the difference between one source and two, so `single_source` and `multi_source` is the whole disagreement.
+- **make with two or more suppliers, all with lead time records**: agrees on `multi_source`.
+- **make with two or more suppliers, any missing a lead time record**: disagrees. Under the stale-flag reading a part with two suppliers and one lead time is `hidden_single_source`; under dual-mode, in-house is a usable source that needs no lead time record because it is not a purchase, so it is `multi_source`.
+
+An earlier draft of this brief claimed the disagreement was confined to make-with-exactly-one-supplier. That holds only if every supplier has a lead time record, which is exactly the condition this data set is built to violate.
 
 `sourcing_list_status` **gates the verdict only. It never enters scoring.**
 
