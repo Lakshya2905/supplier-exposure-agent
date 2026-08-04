@@ -206,6 +206,89 @@ def make_multi_source_no_lead_times(rng, config, world, truth):
         truth.record_intent(part_number, "multi_source_no_lead_times")
 
 
+def link_confusable_pair(rng, config, world, truth):
+    """Attach BOTH confusable suppliers to one part.
+
+    Without this, an over-eager merge cannot reach a verdict anywhere in the
+    data, so verdict-level precision would score perfectly for free. Here, a
+    matcher that collapses "Yarrow Corporation" and "Yarrow Holdings" turns a
+    genuine multi_source into a PHANTOM single source, which sends somebody to
+    qualify a second supplier that already exists.
+    """
+    if not truth.confusable_suppliers:
+        return
+    pair = truth.confusable_suppliers[0]
+    a_id, b_id = pair["a"]["supplier_id"], pair["b"]["supplier_id"]
+
+    candidates = [pn for pn, part in world.parts.items()
+                  if part.source_type == BUY and len(world.links_for(pn)) >= 1
+                  and pn not in truth.intents]
+    rng.shuffle(candidates)
+    for part_number in candidates[:config.n_parts_linking_confusable_pair]:
+        for link in world.links_for(part_number):
+            world.links.remove(link)
+        for lt in world.lead_times_for(part_number):
+            world.lead_times.remove(lt)
+        world.parts[part_number].sourcing_list_status = VERIFIED
+        for supplier_id in (a_id, b_id):
+            canonical = world.suppliers[supplier_id].canonical_name
+            world.links.append(SupplierLink(
+                part_number=part_number, supplier_id=supplier_id,
+                qualification_date="2024-03-01",
+                name_in_suppliers=canonical, name_in_lead_times=canonical))
+            truth.record_variant(canonical, supplier_id)
+            quoted = rng.randint(config.lead_time_min_days,
+                                 config.lead_time_max_days)
+            world.lead_times.append(LeadTime(
+                part_number=part_number, supplier_id=supplier_id,
+                quoted_lead_time_days=quoted,
+                lead_time_p95_days=int(quoted * 1.25)))
+        truth.record_intent(part_number, "links_confusable_pair")
+
+
+def add_duplicate_vendor_rows(rng, config, world, truth):
+    """The SAME supplier, linked twice to one part under two spellings.
+
+    Duplicate vendor records are the most common real form of inconsistent
+    supplier naming, and this is the ONLY case where a name merge changes a
+    part's supplier COUNT. Every other variant in this data set changes how a
+    supplier is spelled, not how many there are.
+
+    That makes it the only case exercising the expensive direction: a missed
+    merge counts one supplier as two, reads multi_source where the truth is
+    single_source, and understates exposure. An over-eager merge only
+    overstates it.
+
+    No second lead time row is added: a duplicate vendor record is a duplicate
+    identity, not a second quotation.
+    """
+    candidates = [pn for pn, part in world.parts.items()
+                  if part.source_type == BUY and world.links_for(pn)
+                  and pn not in truth.intents]
+    rng.shuffle(candidates)
+    # SINGLE-supplier parts first, deliberately. A duplicate on a part with two
+    # real suppliers still reads multi_source whether or not the merge happens,
+    # so it exercises nothing. Only a duplicate on a single-supplier part flips
+    # the verdict: two rows read as multi_source where the truth is
+    # single_source. Left to chance, most draws cover only the harmless shape.
+    candidates.sort(key=lambda pn: len({l.supplier_id
+                                        for l in world.links_for(pn)}))
+    for part_number in candidates[:config.n_duplicate_vendor_rows]:
+        original = world.links_for(part_number)[0]
+        canonical = world.suppliers[original.supplier_id].canonical_name
+        alternatives = [v for v in name_variants(canonical, rng)
+                        if v != original.name_in_suppliers]
+        if not alternatives:
+            continue
+        spelling = rng.choice(alternatives)
+        world.links.append(SupplierLink(
+            part_number=part_number, supplier_id=original.supplier_id,
+            qualification_date=original.qualification_date,
+            name_in_suppliers=spelling, name_in_lead_times=spelling))
+        truth.record_variant(spelling, original.supplier_id)
+        truth.record_intent(part_number, "duplicate_vendor_row")
+
+
 def damage_part_attributes(rng, config, world, truth):
     """Missing on-hand, genuine zero on-hand, and missing tooling owner.
 
@@ -265,6 +348,8 @@ def apply_messiness(rng, config, world, truth):
     make_zero_supplier_parts(rng, config, world, truth)
     make_parts_with_suppliers(rng, config, world, truth)
     make_multi_source_no_lead_times(rng, config, world, truth)
+    link_confusable_pair(rng, config, world, truth)
+    add_duplicate_vendor_rows(rng, config, world, truth)
     damage_part_attributes(rng, config, world, truth)
     damage_list_status(rng, config, world, truth)
     remove_absent_demand(rng, config, world, truth)

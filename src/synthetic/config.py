@@ -31,7 +31,8 @@ SHAPE_FIELDS = ("n_finished_goods", "n_parts_target", "n_levels",
 CASE_FIELDS = ("n_hidden_single_source", "n_no_qualified_supplier",
                "n_supplier_list_unknown", "n_make_with_one_supplier",
                "n_make_with_two_suppliers", "n_make_with_two_missing_lead_time",
-               "n_multi_source_no_lead_times", "n_confusable_supplier_pairs")
+               "n_multi_source_no_lead_times", "n_confusable_supplier_pairs",
+               "n_duplicate_vendor_rows", "n_parts_linking_confusable_pair")
 
 
 @dataclass
@@ -88,8 +89,19 @@ class GeneratorConfig:
     # buy parts with >=2 suppliers and NO lead time records at all.
     n_multi_source_no_lead_times: int = 2
     # A genuinely distinct supplier pair with near-identical names, so an
-    # over-eager fuzzy matcher in stage 2 is caught rather than rewarded.
+    # over-eager fuzzy matcher is caught rather than rewarded.
     n_confusable_supplier_pairs: int = 1
+    # The SAME supplier linked twice to one part under two spellings. This is
+    # the most common real form of inconsistent supplier naming: duplicate
+    # vendor records in an ERP. It is the only case where a name merge changes
+    # a part's SUPPLIER COUNT, and therefore the only thing that exercises the
+    # expensive error, a missed merge overcounting sources and understating
+    # exposure. Its absence was a stage 1 miss.
+    n_duplicate_vendor_rows: int = 4
+    # A part linked to BOTH confusable suppliers. Without it, an over-eager
+    # merge cannot reach a verdict anywhere in the data, so verdict-level
+    # precision would score 100 percent for free.
+    n_parts_linking_confusable_pair: int = 1
 
     # ---- lead time shape ----
     # A few days to 40+ weeks, so the tail actually matters.

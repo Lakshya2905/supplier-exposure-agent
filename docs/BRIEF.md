@@ -116,6 +116,39 @@ An earlier draft of this brief claimed the disagreement was confined to make-wit
 
 ---
 
+## The dual reading: this system's governance primitive
+
+Not a one-off. **Where a judgment could change the answer, compute the answer
+under both judgments and let disagreement route to the exception lane.**
+
+It has now appeared three times, each time discovered rather than designed:
+
+1. **Make plus suppliers.** Supplier rows on a part marked `make` are a
+   contradiction. Under a stale-flag reading the external suppliers are the only
+   sources; under genuine dual-mode, in-house is a source needing no lead time.
+2. **The supplier merge.** Supplier count is not an input, it is the output of
+   name normalisation, which is a fuzzy match carrying a confidence. Two rows
+   may be one supplier or two.
+3. **The cross-file lead-time join.** Whether a supplier has a quotable lead
+   time depends on matching its name across two files that spell it differently.
+
+The pattern earns its place because the alternative is picking a default
+direction, and **the safe direction is not constant**. A missed merge in the
+supplier list overcounts sources and understates exposure, which is expensive. A
+missed match in the lead-time join undercounts lead times and overstates
+exposure, which is merely noisy. The same conservatism is protective in one
+join and harmful in the other, so no global lean is correct. Computing both and
+disagreeing is.
+
+The consequence for autonomy is direct: **a stage runs at `executes` only where
+the answer does not depend on the judgment.** Where it does, the stage drops to
+`recommends` for that item and routes it to the exception lane carrying both
+readings and the evidence that would settle it. The autonomy level is therefore
+a property of the individual finding, not a blanket claim about the stage.
+
+Stages 4 and 5 will hit this again with the correlation rules, where "same
+region" and "same tier" are modelling choices rather than facts.
+
 ## Autonomy levels, stated explicitly
 
 This is the point of the project, not decoration.

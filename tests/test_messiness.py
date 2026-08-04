@@ -166,6 +166,45 @@ class TestGuaranteedCases:
                           if "make_with_suppliers" in intents]
         assert len(contradictions) >= 1
 
+    def test_duplicate_vendor_rows_flip_a_verdict(self, messy):
+        """The only case where a name merge changes a part's SUPPLIER COUNT,
+        and so the only one exercising the expensive direction: a missed merge
+        counts one supplier as two, reads multi_source where the truth is
+        single_source, and understates exposure.
+
+        Every duplicate must land on a SINGLE-supplier part. On a part that
+        already has two real suppliers the verdict is multi_source either way
+        and the case exercises nothing.
+        """
+        world, truth, _ = messy
+        duplicated = [p for p, intents in truth.intents.items()
+                      if "duplicate_vendor_row" in intents]
+        assert duplicated, "no duplicate vendor rows generated"
+        for part_number in duplicated:
+            links = world.links_for(part_number)
+            real = {l.supplier_id for l in links}
+            assert len(links) > len(real), f"{part_number} has no duplicate row"
+            assert len(real) == 1, (
+                f"{part_number} has {len(real)} real suppliers, so a missed "
+                f"merge would not change its verdict and it tests nothing")
+            spellings = {l.name_in_suppliers for l in links}
+            assert len(spellings) == len(links), "the rows must differ in spelling"
+
+    def test_a_part_links_both_confusable_suppliers(self, messy):
+        """Without this an over-eager merge cannot reach a verdict anywhere,
+        so verdict-level precision would score perfectly for free."""
+        world, truth, _ = messy
+        linked = [p for p, intents in truth.intents.items()
+                  if "links_confusable_pair" in intents]
+        assert linked
+        pair = truth.confusable_suppliers[0]
+        ids = {pair["a"]["supplier_id"], pair["b"]["supplier_id"]}
+        for part_number in linked:
+            assert ids <= {l.supplier_id for l in world.links_for(part_number)}
+            assert truth.verdicts[part_number] == "multi_source", (
+                "truth must be multi_source, so a merge produces a PHANTOM "
+                "single source rather than merely a different answer")
+
     def test_a_make_part_with_two_suppliers_is_missing_a_lead_time(self, messy):
         """Covers the second disagreement case, which an earlier draft of the
         brief missed entirely."""

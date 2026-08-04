@@ -91,11 +91,16 @@ def assign_verdicts(world, truth):
     """
     for part_number, part in world.parts.items():
         links = world.links_for(part_number)
+        # DISTINCT suppliers, not rows. A duplicate vendor record is two rows
+        # naming one supplier, and counting rows would make the answer key
+        # agree with the naive reading stage 3 is supposed to be graded against.
+        supplier_ids = {l.supplier_id for l in links}
         with_lead_time = {lt.supplier_id
                           for lt in world.lead_times_for(part_number)}
-        n_with = len({l.supplier_id for l in links} & with_lead_time)
+        n_with = len(supplier_ids & with_lead_time)
         truth.verdicts[part_number] = V.verdict(
-            part.source_type, len(links), part.sourcing_list_status, n_with)
+            part.source_type, len(supplier_ids), part.sourcing_list_status,
+            n_with)
     return truth
 
 
