@@ -12,27 +12,14 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+from fixtures.tiny_bom_expected import (EXPECTED_DEPTHS, EXPECTED_EDGE_COUNT,
+                                        EXPECTED_PART_COUNT,
+                                        EXPECTED_QTY_PER_FG)
 from src.generate_data import generate
 from src.synthetic.config import GeneratorConfig
 from src.synthetic.model import CHILD_PART, PARENT_PART, QTY_PER_PARENT
 
 FIXTURE = Path(__file__).parent / "fixtures" / "tiny_bom.csv"
-
-# Worked out by hand from the tree in the fixture's comment block.
-EXPECTED_QTY_PER_FG = {
-    "SUB-T01": 2, "SUB-T02": 1, "SUB-T03": 3,
-    "LEAF-T01": 11,          # (2 x 3) + (1 x 4) + 1
-    "LEAF-T02": 2, "LEAF-T03": 4, "LEAF-T04": 5, "LEAF-T05": 1,
-    "LEAF-T06": 6, "LEAF-T07": 3,
-    "LEAF-T08": 2, "LEAF-T09": 1, "LEAF-T10": 4, "LEAF-T11": 1,
-}
-EXPECTED_DEPTHS = {
-    "SUB-T01": {1}, "SUB-T02": {1}, "SUB-T03": {1},
-    "LEAF-T01": {1, 2},      # the whole point of the fixture
-    "LEAF-T02": {2}, "LEAF-T03": {2}, "LEAF-T04": {2}, "LEAF-T05": {2},
-    "LEAF-T06": {2}, "LEAF-T07": {2},
-    "LEAF-T08": {1}, "LEAF-T09": {1}, "LEAF-T10": {1}, "LEAF-T11": {1},
-}
 
 
 def load_edges(path, comment=None):
@@ -77,8 +64,8 @@ class TestHandAuthoredFixture:
     def test_shape(self):
         edges = load_edges(FIXTURE, comment="#")
         parts = {e[0] for e in edges} | {e[1] for e in edges}
-        assert len(parts) == 15
-        assert len(edges) == 16
+        assert len(parts) == EXPECTED_PART_COUNT
+        assert len(edges) == EXPECTED_EDGE_COUNT
 
     def test_quantities_match_the_hand_worked_numbers(self):
         edges = load_edges(FIXTURE, comment="#")

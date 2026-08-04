@@ -166,6 +166,8 @@ The split is forced by the eval requirement rather than by taste. If the eval se
 
 This keeps the benefit of a clone that runs out of the box without the drift failure where someone hand-edits a committed CSV and the generator and the data silently disagree for a month.
 
+**The boundary on `truth/`.** It is gitignored *while it is generator output*. When the eval set is frozen at stage 8, **its answer key freezes with it**: `evals/` ships inputs and expected outputs together, in the same commit, covered by the same manifest. A frozen eval set pointing at a regenerated answer key is exactly the drift rejected above for `data/`, relocated one directory over and harder to see. Freezing the inputs while the expectations regenerate would be worse than freezing neither, because the set would look pinned while its floors moved underneath it.
+
 ---
 
 ## Build order

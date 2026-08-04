@@ -1,0 +1,11 @@
+# HAND-AUTHORED. A deliberately CYCLIC BOM, used to prove explosion raises
+# rather than recursing until the stack dies.
+#
+#   FG-C01 -> SUB-C01 -> SUB-C02 -> SUB-C01   (back edge)
+#
+# LEAF-C01 hangs off SUB-C02 so the cycle is not the only thing in the file.
+parent_part,child_part,qty_per_parent
+FG-C01,SUB-C01,1
+SUB-C01,SUB-C02,2
+SUB-C02,SUB-C01,1
+SUB-C02,LEAF-C01,3

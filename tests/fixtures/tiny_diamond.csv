@@ -1,0 +1,12 @@
+# HAND-AUTHORED. A diamond, NOT a cycle. Both branches reach LEAF-D01, which
+# means it is visited twice on different paths. That is correct and must not
+# be mistaken for a cycle.
+#
+#   FG-D01 -+-> SUB-D01 x2 -> LEAF-D01 x3     => 6
+#           +-> SUB-D02 x5 -> LEAF-D01 x1     => 5
+#                                     total   => 11
+parent_part,child_part,qty_per_parent
+FG-D01,SUB-D01,2
+FG-D01,SUB-D02,5
+SUB-D01,LEAF-D01,3
+SUB-D02,LEAF-D01,1

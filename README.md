@@ -66,6 +66,35 @@ no side. Both readings are computed, stale-flag and genuine-dual-mode, and if
 they differ the part goes to an exception lane ordered by exposure under the
 worse reading.
 
+## Stage 2: BOM explosion
+
+One row per (finished good, part), carrying quantity and the **set** of depths
+at which the part appears. It does not aggregate, and there is deliberately no
+rollup function: see below.
+
+Quantities are `Fraction`. They multiply down three levels and then sum across
+branches for common parts, and `Fraction` is exact under both. Floats would
+give `11.999999999999998` against a hand-computed `12`, and the moment the
+fixture needed a tolerance it would have stopped being an oracle.
+`Fraction(11, 1) == 11` is `True`, so the fixture's assertions stay literal
+integers. Rounding happens at display only.
+
+Depth is a property of the **path**, not of the part. `LEAF-T01` in the fixture
+sits at depth 1 and depth 2 under the same finished good and neither is more
+correct, so `depths` is a set and `min_depth` / `max_depth` are derived from it.
+
+A cycle raises `CycleError` naming the path rather than recursing until the
+stack dies. A diamond, where a part is reached twice by different routes, is
+ordinary and correct, and the two are distinguished by test.
+
+**There is no rollup.** Summing `qty_per_finished_good` across finished goods
+produces an unlabelled scalar with no unit, and the obvious next thing to do
+with it is divide on-hand by it to get buffer cover, which would be wrong.
+Annual usage needs the demand plan and carries the partial-demand upper-bound
+rule, so it belongs in stage 4 as `annual_usage(rows, demand_plan)` returning a
+value **and** a completeness flag. `rows_by_part()` keys the per-finished-good
+rows; it does not sum them.
+
 ## Autonomy levels
 
 These are the product, not a detail.
@@ -76,6 +105,22 @@ These are the product, not a detail.
 | Correlation and concentration flagging | recommends, human confirms |
 | Recommended actions | recommends permanently, never auto-selects |
 | Supplier qualification | never. Out of scope by design. |
+
+**Explosion's `executes` level is scoped, and the scope is the reason.** It runs
+unattended because the BOM is structurally complete by construction: every edge
+resolves to a part in the part master, and every part reaches at least one
+finished good. That is why explosion has exactly one return shape and no
+"cannot tell" path.
+
+This is **not** a general claim that explosion is deterministic. Given a BOM
+with an unresolvable parent or an orphan subtree it raises rather than answering
+partially, and the autonomy level would not hold.
+
+The completeness is **enforced, not documented**:
+`tests/test_structural_completeness.py` asserts every edge resolves and every
+part reaches a finished good, and asserts that no damage knob touches BOM
+structure. If a structural knob is ever added, those fail loudly rather than
+leaving an autonomy claim that has quietly stopped being true.
 
 ## Governance
 
