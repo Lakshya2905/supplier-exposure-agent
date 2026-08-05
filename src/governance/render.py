@@ -165,6 +165,13 @@ def _decision_clause(event):
         clause += f", reason: {event.reason_code}"
     if event.note:
         clause += f" ({event.note})"
+    # A CORRECTION CITES THE LINE IT CORRECTS. The log is append-only, so a
+    # reviewer who changes their mind produces a second judgment rather than an
+    # edit, and without this reference two contradictory sentences about one
+    # subject sit in the list with nothing saying which one stands.
+    replaces = (event.evidence or {}).get("replaces")
+    if replaces:
+        clause += f", replacing decision {replaces}"
     return clause
 
 
