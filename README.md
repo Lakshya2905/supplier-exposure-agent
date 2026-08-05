@@ -12,6 +12,12 @@ The interesting part of this project is not the analysis. It is the set of thing
 the system declines to do, and the fact that each refusal is enforced by a test
 rather than by a convention.
 
+**Every count below is a property of the synthetic dataset at seed 42, not of the
+tool.** The generator is deterministic, so the figures are reproducible, but they
+illustrate machinery firing rather than report findings about a supply chain. A
+different seed moves all of them. The floors, the thresholds and the refusals are
+properties of the system; the counts are properties of one dataset.
+
 ---
 
 ## The autonomy ladder
@@ -22,8 +28,8 @@ executes on one part and defers on the next.
 
 **Executes.** BOM explosion, the supplier join, exposure identification, and the
 four per-part scoring dimensions where their inputs are present. Deterministic,
-reproducible, and checkable against the evidence panel. At seed 42, 1021 of 1480
-dimension results execute.
+reproducible, and checkable against the evidence panel. At seed 42, 1021 of the
+1480 dimension results execute, that being 296 scored parts across 5 dimensions.
 
 **Recommends.** Anything whose answer depends on a judgment a reasonable person
 could make differently. 459 results defer, in two distinct ways: 163 because an
@@ -171,8 +177,9 @@ before any expression touches the value.
 
 The queue imputes nothing. It ranks by whether a missing field could change the
 outcome, evaluated against the conditions as they stand with the field unknown,
-never by a plausible value for it. Two parts differing sixtyfold in blast radius
-come back in part-number order, and swapping their values does not move them.
+never by a plausible value for it. A test gives two parts the same missing field
+and a blast radius differing by a factor of six thousand, then asserts they come
+back in part-number order, and that swapping their values does not move them.
 
 ---
 
@@ -215,8 +222,9 @@ flags, never fixes.
 **Two orderings refused on the record.** Counting how many patterns a part
 matches looks like counting and is a weighted sum with every weight set to 1.
 Pareto dominance across parts would be a legitimate weightless partial order and
-is deliberately not built, because across three hundred parts with abstentions
-the frontier is large and almost everything in it is incomparable, and a large
+is deliberately not built, because across a few hundred parts carrying
+abstentions the frontier is large and almost everything in it is incomparable,
+and a large
 frontier presented as the answer invites the mental averaging the design refuses.
 
 ---
