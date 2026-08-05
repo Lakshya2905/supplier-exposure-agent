@@ -91,3 +91,17 @@ Agent 3 of a multi-agent supply chain system. Answers: which single points of fa
 ## Out of scope
 
 Cost optimisation, supplier scorecarding, negotiation support, resourcing workflow. If a change starts pulling in one of these, stop and say so instead of building it.
+
+## Design System
+
+Always read DESIGN.md before making any visual or UI decision.
+Fonts, colours, spacing, the chip vocabulary, the absence states, the evidence
+anatomy, and the anti-ranking contract are all defined there.
+Do not deviate without explicit user approval.
+In QA mode, flag any code that does not match DESIGN.md.
+
+Two rules from it are correctness constraints, not preferences:
+- Never state a perceptual guarantee in HSL. Use OKLCH or CIELAB and assert the
+  measured property, not the notation.
+- Absence is never dimmed, never zero, never blank. It renders at the same weight
+  and footprint as an asserted value.
