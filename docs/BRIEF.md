@@ -311,13 +311,47 @@ never true for exactly the case the generator's mirror trap was built to produce
 What is new under merging is the CORRELATION, not the cluster. Fixed by reading
 membership per part under both readings and comparing that.
 
-The common thread: in each case a proxy stood in for the property that mattered,
-the proxy was correlated with it most of the time, and the divergence was
-precisely the interesting case. The counter-practice is to state what a test is
-establishing in a sentence and then check that the assertion establishes THAT,
-not something that usually travels with it. Hand-written expectations and the
-self-agreement guard exist for the same reason, and they are not sufficient on
-their own: instance 3 had hand-written expectations and still passed.
+**4. A regex flagged its own guard.** The visual pass checked that no
+`box-shadow` other than `none` had crept in, using `box-shadow:\s*(?!none)`.
+Every shadow in the file is `none` and the check reported a violation anyway.
+`\s*` matches the empty string, so the engine backtracked to zero width and
+evaluated the negative lookahead at the position of the space rather than at the
+word, where "none" does not literally begin. The pattern was asking a question
+one character away from the one intended.
+
+**5. A scan flagged a promise not to do the thing.** The same pass searched for
+`dark` to confirm no dark variant had been introduced. The only match was the
+first line of the theme file: "Light only. No dark variant and no toggle." The
+scan found the commitment and reported it as the breach.
+
+The common thread across the first three: a proxy stood in for the property that
+mattered, was correlated with it most of the time, and diverged precisely at the
+interesting case. The counter-practice is to state what a test is establishing
+in one sentence and then check that the assertion establishes THAT, rather than
+something that usually travels with it. Hand-written expectations and the
+self-agreement guard exist for the same reason and are not sufficient alone:
+instance 3 had hand-written expectations and still passed.
+
+**Instances 4 and 5 are a hazard specific to this codebase, and it will keep
+recurring, so it is stated as a rule rather than continued as a list.**
+
+> A system that refuses concepts by name will contain those names in its
+> refusals. Every source scan must therefore distinguish a guard from a breach.
+
+This codebase refuses composites, bands, normalised scales, severity colours,
+imputation and dark mode, and it refuses them in writing: in constants like
+`FORBIDDEN_UNIT_WORDS`, in docstrings that explain at length why a weighted sum
+is not permitted, and in comments promising there is no night mode. Every one of
+those is a string containing the forbidden token. A naive scan finds the
+strongest statements of the rule and reports them as violations of it.
+
+The consequences are worse than a red build. A test that fails on correct code
+teaches the next person to delete the test, which removes the guard and leaves
+the refusal undefended. It has already forced two mitigations, and both are the
+same idea: `tests/codescan.py` strips docstrings and comments before scanning,
+and its `functions_only` mode additionally drops module-level statements so that
+a module DECLARING the forbidden vocabulary as data is not mistaken for using
+it. Anything new in this class needs the same treatment before it is trusted.
 
 ---
 
