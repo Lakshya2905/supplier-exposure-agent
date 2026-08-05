@@ -1,0 +1,18 @@
+# Light only. No dark variant and no toggle: this is a printed diligence memo,
+# and a memo does not have a night mode.
+#
+# The palette is paper and ink. One accent, a desaturated slate blue, used only
+# on interactive elements and never on a value, because a coloured value is an
+# ordinal encoding by implication and this system refuses those everywhere else.
+
+[theme]
+base = "light"
+primaryColor = "#2C4A63"
+backgroundColor = "#FCFCFA"
+secondaryBackgroundColor = "#F2F1ED"
+textColor = "#16181A"
+font = "sans serif"
+
+[client]
+toolbarMode = "minimal"
+showErrorDetails = true

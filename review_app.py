@@ -19,11 +19,162 @@ the model, which refuses to construct such a row, and again here.
 import streamlit as st
 
 from src import governance as gov
+from src import ranking
 from src.interface import actions
 from src.interface import model as view
 from src.pipeline import run, surfaces
 
 st.set_page_config(page_title="Supplier exposure review", layout="wide")
+
+# A printed diligence memo, not a dashboard. Left aligned and pinned to a
+# readable measure rather than centred in the viewport; hierarchy from size and
+# weight alone; hairline rules instead of shadows; no cards, no badges, no
+# icons. Nothing here encodes a value: the single accent appears only on things
+# a reviewer can act on, because a coloured number is an ordinal encoding by
+# implication and those are refused everywhere else in this system.
+MEMO_CSS = """
+<style>
+  .block-container {
+      max-width: 60rem;
+      margin-left: 3.5rem;
+      margin-right: auto;
+      padding-top: 2.2rem;
+      padding-bottom: 4rem;
+  }
+  html, body, [class*="css"] {
+      font-feature-settings: "kern" 1, "liga" 1;
+      -webkit-font-smoothing: antialiased;
+  }
+  h1 {
+      font-size: 1.45rem !important;
+      font-weight: 600 !important;
+      letter-spacing: -0.012em;
+      margin: 0 0 0.15rem 0 !important;
+      padding: 0 !important;
+      color: #16181A;
+  }
+  h2 {
+      font-size: 0.98rem !important;
+      font-weight: 600 !important;
+      letter-spacing: -0.005em;
+      margin: 2rem 0 0.8rem 0 !important;
+      padding: 0 !important;
+  }
+  h3, h4 {
+      font-size: 0.9rem !important;
+      font-weight: 600 !important;
+      margin: 1.1rem 0 0.35rem 0 !important;
+      padding: 0 !important;
+  }
+  hr, [data-testid="stDivider"] hr {
+      border: none;
+      border-top: 1px solid #E2E0D9;
+      margin: 1.4rem 0 0.9rem 0;
+  }
+  [data-testid="stVerticalBlock"] { gap: 0.35rem; }
+  /* The finding sentence is the deliverable, so it reads as body copy rather
+     than as a cell in a grid. */
+  p.finding {
+      font-size: 1.0rem;
+      line-height: 1.62;
+      max-width: 78ch;
+      margin: 1.05rem 0 0.15rem 0;
+      color: #16181A;
+  }
+  p.note {
+      font-size: 0.86rem;
+      line-height: 1.55;
+      max-width: 74ch;
+      color: #4A4E52;
+      margin: 0 0 0.7rem 0;
+  }
+  .stCaption, [data-testid="stCaptionContainer"] p {
+      font-size: 0.79rem !important;
+      color: #63676B !important;
+      line-height: 1.5;
+      max-width: 74ch;
+  }
+  code, .identifier {
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+                   monospace;
+      font-size: 0.86em;
+      background: transparent !important;
+      color: #16181A !important;
+      padding: 0 !important;
+  }
+  /* Flat, hairline, no card. */
+  [data-testid="stExpander"],
+  [data-testid="stExpander"] details,
+  [data-testid="stExpanderDetails"] {
+      border: none !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      background: transparent !important;
+  }
+  [data-testid="stExpander"] { margin: 0 0 1.5rem 0; }
+  [data-testid="stExpander"] summary {
+      font-size: 0.82rem !important;
+      color: #2C4A63 !important;
+      padding: 0 !important;
+      width: max-content;
+  }
+  [data-testid="stExpander"] summary p { font-size: 0.82rem !important; }
+  [data-testid="stExpanderDetails"] {
+      border-left: 1px solid #E2E0D9 !important;
+      padding: 0.4rem 0 0.2rem 1rem !important;
+      margin-top: 0.5rem;
+  }
+  [data-testid="stDataFrame"], [data-testid="stTable"] {
+      border-radius: 0 !important;
+      box-shadow: none !important;
+  }
+  .stButton > button {
+      border-radius: 2px;
+      border: 1px solid #2C4A63;
+      background: transparent;
+      color: #2C4A63;
+      font-size: 0.82rem;
+      font-weight: 500;
+      padding: 0.25rem 0.9rem;
+      box-shadow: none;
+  }
+  .stButton > button:hover {
+      background: #2C4A63;
+      color: #FCFCFA;
+      border-color: #2C4A63;
+  }
+  section[data-testid="stSidebar"] {
+      background: #F2F1ED;
+      border-right: 1px solid #E2E0D9;
+  }
+  section[data-testid="stSidebar"] .block-container {
+      margin-left: 0;
+      padding-top: 2.4rem;
+  }
+  [data-testid="stMetric"], [data-testid="stAlert"] {
+      border-radius: 0 !important;
+      box-shadow: none !important;
+  }
+</style>
+"""
+st.markdown(MEMO_CSS, unsafe_allow_html=True)
+
+
+def identifier(text):
+    return f"<span class='identifier'>{text}</span>"
+
+
+def finding(sentence):
+    """The rendered sentence, given the prominence of the primary content.
+
+    Emitted verbatim, never reassembled: the goldens pin this wording and any
+    edit here would fork it from them.
+    """
+    st.markdown(f"<p class='finding'>{sentence}</p>", unsafe_allow_html=True)
+
+
+def note(text):
+    st.markdown(f"<p class='note'>{text}</p>", unsafe_allow_html=True)
 
 
 @st.cache_resource
@@ -39,23 +190,26 @@ def render_evidence(row):
     trust is what this system replaces with verification.
     """
     evidence = row.evidence
-    with st.expander(f"How this was worked out: {row.key}"):
+    with st.expander("How this was worked out"):
         st.caption("Read only. Nothing on this panel changes any value.")
 
-        st.markdown("**Supplier rows read for this part**")
+        st.markdown("###### Supplier rows read for this part")
         if evidence.supplier_rows:
             st.dataframe(
-                [{"supplier (as spelled in suppliers.csv)": r.supplier_name,
+                [{"supplier as spelled in suppliers.csv": r.supplier_name,
                   "region": r.region,
                   "lead time on file": "yes" if r.has_lead_time else "no",
                   "quoted days": r.quoted_lead_time_days,
                   "p95 days": r.p95_lead_time_days}
                  for r in evidence.supplier_rows],
-                hide_index=True, width="stretch")
+                hide_index=True, width="stretch",
+                column_config={
+                    "quoted days": st.column_config.NumberColumn(format="%d"),
+                    "p95 days": st.column_config.NumberColumn(format="%d")})
         else:
-            st.write("No supplier rows exist for this part.")
+            note("No supplier rows exist for this part.")
 
-        st.markdown("**Finished goods and quantities behind the usage figure**")
+        st.markdown("###### Finished goods and quantities behind the usage figure")
         st.dataframe(
             [{"finished good": r.finished_good,
               "qty per finished good": r.qty_per_finished_good,
@@ -65,16 +219,17 @@ def render_evidence(row):
              for r in evidence.demand_rows],
             hide_index=True, width="stretch")
 
-        st.markdown("**Lead time record used**")
+        st.markdown("###### Lead time record used")
         used = evidence.lead_time_used
-        st.write(
-            f"{used.supplier_name}: {used.quoted_lead_time_days} days quoted, "
+        note(
+            f"{identifier(used.supplier_name)}, "
+            f"{used.quoted_lead_time_days} days quoted, "
             f"{used.p95_lead_time_days} at p95."
             if used else
             "None. No supplier on this part has a lead time record.")
 
-        for note in evidence.notes:
-            st.write(f"- {note}")
+        for line in evidence.notes:
+            note(line)
 
         st.caption(
             "To change any value above, correct it in the system of record and "
@@ -89,35 +244,57 @@ def render_coverage(panel):
     """
     st.subheader(panel.heading)
     if panel.is_empty:
-        st.write("Everything on this page was assessed.")
+        note("Everything on this page was assessed.")
         return
-    for note in panel.notes:
-        st.write(f"- {note.sentence}")
+    for entry in panel.notes:
+        note(entry.sentence)
 
 
-def render_exposure(surface):
+def render_exposure(surface, find_out):
     st.title(surface.question)
+
+    # WHAT THE SYSTEM DOES NOT KNOW LEADS. It is the most distinctive property
+    # of this tool and it is invisible below the fold, so the coverage panel and
+    # the outstanding fields come before any finding rather than after them.
+    render_coverage(surface.coverage)
+
+    if find_out.rows:
+        st.subheader("Outstanding, on another page")
+        settles = sum(len(row.detail["parts"]) for row in find_out.rows)
+        note(f"{len(find_out.rows)} fields would settle {settles} undecided "
+             f"memberships, listed on the "
+             f"{view.SURFACE_TITLE[view.FIND_OUT]} page.")
+
+    st.divider()
+    st.subheader("Patterns")
     st.caption("Groups stacked vertically dominate the groups below them. "
                "Groups side by side are incomparable, and their left-to-right "
-               "order is alphabetical and carries no meaning.")
-    for notice in surface.notices:
-        st.info(notice)
+               "order is alphabetical and carries no meaning. Within a group, "
+               f"parts are {ranking.DEFAULT_ORDER_LABEL}.")
 
+    # The columns carry the partial order and nothing else: groups side by side
+    # are incomparable. The findings themselves run full width underneath,
+    # because a sentence squeezed into a quarter-width column wraps into a
+    # ribbon and stops being readable prose, and the sentence is the deliverable.
     for layer in surface.layers:
         columns = st.columns(len(layer)) if len(layer) > 1 else [st.container()]
         for column, group in zip(columns, layer):
             with column:
-                st.subheader(group.label)
-                st.caption(f"{len(group.rows)} parts, {group.order_label}")
+                st.markdown(f"**{group.label}**")
+                st.caption(f"{len(group.rows)} parts")
                 if group.autonomy == gov.RECOMMENDS:
                     st.caption("Recommended, not applied: this grouping "
                                "depends on a modelling judgment.")
-                for row in group.rows:
-                    st.write(row.sentence)
-                    render_evidence(row)
-        st.divider()
+                st.markdown(
+                    "<p class='note'>" +
+                    "<br>".join(identifier(row.key) for row in group.rows) +
+                    "</p>", unsafe_allow_html=True)
 
-    render_coverage(surface.coverage)
+        for group in layer:
+            for row in group.rows:
+                finding(row.sentence)
+                render_evidence(row)
+        st.divider()
 
 
 def render_find_out(surface):
@@ -127,11 +304,13 @@ def render_find_out(surface):
     if not surface.rows:
         st.write("Nothing is waiting on a missing field.")
     for row in surface.rows:
-        st.subheader(row.key)
-        st.write(row.sentence)
+        st.markdown(f"## `{row.key}`")
+        finding(row.sentence)
         st.caption(row.detail["order_label"])
-        st.dataframe([{"part": part} for part in row.detail["parts"]],
-                     hide_index=True, width="stretch")
+        st.markdown(
+            "<p class='note'>" +
+            "  ".join(identifier(part) for part in row.detail["parts"]) +
+            "</p>", unsafe_allow_html=True)
 
 
 def render_confirm(surface, result):
@@ -141,13 +320,14 @@ def render_confirm(surface, result):
     reviewer = st.sidebar.text_input("Your name (recorded on every decision)")
 
     for row in surface.rows:
-        st.subheader(row.key)
-        st.write(row.sentence)
+        st.markdown(f"## `{row.key}`")
+        finding(row.sentence)
         if row.detail.get("members"):
+            # The rendered sentence already names every member, so the list is
+            # not repeated here. Saying it twice is the interface disagreeing
+            # with itself about which one is the record.
             st.caption(f"{row.detail['member_count']} members, confirmed as "
                        f"one act")
-            st.dataframe([{"part": part} for part in row.detail["members"]],
-                         hide_index=True, width="stretch")
         control_columns = st.columns(len(row.controls) + 1)
         reason = control_columns[-1].selectbox(
             "Reason", ("",) + row.controls[0].reason_codes,
@@ -179,7 +359,7 @@ def main():
 
     surface = built[choice]
     if choice == view.EXPOSURE:
-        render_exposure(surface)
+        render_exposure(surface, built[view.FIND_OUT])
     elif choice == view.FIND_OUT:
         render_find_out(surface)
     else:

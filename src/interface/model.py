@@ -49,6 +49,11 @@ SURFACE_QUESTION = {
 }
 SURFACE_VERB = {EXPOSURE: "look at", FIND_OUT: "go and get",
                 CONFIRM: "agree or disagree"}
+# Short names for cross-references. A reference carries the page NAME, never the
+# other page's question, so that one surface quoting another cannot be mistaken
+# for the two having been merged.
+SURFACE_TITLE = {EXPOSURE: "Exposure", FIND_OUT: "Find out",
+                 CONFIRM: "Confirm"}
 
 
 def _plain(value):
