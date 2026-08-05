@@ -282,7 +282,9 @@ reason that had drifted away from what the test was supposed to establish. Code
 that is wrong announces itself. A test that is about the wrong thing announces
 that everything is fine.
 
-Three instances so far, and they are the same shape.
+Three instances of the original shape, then two of a second shape, then one that
+sharpens the first. Entries 1, 2, 3 and 6 are a proxy standing in for the
+property. Entries 4 and 5 are a check that malfunctioned on correct code.
 
 **1. The clean-world control stopped being clean.** `zeroed()` enumerated the
 damage knobs inline. Two knobs added later were not added to the list, so
@@ -324,13 +326,55 @@ one character away from the one intended.
 first line of the theme file: "Light only. No dark variant and no toggle." The
 scan found the commitment and reported it as the breach.
 
-The common thread across the first three: a proxy stood in for the property that
-mattered, was correlated with it most of the time, and diverged precisely at the
-interesting case. The counter-practice is to state what a test is establishing
-in one sentence and then check that the assertion establishes THAT, rather than
-something that usually travels with it. Hand-written expectations and the
-self-agreement guard exist for the same reason and are not sufficient alone:
-instance 3 had hand-written expectations and still passed.
+**6. Three guards enforced one guarantee and all three checked the notation.**
+The chip palette guaranteed that "no chip is darker, stronger or warmer than
+another, so no reading of the set produces an order." Three mechanisms enforced
+it: a comment in `.streamlit/config.toml`, the `.badge` rule declaring one
+background and one colour, and
+`test_the_category_palette_is_nominal_by_arithmetic` asserting equal HSL
+saturation and lightness. All three passed. The guarantee was false. HSL
+lightness is not perceptual lightness, and in CIELAB the six completeness
+entries spanned 15.3 L\* points and sorted into a clean brightness ramp in
+declaration order, so the enum's own order was leaking into the perceptual
+channel. Two of the three guards were also bypassed at runtime by inline styles
+that `chip_colour()` wrote per category, including a per-category text tint.
+Fixed by deleting the hue map: the label already carried the category, and
+`CLAUDE.md` already required that stripping colour lose no information.
+
+Entry 6 is instances 1 to 3 again, with one addition worth stating on its own.
+
+> **Redundant guards that share an assumption read as confirmation while
+> providing none.** Independence is not about how many guards exist, or how far
+> apart they live in the tree. It is about whether they can fail SEPARATELY.
+> Guards that inherit the same premise fail together and silently, and their
+> agreement is what stops anybody looking.
+
+Three checks agreeing looked like triangulation. It was one check performed three
+times. This is the sharper form of the defect this log is about: testing the
+wrong thing leaves you with no evidence, and redundantly testing the wrong thing
+leaves you with false evidence, because the count of passing guards becomes the
+argument against investigating. When adding a guard, the question is not "is this
+covered elsewhere" but "what premise does this share with the guards already
+there." If the answer is the same one, it adds confidence without adding
+coverage.
+
+A corollary for review: a guarantee defended by several mechanisms deserves MORE
+suspicion of its premise, not less. Ask what all of them assume, and verify that
+assumption directly and numerically at least once.
+
+Severity, stated accurately, because it matters to how this entry is read: nine
+of the eleven hues never reached a badge, so no reader ever saw the ramp. It was
+a latent trap rather than a live defect. That is the more dangerous timing, not
+the less: a wrong guard is most trusted before the code it guards is written,
+which is exactly when somebody first relies on it.
+
+The common thread across the first three, and six: a proxy stood in for the
+property that mattered, was correlated with it most of the time, and diverged
+precisely at the interesting case. The counter-practice is to state what a test
+is establishing in one sentence and then check that the assertion establishes
+THAT, rather than something that usually travels with it. Hand-written
+expectations and the self-agreement guard exist for the same reason and are not
+sufficient alone: instance 3 had hand-written expectations and still passed.
 
 **Instances 4 and 5 are a hazard specific to this codebase, and it will keep
 recurring, so it is stated as a rule rather than continued as a list.**
