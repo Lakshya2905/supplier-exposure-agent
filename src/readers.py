@@ -19,9 +19,11 @@ analysis.
 import pandas as pd
 
 from .synthetic.model import (ANNUAL_UNITS, CHILD_PART, FINISHED_GOOD_PART,
-                              ON_HAND_UNITS, PARENT_PART, PART_NUMBER,
-                              QTY_PER_PARENT, SOURCE_TYPE,
-                              SOURCING_LIST_STATUS, TOOLING_OWNER)
+                              LEAD_TIME_P95_DAYS, ON_HAND_UNITS, PARENT_PART,
+                              PART_NUMBER, QTY_PER_PARENT,
+                              QUOTED_LEAD_TIME_DAYS, SOURCE_TYPE,
+                              SOURCING_LIST_STATUS, SUPPLIER_NAME,
+                              SUPPLIER_REGION, TOOLING_OWNER)
 
 
 def _frame(path):
@@ -64,6 +66,31 @@ def read_demand_plan(path):
     frame = _frame(path)
     return {row[FINISHED_GOOD_PART]: int(row[ANNUAL_UNITS])
             for _, row in frame.iterrows()}
+
+
+def read_suppliers(path):
+    """part_number -> ((supplier_name, supplier_region), ...), as spelled."""
+    frame = _frame(path)
+    rows = {}
+    for _, row in frame.iterrows():
+        rows.setdefault(row[PART_NUMBER], []).append(
+            (row[SUPPLIER_NAME], row[SUPPLIER_REGION]))
+    return {part: tuple(sorted(entries)) for part, entries in rows.items()}
+
+
+def read_lead_times(path):
+    """part_number -> ((supplier_name, quoted, p95), ...), as spelled.
+
+    Keyed by the name in THIS file, which may differ from the spelling in
+    suppliers.csv. Reconciling them is the normaliser's job, not the reader's.
+    """
+    frame = _frame(path)
+    rows = {}
+    for _, row in frame.iterrows():
+        rows.setdefault(row[PART_NUMBER], []).append(
+            (row[SUPPLIER_NAME], int(row[QUOTED_LEAD_TIME_DAYS]),
+             int(row[LEAD_TIME_P95_DAYS])))
+    return {part: tuple(sorted(entries)) for part, entries in rows.items()}
 
 
 def read_bom(path):

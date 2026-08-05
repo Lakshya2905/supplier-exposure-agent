@@ -12,6 +12,9 @@ dependencies = [
     # Pinned with a floor like the rest. Carries config/archetypes.yaml, which
     # holds the reviewer-owned magnitude thresholds.
     "pyyaml>=6.0",
+    # The review interface. Pinned with a floor like the rest; the headless
+    # AppTest harness that gates it lives in streamlit.testing.v1.
+    "streamlit>=1.40",
 ]
 
 [project.optional-dependencies]

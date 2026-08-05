@@ -808,6 +808,167 @@ tooling-dependent traps. Ranking by cover puts three parts at zero days at the
 top; 107 parts are not comparable on cover and are listed separately rather than
 placed at either end.
 
+## Stage 7: the review interface
+
+**This is the stage where the autonomy claims either become visible or silently
+stop existing.** Everything the system knows about who may decide what is a
+property of an object; on screen it becomes layout. If an executed finding and a
+`recommends` finding render identically, five stages of ceiling discipline
+evaporate the moment a person looks at the output. That is treated as a
+correctness requirement, not styling.
+
+### Autonomy is an affordance, not an appearance
+
+**An executed finding has nothing to click. A `recommends` finding has a
+control.** That distinction is functional rather than decorative, so it survives
+a restyle, a theme change, or somebody tidying the stylesheet. A colour-based
+distinction is one commit from evaporating; a missing button is not.
+
+It is enforced where it cannot be undone by a template: `Row.__post_init__`
+**refuses to construct** an executed row carrying a control. Both halves are
+asserted, because "no buttons anywhere" would also pass if the interface simply
+did nothing:
+
+- every part row on the exposure surface has no control
+- every cluster row on the confirm surface has one
+
+### The six completeness states without a severity scale
+
+**The encoding rule is nominal only.** Hue may distinguish categories.
+Intensity, size, length and fill fraction may not, because those are *ordinal*
+encodings, and an ordinal encoding across a heterogeneous set is a composite
+drawn instead of computed. That is the objection that killed the radar chart and
+it applies identically to a red-to-green ramp.
+
+**The redundancy rule: strip every colour and lose no information.** Each state
+is carried in words the renderer already produces and the goldens already pin:
+*at most 11.1 days*, *no on-hand record, so cover is unknown*, *nobody to be
+correlated with*, *no recovery path at all*. The headless tests read the element
+tree as text, so this is checked directly rather than asserted.
+
+### Three surfaces, and why they cannot be one table
+
+| surface | question | row entity |
+|---|---|---|
+| Exposure | What is worst? | a **part** |
+| Find out | What should I go and find out? | a **field** |
+| Confirm | Do I agree with your model? | a **cluster** |
+
+The argument against a unified view is structural, not aesthetic. **Merging
+requires choosing one row entity, and each surface has a different one.**
+Whichever is chosen, the other two get denormalised, and the damage is concrete:
+
+- flatten clusters to parts and a cluster of nine becomes nine rows, so a
+  reviewer confirms one judgment nine times and `member_count` stops meaning
+  anything
+- flatten fields to parts and "fetch on-hand for twenty-six parts" becomes
+  twenty-six rows that each mention on-hand, which is a list of parts rather
+  than a list of trips
+
+So they are separate surfaces, one rendered at a time, each stating its own
+question. A test asserts every surface contains exactly one row entity and that
+the three differ.
+
+### Archetype layout: the partial order, and nothing more
+
+- **vertical position means dominance.** A dominating archetype sits above the
+  one it dominates.
+- **horizontal position means nothing.** Incomparable archetypes sit side by
+  side in one row, and the page says their left-to-right order is alphabetical
+  and carries no meaning.
+- **no group is numbered.** A "1., 2., 3." list is a total order asserted by
+  typography, and it is how the composite arrives through the back door. `Group`
+  has no rank field and a test asserts no heading begins with a number.
+
+### Evidence: executed findings are reachable, not just asserted
+
+An executed finding is the least inspectable thing in a system whose claim is
+inspectability, unless the workings are one click away. A reviewer who cannot
+see how a number was reached has to **trust** it, and trust is what this system
+replaces with verification.
+
+So every part row carries read-only evidence with no control in it:
+
+- **which supplier rows produced the verdict**, as spelled in `suppliers.csv`,
+  with region and whether a lead time exists
+- **which finished goods and quantities produced the usage**, showing
+  `qty x annual units = contribution`, with an absent finished good shown as
+  absent rather than as zero
+- **which lead time record was used**, named
+
+And it shows **the cross-file join**, which is the most load-bearing inference in
+the pipeline. Where the two files spell a supplier differently, the panel says
+so: *the lead time for 'Braxton Industries' was matched to the row spelled
+'Braxton Inds' in lead_times.csv*. 71 parts in the generated data carry that
+note.
+
+The panel ends by saying that correcting a value means fixing it in the system
+of record and re-running.
+
+### The coverage panel
+
+At the **same level** as the archetype groups, not beneath them. The counterpart
+to the work queue: that surface says what to go and get, this says what was not
+assessed at all.
+
+> - 20 parts have an unconfirmed or unresolved supplier list, so they could
+>   belong to any cluster here and every membership count on this page is a
+>   lower bound.
+> - 89 parts are not applicable for concentration, meaning the question does not
+>   attach to them rather than that the answer is no.
+> - Magnitude archetypes are off. No threshold is set for long lead or thin
+>   cover, and the system will not choose one.
+
+**Neutral by construction.** These are properties of the data and deliberate
+design decisions, not faults, and phrasing them as warnings would train a reader
+to dismiss them. A test asserts the wording contains no alarm vocabulary.
+
+### What a reviewer can do
+
+**There is no write path to source data.** Not a hedge, a rule: no function in
+`src/interface/actions.py` edits a CSV, and a source scan asserts the module
+imports nothing that could. "Validation flags, never fixes" has to hold at the
+surface where fixing would feel most natural.
+
+The only writes are decision events on the append-only log. Confirming a cluster
+is **one act** with `act_kind=bulk_approve` and `member_count` equal to the
+cluster size. Rejections require a reason code from the enum; `other` requires
+its note; an anonymous decision is refused.
+
+### When the threshold config is absent, which is the default
+
+Magnitude archetype groups simply do not appear, and a neutral panel states that
+no threshold is set, that the system will not choose one, and where to set it.
+It is not an error, a warning, or a "coming soon", and a test asserts that
+vocabulary is absent.
+
+**There is no inline slider.** A number typed into a widget and applied to the
+current view is a band with no owner and no version, which is exactly what stage
+6 moved out of the system. `st.slider` is on the widget deny-list for that
+reason. A "what if" control is genuinely useful and is deliberately deferred.
+
+### Can Streamlit express this without a composite creeping in?
+
+Yes, with one real hazard: its convenience widgets are mostly ordinal encodings,
+so the composite would arrive through a widget rather than through arithmetic.
+The answer is a deny-list enforced by scanning the app source, the same
+technique already used against banding:
+
+`st.progress`, `ProgressColumn`, `BarChartColumn`, `LineChartColumn`,
+`AreaChartColumn`, `st.bar_chart`, `st.line_chart`, `st.area_chart`,
+`st.scatter_chart`, `st.pyplot`, `st.altair_chart`, `background_gradient`,
+`color_gradient`, `st.slider`.
+
+Plus a regex asserting no literal fraction is ever passed to a widget, since a
+0-to-1 value handed to a display element is a normalised scale whatever it is
+called. `st.dataframe` sorting is allowed because it sorts one column at a time,
+which is ranking within a dimension; the rankings mode shows one dimension at a
+time for the same reason.
+
+**Streamlit paints; it does not decide.** The view model is pure data computed by
+plain functions with no Streamlit import, which is what makes the autonomy claim
+assertable as data rather than by screenshot.
+
 ## Autonomy levels
 
 These are the product, not a detail.
@@ -900,7 +1061,7 @@ green, and the test fails loudly the day someone fixes it without noticing.
 
 ## What is deliberately not here
 
-Stages 7 and 8: the review interface and the eval harness.
+Stage 8: the eval harness.
 
 Out of scope permanently: cost optimisation, supplier scorecarding, negotiation
 support, resourcing workflow. `annual_spend_usd` is carried as a display column

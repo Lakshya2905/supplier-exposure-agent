@@ -402,3 +402,73 @@ def render(event):
 
 def render_all(log):
     return [render(event) for event in log]
+
+
+# ---------------------------------------------- wording with no event ------
+# The work queue and the coverage panel are not decisions, so they have no
+# decision event and cannot be rendered from one. Their wording lives here
+# anyway, because this module is where user-facing sentences are written and
+# golden-pinned, and splitting it would let two vocabularies drift apart.
+
+FIELD_PROSE = {
+    "on_hand_units": "an on-hand count",
+    "tooling_owner": "a tooling owner",
+    "verdict": "a confirmed supplier list",
+    "concentration": "a resolved supplier name merge",
+    "lead_time_to_recover": "a lead time record",
+}
+
+ARCHETYPE_PROSE = {
+    "resourcing_trap": "the resourcing trap",
+    "correlated_resourcing_trap": "the correlated resourcing trap",
+    "counted_empty_single_source": "single source, counted empty",
+    "no_quotable_single_source": "single source, nobody quoting",
+    "nobody_to_call": "nobody to call",
+    "headline_exposure": "single source, long lead, thin cover, supplier tooling",
+    "long_lead_single_source": "single source on a long lead time",
+}
+
+
+def render_field_request(field_name, part_count, archetype_names):
+    """One trip to one system of record. THE ROW IS THE FIELD, NOT THE PART.
+
+    Says what fetching it would settle, never what the value is likely to be.
+    Nothing here imputes: the sentence describes a question, not a forecast.
+    """
+    described = FIELD_PROSE.get(field_name, field_name)
+    patterns = ", ".join(ARCHETYPE_PROSE.get(name, name)
+                         for name in archetype_names)
+    plural = "part" if part_count == 1 else "parts"
+    return (f"Fetching {described} for {part_count} {plural} would settle "
+            f"whether they match {patterns}.")
+
+
+COVERAGE_PROSE = {
+    "unplaceable": (
+        "{count} parts have an unconfirmed or unresolved supplier list, so they "
+        "could belong to any cluster here and every membership count on this "
+        "page is a lower bound."),
+    "not_applicable": (
+        "{count} parts are not applicable for {dimension}, meaning the question "
+        "does not attach to them rather than that the answer is no."),
+    "no_thresholds": (
+        "Magnitude archetypes are off. No threshold is set for long lead or "
+        "thin cover, and the system will not choose one. Set them in "
+        "config/archetypes.yaml, where the number is owned and versioned."),
+    "catalogue": (
+        "Which conjunctions are worth naming is a modelling judgment, so the "
+        "catalogue is confirmed once here rather than once per part."),
+}
+
+
+def render_coverage_note(kind, count, dimension=""):
+    """Neutral by construction.
+
+    These are properties of the data and of deliberate design decisions, not
+    faults. Phrasing them as warnings would train a reader to dismiss them, and
+    the panel exists precisely so that what was not assessed is as visible as
+    what was.
+    """
+    template = COVERAGE_PROSE.get(kind, "")
+    return template.format(count=count,
+                           dimension=DIMENSION_PROSE.get(dimension, dimension))

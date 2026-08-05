@@ -50,6 +50,17 @@ Agent 3 of a multi-agent supply chain system. Answers: which single points of fa
 - Never impute a missing value in order to rank something. Evaluate the actual
   conditions with the field unknown. A list ordered by a guessed value is a
   forecast wearing a work queue's clothes.
+- Autonomy is an affordance, never an appearance. An executed finding has
+  nothing to click; a recommends finding has a control. A styling distinction is
+  one commit from evaporating, so the model refuses to construct an executed row
+  carrying a control.
+- Visual encodings are nominal only. Hue may distinguish categories; intensity,
+  size, length and fill fraction may not, because an ordinal encoding of a
+  heterogeneous set is a composite drawn rather than computed. Strip every
+  colour and no information may be lost.
+- Every executed finding carries reachable, read-only evidence. A conclusion a
+  reviewer cannot check is one they must trust, and trust is what this system
+  replaces with verification.
 - Store structured, render prose, never store the prose. The decision log holds
   no rendered text; `render(event)` produces it on demand and golden files pin
   the wording. `evals/` and `tests/fixtures/` are committed and frozen; `data/` is gitignored and regenerated from a documented seed.
