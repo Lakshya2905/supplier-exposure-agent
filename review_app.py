@@ -26,12 +26,16 @@ from src.pipeline import default_data_dir, run, surfaces
 
 st.set_page_config(page_title="Supplier exposure review", layout="wide")
 
-# A printed diligence memo, not a dashboard. Left aligned and pinned to a
-# readable measure rather than centred in the viewport; hierarchy from size and
-# weight alone; hairline rules instead of shadows; no cards, no badges, no
-# icons. Nothing here encodes a value: the single accent appears only on things
-# a reviewer can act on, because a coloured number is an ordinal encoding by
-# implication and those are refused everywhere else in this system.
+# An operational console: SAP, an MRP screen, a procurement terminal. Dense
+# rows, aligned columns, monospace identifiers, high information per screen.
+# Bordered panels and surface fills carry structure; badges carry category.
+#
+# NOTHING HERE ENCODES A MAGNITUDE, and that is a correctness constraint rather
+# than a stylistic one. Every badge is one colour and one weight, because a set
+# where one chip is red and another green has an order, and an ordered encoding
+# across incommensurable states is the composite this system refuses to compute
+# arriving through the palette instead of the arithmetic. The accent appears
+# only on things a reviewer can act on.
 CONSOLE_CSS = """
 <style>
   /* An operational console: dense rows, aligned columns, high information per
@@ -87,13 +91,13 @@ CONSOLE_CSS = """
   .ids { display: flex; flex-wrap: wrap; gap: 0 0.9rem; margin: 0.15rem 0 0 0; }
   .ids span { display: inline-block; min-width: 6.4rem; line-height: 1.5; }
   /* Coverage: counts right-aligned against their sentence, one glance. */
-  table.tight { border-collapse: collapse; width: 100%; max-width: 110ch; }
+  table.tight { border-collapse: collapse; width: 100%; }
   table.tight td {
       border-top: 1px solid #EDEBE4; padding: 0.22rem 0.7rem 0.22rem 0;
       font-size: 0.82rem; line-height: 1.4; color: #4A4E52; vertical-align: top;
   }
   table.tight td.num {
-      text-align: right; width: 4.5rem; font-variant-numeric: tabular-nums;
+      text-align: right; width: 4rem; font-variant-numeric: tabular-nums;
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
       color: #16181A; white-space: nowrap;
   }
@@ -153,6 +157,41 @@ CONSOLE_CSS = """
   section[data-testid="stSidebar"] [role="radiogroup"] p {
       font-size: 0.82rem !important; line-height: 1.3;
   }
+  /* ------------------------------------------------- panels and badges --
+     Bordered panels and surface fills carry STRUCTURE: where one group ends
+     and the next begins. Badges carry CATEGORY.
+
+     EVERY BADGE IS THE SAME COLOUR AND THE SAME WEIGHT, and that is a
+     correctness constraint rather than a stylistic one. The moment one badge
+     is red and another green, the set has an order, and an ordered encoding
+     across incommensurable states is the composite this system refuses to
+     compute arriving through the palette. The label carries the meaning; the
+     chip only says "this is a label". The single exception is autonomy, where
+     filled versus outlined distinguishes two categories without ranking them,
+     mirroring the rule that an executed finding has nothing to click. */
+  .badge {
+      display: inline-block; font-family: ui-monospace, SFMono-Regular, Menlo,
+      Consolas, monospace; font-size: 0.68rem; letter-spacing: 0.04em;
+      text-transform: uppercase; padding: 0.08rem 0.4rem; border-radius: 2px;
+      background: #E7E5DE; color: #4A4E52; border: 1px solid #DAD7CE;
+      margin-right: 0.3rem; vertical-align: 0.06rem; white-space: nowrap;
+  }
+  .badge.open { background: transparent; color: #2C4A63; border-color: #2C4A63; }
+  [data-testid="stVerticalBlockBorderWrapper"] {
+      border: 1px solid #E2E0D9 !important; border-radius: 3px;
+      background: #FFFFFF;
+  }
+  [data-testid="stVerticalBlockBorderWrapper"] > div { padding: 0.55rem 0.7rem; }
+  .panelhead {
+      display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap;
+      border-bottom: 1px solid #EDEBE4; margin: -0.55rem -0.7rem 0.5rem -0.7rem;
+      padding: 0.4rem 0.7rem; background: #F7F6F2;
+  }
+  .panelhead .title { font-size: 0.86rem; font-weight: 600; color: #16181A; }
+  .navglyph {
+      font-family: ui-monospace, Menlo, monospace; color: #8A8E92;
+      margin-right: 0.4rem;
+  }
   [data-testid="stMetric"], [data-testid="stAlert"] {
       border-radius: 0 !important; box-shadow: none !important;
   }
@@ -169,6 +208,17 @@ def identifier_block(items):
     """A wrapping grid of identifiers. Fourteen parts take three lines."""
     cells = "".join(f"<span>{item}</span>" for item in items)
     return f"<div class='ids'>{cells}</div>"
+
+
+def badge(text, open_style=False):
+    """A nominal chip. Same colour for every category, always."""
+    return f"<span class='badge{' open' if open_style else ''}'>{text}</span>"
+
+
+def panel_head(title, badges=()):
+    chips = "".join(badges)
+    return (f"<div class='panelhead'><span class='title'>{title}</span>"
+            f"{chips}</div>")
 
 
 def tight_table(pairs):
@@ -257,13 +307,16 @@ def render_coverage(panel):
     The counterpart to the work queue: that surface says what to go and get,
     this says what was not assessed at all.
     """
-    st.subheader(panel.heading)
-    if panel.is_empty:
-        note("Everything on this page was assessed.")
-        return
-    st.markdown(
-        tight_table([(entry.count if entry.count else "", entry.sentence)
-                     for entry in panel.notes]), unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown(panel_head(panel.heading,
+                               (badge(f"{len(panel.notes)} items"),)),
+                    unsafe_allow_html=True)
+        if panel.is_empty:
+            note("Everything on this page was assessed.")
+            return
+        st.markdown(
+            tight_table([(entry.count if entry.count else "", entry.sentence)
+                         for entry in panel.notes]), unsafe_allow_html=True)
 
 
 def render_exposure(surface, find_out):
@@ -296,13 +349,19 @@ def render_exposure(surface, find_out):
         columns = st.columns(len(layer)) if len(layer) > 1 else [st.container()]
         for column, group in zip(columns, layer):
             with column:
-                st.markdown(f"**{group.label}**")
-                st.caption(f"{len(group.rows)} parts")
-                if group.autonomy == gov.RECOMMENDS:
-                    st.caption("Recommended, not applied: this grouping "
-                               "depends on a modelling judgment.")
-                st.markdown(identifier_block(row.key for row in group.rows),
-                            unsafe_allow_html=True)
+                with st.container(border=True):
+                    st.markdown(
+                        panel_head(group.label, (
+                            badge(f"{len(group.rows)} parts"),
+                            badge(group.autonomy,
+                                  open_style=group.autonomy == gov.RECOMMENDS),
+                        )), unsafe_allow_html=True)
+                    if group.autonomy == gov.RECOMMENDS:
+                        st.caption("Recommended, not applied: this grouping "
+                                   "depends on a modelling judgment.")
+                    st.markdown(
+                        identifier_block(row.key for row in group.rows),
+                        unsafe_allow_html=True)
 
         for group in layer:
             for row in group.rows:
@@ -391,6 +450,9 @@ def render_confirm(surface, result):
         st.divider()
 
 
+# Nominal marks, one per surface. They distinguish, they do not rank.
+NAV_GLYPH = {view.EXPOSURE: "▤", view.FIND_OUT: "◷", view.CONFIRM: "◆"}
+
 REPO = "https://github.com/Lakshya2905/supplier-exposure-agent"
 
 # One line, stated once, in the same register as everything else on the page.
@@ -408,7 +470,8 @@ def main():
     choice = st.sidebar.radio(
         "Surface",
         (view.EXPOSURE, view.FIND_OUT, view.CONFIRM),
-        format_func=lambda name: view.SURFACE_QUESTION[name])
+        format_func=lambda name: f"{NAV_GLYPH[name]}  "
+                                 f"{view.SURFACE_QUESTION[name]}")
     st.sidebar.caption("Three surfaces, deliberately separate. Their rows are "
                        "different things: a part, a field, a cluster.")
 

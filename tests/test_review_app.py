@@ -221,6 +221,48 @@ class TestConfirmSurface(unittest.TestCase):
         self.assertIn("anonymous decision is not a decision", warnings)
 
 
+class TestBadgesAreNominal(unittest.TestCase):
+    """A badge set with an order is a severity scale in disguise."""
+
+    def test_every_badge_shares_one_background_and_one_text_colour(self):
+        # The moment one chip is red and another green the set has an order,
+        # and an ordered encoding across incommensurable states is the
+        # composite this system refuses, arriving through the palette.
+        block = SOURCE.split(".badge {")[1].split("}")[0]
+        self.assertIn("background: #E7E5DE", block)
+        self.assertIn("color: #4A4E52", block)
+        variants = re.findall(r"\.badge\.(\w+)\s*{", SOURCE)
+        self.assertEqual(variants, ["open"],
+                         "one variant only, and it distinguishes autonomy "
+                         "rather than ranking anything")
+
+    def test_no_badge_style_encodes_a_severity(self):
+        """DECLARATIONS ONLY, with comments stripped and word boundaries.
+
+        The sixth time this hazard has bitten in this repository, and always
+        the same way: a system that refuses concepts by name contains those
+        names in its refusals. "high" lives inside "high information per
+        screen" and "red" inside "bordered", so a substring scan of the raw
+        source flags the prose explaining the rule as a breach of it.
+        """
+        css = SOURCE.split("<style>")[1].split("</style>")[0]
+        declarations = re.sub(r"/\*.*?\*/", " ", css, flags=re.S).lower()
+        for word in ("danger", "warning", "critical", "severity", "risk",
+                     "high", "low", "red", "amber", "green", "orange"):
+            with self.subTest(word=word):
+                self.assertIsNone(re.search(rf"\b{word}\b", declarations))
+        for ramp in ("#d00", "#f00", "#ff0000", "#e74c3c", "#2ecc71"):
+            with self.subTest(colour=ramp):
+                self.assertNotIn(ramp, declarations)
+
+    def test_the_label_carries_the_meaning_not_the_chip(self):
+        # Legible with every colour stripped, which the plain-text check
+        # already asserts for the page as a whole.
+        rendered = text_of(run_app())
+        self.assertIn("executes", rendered)
+        self.assertIn("parts", rendered)
+
+
 class TestStructuralViews(unittest.TestCase):
     """Both encode WHICH, never HOW MUCH."""
 
