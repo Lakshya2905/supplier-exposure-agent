@@ -179,16 +179,24 @@ CONSOLE_CSS = """
      refuses to compute, arriving through the palette instead of the
      arithmetic. Autonomy keeps a filled-versus-outlined distinction, which
      separates two categories without ranking them. */
+  /* 12px is the floor. The previous 0.68rem (10.9px) uppercase monospace with
+     0.05em tracking applied the slowest reading mode, letter by letter with no
+     word shape, to the densest label in the interface, and a long category name
+     would have truncated. A truncated epistemic state is a wrong claim rather
+     than a cosmetic problem, so the chip wraps instead. */
   .badge {
-      display: inline-block; font-family: ui-monospace, SFMono-Regular, Menlo,
-      Consolas, monospace; font-size: 0.68rem; letter-spacing: 0.05em;
-      text-transform: uppercase; padding: 0.12rem 0.45rem; border-radius: 3px;
-      background: #242A30; color: #AAB4BC; border: 1px solid #333B42;
-      margin-right: 0.35rem; vertical-align: 0.06rem; white-space: nowrap;
+      display: inline-block; font-size: 0.75rem; font-weight: 500;
+      letter-spacing: 0.02em; padding: 0.1rem 0.45rem; border-radius: 3px;
+      background: #242A30; color: #D5DADE; border: 1px solid #333B42;
+      margin-right: 0.35rem; vertical-align: 0.06rem;
   }
   .badge.open {
       background: transparent; color: #7FB2D9; border-color: #3E5C74;
   }
+  /* Absence is the same footprint and the same text weight as presence. The
+     dashed rule is the only difference, and it is a form cue, so it survives
+     greyscale and print where a colour cue would not. */
+  .badge.absent { border-style: dashed; border-color: #6B7278; }
   [data-testid="stVerticalBlockBorderWrapper"] {
       border: 1px solid #272D33 !important; border-radius: 4px;
       background: #191D21;
@@ -220,12 +228,25 @@ def identifier_block(items):
     return f"<div class='ids'>{cells}</div>"
 
 
-def badge(text, open_style=False):
-    """A nominal chip. Hue distinguishes the category; nothing ranks it."""
-    style = chip_colour(str(text))
-    return (f"<span class='badge{' open' if open_style else ''}'"
-            f"{f' style=\"{style}\"' if style and not open_style else ''}>"
-            f"{text}</span>")
+def badge(text, open_style=False, absent=False):
+    """A neutral chip. The label carries the category; nothing ranks it.
+
+    Three variants, and each distinction is form rather than hue, so it survives
+    greyscale, colour vision deficiency, a screenshot pasted into a review memo,
+    and print:
+
+    solid    an asserted category
+    open     this row carries a control. REDUNDANT with the control itself, which
+             is the real affordance: CLAUDE.md requires that autonomy never be
+             an appearance, because a styling distinction is one commit from
+             evaporating. If the chip and the control ever disagree, the control
+             is right.
+    absent   something is not established. Never dimmed, because dimming an
+             unknown says it matters less, which is the claim this tool exists to
+             refuse.
+    """
+    variant = " open" if open_style else (" absent" if absent else "")
+    return f"<span class='badge{variant}'>{text}</span>"
 
 
 def panel_head(title, badges=()):
@@ -478,33 +499,26 @@ NAV_SUBTITLE = {view.EXPOSURE: "what is worst",
                 view.FIND_OUT: "what should I go and get",
                 view.CONFIRM: "do I agree with your model"}
 
-# NOMINAL PALETTE, AND THE CONSTRAINT IS ARITHMETIC RATHER THAN AESTHETIC.
-# Every category shares one saturation and one lightness and differs only in
-# hue. That is the mathematical statement of "distinguishes but does not rank":
-# no chip is darker, stronger or warmer than any other, so no reading of the set
-# produces an order. Hues are confined to a cool band, because a palette can be
-# perfectly equal in weight and still rank if one member is the colour of an
-# alarm. An ordered colour encoding across incommensurable states is the
-# composite this system refuses to compute, arriving through the palette.
-CHIP_SATURATION = 30
-CHIP_LIGHTNESS = 34
-COOL_BAND = (150, 320)
-CATEGORY_HUE = {
-    "executes": 200, "recommends": 268,
-    "known": 190, "upper_bound": 225, "lower_bound": 245,
-    "cannot_tell": 288, "no_recovery_path": 312, "not_applicable": 165,
-    "supplier": 212, "region": 172, "catalogue": 255,
-}
-
-
-def chip_colour(label):
-    hue = CATEGORY_HUE.get(label.strip().lower().split()[0])
-    if hue is None:
-        return ""
-    return (f"background:hsl({hue} {CHIP_SATURATION}% {CHIP_LIGHTNESS}%);"
-            f"border-color:hsl({hue} {CHIP_SATURATION}% "
-            f"{CHIP_LIGHTNESS + 14}%);color:hsl({hue} 22% 88%);")
-
+# THE CATEGORY PALETTE HAS NO HUE, AND THAT IS THE CORRECTION OF A REAL DEFECT.
+#
+# The previous revision drew each category at one HSL saturation and lightness,
+# varying hue only, and called that the mathematical statement of "distinguishes
+# but does not rank". HSL lightness is not perceptual lightness, so the claim was
+# false: measured in CIELAB the six completeness entries spanned 15.3 L* points
+# and sorted into a clean brightness ramp in declaration order. Three mechanisms
+# asserted the guarantee (this file, config.toml, and a test) and all three
+# checked the notation instead of the property, so their agreement read as
+# confirmation while providing none.
+#
+# Nine of the eleven hues never reached a badge at all; only `executes` rendered.
+# So the palette was a latent trap rather than a live defect: the first caller to
+# write badge(row.completeness) would have shipped an ordered ramp with three
+# guards saying it was fine.
+#
+# CLAUDE.md already settles it: "strip every colour and no information may be
+# lost." If that holds, hue is redundant, and a channel that looks like an
+# encoding while carrying nothing invites a reader to learn a mapping that is not
+# there. One neutral chip. The label carries the category; form carries the rest.
 REPO = "https://github.com/Lakshya2905/supplier-exposure-agent"
 
 # One line, stated once, in the same register as everything else on the page.
