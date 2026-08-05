@@ -504,6 +504,23 @@ finding:
 different risk that supplier grouping is structurally blind to, and filing it as
 a defect would discard the reason for computing both.
 
+**`supplier_only` never appears in the generated data, and the reason matters.**
+The generator gives every supplier exactly one region, so a supplier cluster is
+always contained in a single region, and a concentrated supplier cluster
+therefore always implies a concentrated region cluster. `supplier_only` is
+structurally unreachable, not rare.
+
+What cannot be represented is a **multinational supplier**, one company with
+plants in more than one region. That is precisely the commercial case which
+justifies computing supplier grouping separately from region grouping at all: a
+company that fails as a company takes all of its plants with it, wherever they
+are, and no region grouping sees that coming. So the one agreement class the
+data cannot produce is the one that carries the argument for the second reading.
+
+The class is exercised in the hand-authored fixture, where one company
+deliberately spans two regions, and a second frozen dataset that can produce it
+on generated data is specified in `docs/EVAL_SCENARIO.md` for stage 8.
+
 Where one reading is settled and the other is not, the class is **not computed**
 rather than defaulting the unknown side to "not concentrated", which would
 silently downgrade the finding.
@@ -625,7 +642,9 @@ cause as the empty merge lane, not a second finding. The fixture pins both at
 proves the uncertainty comes from the merge rather than from the clustering.
 
 A harder supplier-and-region distribution belongs in the eval set at stage 8 as
-a separate frozen scenario, not in the primary generator.
+a separate frozen scenario, not in the primary generator. What that scenario has
+to exercise, and what it must not do, is written down in
+[docs/EVAL_SCENARIO.md](docs/EVAL_SCENARIO.md).
 
 ## Autonomy levels
 

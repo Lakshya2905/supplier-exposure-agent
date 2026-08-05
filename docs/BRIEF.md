@@ -271,6 +271,56 @@ numbers can be added by everyone. So the rule is that **every measure keeps its
 unit**, and a dimension expressed as a 0-to-1 or 0-to-100 figure is a composite
 already assembled, whether or not anybody writes the operator.
 
+---
+
+## Corrections log: this project's actual failure mode
+
+Kept because the pattern is more useful than any single entry. **The recurring
+defect here is not wrong code. It is a test that passes while being subtly about
+the wrong thing.** Each instance below was green, and each was green for a
+reason that had drifted away from what the test was supposed to establish. Code
+that is wrong announces itself. A test that is about the wrong thing announces
+that everything is fine.
+
+Three instances so far, and they are the same shape.
+
+**1. The clean-world control stopped being clean.** `zeroed()` enumerated the
+damage knobs inline. Two knobs added later were not added to the list, so
+setting "all messiness to zero" left two forms of damage running, and the test
+that proves an undamaged world has no findings passed under its own name while
+testing a world that was still damaged. The test was about *the knobs somebody
+remembered*, not about *all knobs*. Fixed by classifying every `n_*` field
+generically and asserting that the classification is exhaustive, so a new knob
+cannot be silently omitted.
+
+**2. Verdicts matched truth while autonomy was wrong.** Stage 3 reported 300 of
+300 verdicts matching the answer key, and that was true. It was also hiding four
+findings whose verdict literally read `readings_disagree` and which were
+nonetheless stamped `executes` and never reached the exception lane. The test
+compared the verdict string. Nothing compared the autonomy, so a headline number
+that was completely accurate concealed a governance defect underneath it. Fixed
+by asserting that no finding meaning "nobody can tell" is ever decided
+automatically.
+
+**3. Contingency was detected on the wrong noun.** Stage 5 needed to find
+concentrations that exist only if an unresolved supplier merge is confirmed. The
+first implementation tested whether the cluster KEY was new under the merged
+reading. It passed. It passed for the wrong reason: two singleton suppliers whose
+names might be one supplier exist as keys under BOTH readings, so key novelty is
+never true for exactly the case the generator's mirror trap was built to produce.
+What is new under merging is the CORRELATION, not the cluster. Fixed by reading
+membership per part under both readings and comparing that.
+
+The common thread: in each case a proxy stood in for the property that mattered,
+the proxy was correlated with it most of the time, and the divergence was
+precisely the interesting case. The counter-practice is to state what a test is
+establishing in a sentence and then check that the assertion establishes THAT,
+not something that usually travels with it. Hand-written expectations and the
+self-agreement guard exist for the same reason, and they are not sufficient on
+their own: instance 3 had hand-written expectations and still passed.
+
+---
+
 ## Autonomy levels, stated explicitly
 
 This is the point of the project, not decoration.
