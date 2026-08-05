@@ -7,6 +7,6 @@
     "inputs/part_master.csv": "8dd8baf91516870df0aa7ba6a21f352f7f4ac5ba1cab3ea64ef7da24f1379d7b",
     "inputs/suppliers.csv": "bef7e98390e564a3d51823089b6d0a0602acd9f297196955b16b8d3121dc2e3f"
   },
-  "note": "The manifest DETECTS an edit to a frozen file. It does not PREVENT one: a commit that rewrites a frozen file and its manifest entry together passes this check, because the check compares the set against its own record of itself. Branch protection requiring this gate to be green before a merge is the control that closes it, and that applies on a remote only. It is NOT in place for a purely local repository.",
+  "note": "The manifest DETECTS an edit to a frozen file. It does not PREVENT one: a commit that rewrites a frozen file and its manifest entry together passes this check, because the check compares the set against its own record of itself. The control that closes it is branch protection requiring this gate to be green before a merge, which IS in effect on origin/main, enforced for admins, with force pushes and deletion refused. It is a property of the remote and not of a checkout: a commit made and tested purely locally is not covered by it until it is pushed.",
   "seed": 42
 }

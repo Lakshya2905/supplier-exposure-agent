@@ -153,8 +153,16 @@ class TestManifest(unittest.TestCase):
 
     def test_the_harness_prints_the_limit(self):
         self.assertIn("does not PREVENT one", frozen.MANIFEST_LIMIT)
-        self.assertIn("NOT in place for a purely local repository",
-                      frozen.MANIFEST_LIMIT)
+
+    def test_the_limit_names_the_control_that_closes_it_and_its_scope(self):
+        # Branch protection requiring the gate is now in effect on the remote,
+        # so the text states that rather than the hypothetical it replaced. The
+        # scope clause matters: protection is a property of the remote, not of
+        # a checkout, so a commit tested only locally is not covered by it yet.
+        limit = frozen.MANIFEST_LIMIT
+        self.assertIn("branch protection", limit.lower())
+        self.assertIn("IS in effect on origin/main", limit)
+        self.assertIn("not of a checkout", limit)
 
 
 class TestFailedFloorReport(unittest.TestCase):

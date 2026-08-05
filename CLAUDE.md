@@ -61,6 +61,12 @@ Agent 3 of a multi-agent supply chain system. Answers: which single points of fa
 - Every executed finding carries reachable, read-only evidence. A conclusion a
   reviewer cannot check is one they must trust, and trust is what this system
   replaces with verification.
+- Default flow for any change: branch, push the branch, open a PR, merge when
+  the gate is green. This is not a preference, it is the only path that works:
+  main requires the `gate` status check and enforce_admins is on, so a push
+  carrying a fresh commit has no green check yet and GitHub refuses it. The
+  local gate still runs before every commit; CI is the second opinion, not a
+  replacement.
 - Run `python eval_harness.py` before every commit. A task is not done unless
   SHIP GATE: PASS. It blocks on a failing test, a PASSING xfail, a manifest
   mismatch, or a missed floor. Never lower a floor to pass: each carries its
