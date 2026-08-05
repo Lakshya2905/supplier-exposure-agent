@@ -435,7 +435,13 @@ def render_confirm(surface, result):
                    f"region each one is grouped under. Identifiers only: "
                    f"nothing here is ordered or scored.")
         st.dataframe(list(grid), hide_index=True, width="stretch")
-    reviewer = st.sidebar.text_input("Your name (recorded on every decision)")
+    # Held outside the widget. This input exists only on this surface, so
+    # Streamlit discards its state the moment a reviewer navigates away, and
+    # they would come back anonymous with nothing on screen saying so.
+    reviewer = st.sidebar.text_input(
+        "Your name (recorded on every decision)",
+        key="reviewer-input", value=st.session_state.get("reviewer", ""))
+    st.session_state["reviewer"] = reviewer
 
     for row in surface.rows:
         st.markdown(f"## `{row.key}`")
@@ -448,15 +454,15 @@ def render_confirm(surface, result):
                        f"one act")
         control_columns = st.columns(len(row.controls) + 1)
         reason = control_columns[-1].selectbox(
-            "Reason", ("",) + row.controls[0].reason_codes,
-            key=f"reason-{row.key}")
+            "Reason", row.controls[0].reason_codes, index=None,
+            placeholder="Choose an option", key=f"reason-{row.key}")
         note = st.text_input("Note", key=f"note-{row.key}")
         for column, control in zip(control_columns, row.controls):
             if column.button(control.action.title(), key=f"{control.action}-{row.key}"):
                 try:
                     actions.apply(st.session_state.setdefault(
                         "log", gov.DecisionLog()), control, reviewer,
-                        reason_code=reason, note=note)
+                        reason_code=reason or "", note=note)
                     st.success(f"Recorded: {control.action} {row.key}")
                 except ValueError as refusal:
                     st.warning(str(refusal))
