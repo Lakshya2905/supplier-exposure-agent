@@ -20,7 +20,8 @@ An event that cannot answer one of these omits that clause rather than
 inventing it. A renderer that fabricates a plausible number is worse than one
 that says nothing.
 """
-from . import (EXECUTES, KIND_CLUSTER_CONTINGENT, KIND_CLUSTER_FLAGGED,
+from . import (ACT_RESOLVE_CONFLICT,
+               EXECUTES, KIND_CLUSTER_CONTINGENT, KIND_CLUSTER_FLAGGED,
                KIND_DIMENSION_ABSTAINED, KIND_DIMENSION_SCORED,
                KIND_PART_RANKED,
                KIND_HUMAN_DECISION, KIND_MERGE_UNCERTAIN,
@@ -153,6 +154,7 @@ def _decision_clause(event):
     # a search for the person who made the decision.
     clause = (f"{STATUS_PROSE.get(event.status, event.status)} by "
               f"{event.decided_by}")
+    # (see _act_opening for why the arity is rendered and not only counted)
     # TIME BELONGS IN THE RECORD, NOT IN THE SENTENCE, and this is a
     # determinism constraint rather than a wording preference. Every sentence
     # this module produces is golden-pinned, so a real clock reaching this line
@@ -375,10 +377,8 @@ def render(event):
         parts.append(sentence + ".")
 
     elif event.kind == KIND_HUMAN_DECISION:
-        opening = _strings_clause(evidence)
-        parts.append(
-            f"{_subject_clause(event)}: " +
-            (opening + "." if opening else "a review decision was recorded."))
+        opening = _strings_clause(evidence) or _act_opening(event)
+        parts.append(f"{_subject_clause(event)}: {opening}.")
         score = _score_clause(evidence)
         if score:
             parts.append("The system had them " + score + ".")
@@ -402,6 +402,28 @@ def render(event):
         parts.append(f"{_subject_clause(event)}: {event.kind}.")
 
     return " ".join(p for p in parts if p)
+
+
+def _act_opening(event):
+    """What kind of act this was, and over how many members.
+
+    ONE ACT OVER N MEMBERS IS THE POINT OF A CLUSTER DECISION. The model refuses
+    to flatten a cluster to its parts precisely so that a reviewer confirms one
+    judgment once instead of once per member, and `member_count` is the field
+    carrying that. A renderer that drops it undoes at the point of display what
+    the model is built to protect, which is the same failure as a palette that
+    ranks perceptually while the arithmetic says it cannot: the guarantee holds
+    everywhere except where somebody reads it.
+
+    `bulk_approve` differs from `approve` only in arity, so the count carries the
+    act kind for those two. `resolve_conflict` is a different act and is named.
+    """
+    if event.act_kind == ACT_RESOLVE_CONFLICT:
+        return "a conflict between two readings was resolved by review"
+    if event.member_count > 1:
+        return (f"one review decision covering {event.member_count} members "
+                f"was recorded")
+    return "a review decision was recorded"
 
 
 def render_all(log):

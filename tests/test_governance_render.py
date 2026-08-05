@@ -45,6 +45,37 @@ def human_decision_event():
                   "resulting_verdict": "multi_source"})
 
 
+def _cluster_decision(member_count, act_kind, **overrides):
+    """A cluster judgment, which is what the Confirm surface actually records.
+
+    Hand-written rather than produced by `actions.apply`, so the fixture does not
+    import a value from the code under test.
+    """
+    fields = dict(
+        event_id=3, at="2026-08-04T10:02:00+00:00",
+        status=gov.STATUS_APPROVED, sku_id="south_asia",
+        field="concentration", value="confirm", decided_by="r.okafor",
+        reason_code=gov.REASON_CORRELATION_CONFIRMED, act_id=11,
+        act_kind=act_kind, member_count=member_count,
+        kind=gov.KIND_HUMAN_DECISION,
+        evidence={"members": (), "member_count": member_count,
+                  "resulting_verdict": ""})
+    fields.update(overrides)
+    return gov.DecisionEvent(**fields)
+
+
+def bulk_decision_event():
+    return _cluster_decision(28, gov.ACT_BULK_APPROVE)
+
+
+def single_decision_event():
+    return _cluster_decision(1, gov.ACT_APPROVE)
+
+
+def conflict_resolved_event():
+    return _cluster_decision(1, gov.ACT_RESOLVE_CONFLICT)
+
+
 def readings_disagree_event():
     return gov.DecisionEvent(
         event_id=3, at="2026-08-04T09:15:00+00:00",
@@ -151,6 +182,37 @@ class TestGoldens(unittest.TestCase):
     def test_merge_uncertain_golden(self):
         self.assertEqual(render(merge_uncertain_event()),
                          read_golden("golden_merge_uncertain.txt"))
+
+    def test_bulk_decision_golden(self):
+        self.assertEqual(render(bulk_decision_event()),
+                         read_golden("golden_bulk_decision.txt"))
+
+    def test_a_cluster_decision_says_how_many_members_it_covered(self):
+        """One act over N members is the point, so the renderer must say N.
+
+        The model refuses to flatten a cluster to its parts so that a reviewer
+        confirms one judgment once rather than once per member, and
+        `member_count` is the field carrying that. Before this, a 28-member bulk
+        approval and a single-part decision rendered identically as "a review
+        decision was recorded", so the renderer undid the design at the point of
+        display: the guarantee held everywhere except where somebody read it.
+        """
+        sentence = render(bulk_decision_event())
+        self.assertIn("28 members", sentence)
+        self.assertNotEqual(sentence, render(single_decision_event()))
+        self.assertNotIn("28", render(single_decision_event()))
+
+    def test_a_single_member_decision_does_not_claim_an_arity(self):
+        # One member is not "covering 1 members", and it is not a bulk act.
+        self.assertIn("a review decision was recorded",
+                      render(single_decision_event()))
+
+    def test_resolving_a_conflict_is_named_rather_than_counted(self):
+        # bulk_approve differs from approve only in arity, so the count carries
+        # it. resolve_conflict is a different act and says so in words.
+        sentence = render(conflict_resolved_event())
+        self.assertIn("conflict", sentence)
+        self.assertIn("two readings", sentence)
 
     def test_human_decision_golden(self):
         self.assertEqual(render(human_decision_event()),
