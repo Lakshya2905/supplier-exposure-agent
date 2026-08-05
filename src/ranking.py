@@ -36,8 +36,16 @@ from . import scoring
 # arbitrary TODAY and silently become a meaningful order the moment an upstream
 # function changes how it iterates, at which point the display acquires an
 # ordering nobody chose and nobody can see.
+#
+# THE LABEL DOES NOT OFFER A CONTROL. It used to end "; choose a dimension to
+# rank by", which promised a sort this interface has never had and must never
+# have: a reviewer who sorts by one dimension has declared that dimension the
+# ranking, which is the composite the whole system refuses to compute, arriving
+# through a click. Filtering is a stated question and is offered freely; sorting
+# is a smuggled conclusion. The first clause stays because the rule above
+# requires the order be labelled; the invitation goes.
 DEFAULT_ORDER_FIELD = "part_number"
-DEFAULT_ORDER_LABEL = "ordered by part number; choose a dimension to rank by"
+DEFAULT_ORDER_LABEL = "ordered by part number, and the order carries no meaning"
 
 # Which end of each dimension is worse. A DIRECTION, not a threshold: it says
 # which way is bad, never where bad begins.
