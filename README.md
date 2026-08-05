@@ -23,10 +23,13 @@ properties of the system; the counts are properties of one dataset.
 **Which figures are gated.** The floors in the section below are checked on every
 push and block a merge. Every count in this document is an illustrative snapshot
 at seed 42 and is **not gated**: asserting each one would turn a legitimate
-change into a red build, which is worse than the drift it would catch. The prose
-does drift, and has: an earlier revision carried a stale count of 84 for four
-commits. So the counts are audited against the pipeline by hand when they change,
-and the gate reports them under a heading that says it asserts nothing.
+change into a red build, which is worse than the drift it would catch.
+
+The prose does drift, and has twice. An earlier revision carried a stale count of
+84 for four commits, and a stale test total for a stage after that. So the counts
+are audited against the pipeline by hand when they change, the gate reports them
+under a heading saying it asserts nothing, and figures that change on every
+commit are not written down here at all.
 
 ---
 
@@ -308,7 +311,10 @@ the threshold makes the number a consequence of the case built to justify it.
 
 ## How it is verified
 
-462 tests, 4 strict xfails, no skips.
+Just under 500 tests, 4 strict xfails, no skips. The exact count is printed by
+`python eval_harness.py` on every run and is deliberately not repeated here: it
+changes on any commit that adds a test, which makes it the most drift-prone
+figure in this document. An earlier revision carried a stale one for a stage.
 
 **Hand-authored oracles.** The fixture BOMs, part master, demand plan and
 supplier list are written by hand, never generated, with the arithmetic worked
