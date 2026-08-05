@@ -21,7 +21,8 @@ from fixtures.tiny_expected_scores import (EXPECTED_BLAST_RADIUS_COMPLETENESS,
                                            EXPECTED_PORTABILITY, SCORED_PARTS)
 from src import governance as gov
 from src import scoring
-from src.demand import Usage, usage_by_part, USAGE_CANNOT_TELL, USAGE_KNOWN
+from src.demand import (Usage, usage_by_part, USAGE_CANNOT_TELL, USAGE_KNOWN,
+                        USAGE_PARTIAL)
 from src.explosion import explode, rows_by_part
 from src.readers import read_bom, read_demand_plan, read_part_master
 from src.scoring import (CANNOT_TELL, DAYS, KNOWN, LOWER_BOUND, NOT_APPLICABLE,
@@ -168,6 +169,52 @@ class TestBlastRadius(unittest.TestCase):
             with self.subTest(part=part):
                 self.assertEqual(self.profiles[part].blast_radius.completeness,
                                  EXPECTED_BLAST_RADIUS_COMPLETENESS[part])
+
+    def test_the_detail_names_which_usage_branch_produced_the_completeness(self):
+        """LOWER_BOUND is assigned by two branches and they mean different things.
+
+        Partial usage means some finished goods are recorded, so the figure is a
+        real lower bound. Cannot-tell means none are, so the volume is absent
+        rather than small. A consumer cannot separate them from `completeness`
+        and `value` alone, and inferring it from `value == 0` is wrong: partial
+        usage whose recorded goods total zero is a RECORDED zero. Collapsing
+        those is the missing-versus-zero conflation this module separates before
+        any arithmetic.
+        """
+        for part in SCORED_PARTS:
+            with self.subTest(part=part):
+                score = self.profiles[part].blast_radius
+                self.assertIn("usage_completeness", score.detail)
+                self.assertIn(score.detail["usage_completeness"],
+                              (USAGE_KNOWN, USAGE_PARTIAL, USAGE_CANNOT_TELL))
+
+    def test_the_branch_is_named_rather_than_reduced_to_a_flag(self):
+        """A boolean would let a third usage state inherit a reading by default.
+
+        `units_countable: False` cannot distinguish "none recorded" from a state
+        nobody has written yet. A name arrives unrecognised, which forces the
+        consumer to handle it instead of silently reading it as one of these two.
+        """
+        for part in SCORED_PARTS:
+            detail = self.profiles[part].blast_radius.detail
+            with self.subTest(part=part):
+                self.assertIsInstance(detail["usage_completeness"], str)
+                self.assertNotIsInstance(detail["usage_completeness"], bool)
+
+    def test_the_detail_contract_is_pinned_so_a_removal_is_loud(self):
+        """`log_profile` splats detail into event evidence (scoring.py:491).
+
+        That makes the key set a cross-module contract, and nothing else pins it:
+        no golden and no frozen eval contains these keys, so dropping one would
+        be silent at every layer. This is the pin.
+        """
+        expected = {"finished_goods_blocked", "finished_goods",
+                    "assemblies_blocked", "usage_completeness",
+                    "min_depth", "max_depth", "spans_depths"}
+        for part in SCORED_PARTS:
+            with self.subTest(part=part):
+                self.assertEqual(
+                    set(self.profiles[part].blast_radius.detail), expected)
 
     def test_blast_radius_never_abstains(self):
         for part in SCORED_PARTS:
@@ -477,10 +524,33 @@ class TestLogging(unittest.TestCase):
     "replacement scores identically to one that can be resourced in a "
     "fortnight."))
 def test_lead_time_to_recover_covers_qualification_time():
-    from src.synthetic.model import QUOTED_LEAD_TIME_DAYS
-    import src.synthetic.model as model
-    assert hasattr(model, "QUALIFICATION_LEAD_TIME_DAYS"), (
-        "no field records how long qualifying an alternative source takes")
+    """BEHAVIOURAL, and deliberately not `hasattr`.
+
+    The predecessor asserted `hasattr(model, "QUALIFICATION_LEAD_TIME_DAYS")`.
+    A bare constant satisfies that, flipping a strict xfail to XPASS and turning
+    the gate red while the dimension still answers half the brief's question, so
+    the cheapest route back to green is a name with no logic behind it. That is a
+    proxy standing in for the property, which is the defect shape this project's
+    corrections log is about.
+
+    This asserts the exact scenario the gap is named for. Two parts have
+    identical purchase lead times; one supplier needs 40 weeks to qualify a
+    replacement and the other a fortnight. The brief defines this dimension as
+    how long to QUALIFY an alternative or wait out the disruption, so the two
+    must not score the same. Qualification days ride in third position, which is
+    one shape the future input could take; today the function reads pairs and
+    ignores anything beyond them, so both parts score identically and this fails
+    on the assertion rather than on the input. That equality is the gap.
+    """
+    slow = scoring.lead_time_to_recover(
+        "SLOW-Q", "single_source", ((30, 45, 280),))
+    fast = scoring.lead_time_to_recover(
+        "FAST-Q", "single_source", ((30, 45, 14),))
+
+    assert slow.value != fast.value, (
+        "a part whose only supplier needs 40 weeks to qualify a replacement "
+        "scores identically to one resourceable in a fortnight, so the "
+        "dimension answers only the wait-it-out half of its definition")
 
 
 if __name__ == "__main__":  # keep last: classes below an entrypoint never run

@@ -521,8 +521,36 @@ class TestFillingTheReservedSlot(unittest.TestCase):
     "computed at all. Choosing two of three is a scoping decision and should "
     "not look like the data happened to support exactly the right two."))
 def test_concentration_can_group_by_tier():
-    import src.synthetic.model as model
-    assert hasattr(model, "SUPPLIER_TIER"), "no tier field exists"
+    """BEHAVIOURAL, and deliberately not `hasattr`.
+
+    The predecessor asserted `hasattr(model, "SUPPLIER_TIER")`. A bare constant
+    satisfies that, which flips a strict xfail to XPASS and turns the gate red
+    while the reading is still absent, so the cheapest way back to green is to
+    define a name and ship no capability. That is the failing test teaching
+    somebody to satisfy the letter, and it is corrections-log entries 1, 2, 3
+    and 6 in test form: a proxy standing in for the property.
+
+    This asserts the reading by USING it. Two exposed parts share a tier and
+    share nothing else, so only a tier grouping can see the correlation. The
+    tier arrives as a `tiers=` mapping, which is the shape the input would take
+    if the reading existed, so the failure names the missing capability directly
+    ("unexpected keyword argument 'tiers'") rather than crashing on a tuple
+    width. It becomes passable exactly when somebody adds the parameter AND the
+    grouping, which is the property a gap test needs: it must be closable by
+    implementing the gap and by nothing else.
+    """
+    verdicts = {"SHARED-T1": "single_source", "SHARED-T2": "single_source"}
+    dependencies = {"SHARED-T1": (("Alpha Works", "europe"),),
+                    "SHARED-T2": (("Beta Industries", "south_asia"),)}
+    report = analyse(verdicts, dependencies,
+                     tiers={"SHARED-T1": "tier_2", "SHARED-T2": "tier_2"})
+
+    bases = {cluster.basis for cluster in report.clusters}
+    assert "tier" in bases, (
+        "no tier grouping basis exists, so two parts sharing a tier and "
+        "nothing else cannot be seen as correlated")
+    tiers = [c for c in report.clusters if c.basis == "tier"]
+    assert set(tiers[0].members) == {"SHARED-T1", "SHARED-T2"}
 
 
 @pytest.mark.xfail(strict=True, reason=(
@@ -533,8 +561,32 @@ def test_concentration_can_group_by_tier():
     "NOT_APPLICABLE for concentration while still carrying real correlated "
     "risk."))
 def test_in_house_parts_can_be_concentrated_on_an_internal_line():
-    import src.synthetic.model as model
-    assert hasattr(model, "INTERNAL_WORK_CENTRE"), "no internal capacity field"
+    """BEHAVIOURAL, and deliberately not `hasattr`.
+
+    The predecessor asserted `hasattr(model, "INTERNAL_WORK_CENTRE")`, which a
+    bare constant satisfies. See the note on the tier gap above for why that
+    shape of guard is worse than no guard.
+
+    This asserts the OUTCOME that is currently wrong. Two made-in-house parts on
+    one internal line are correlated in fact: the line stops, both stop. Today
+    `_not_applicable` returns NOT_APPLICABLE for every make part, and its own
+    reason text concedes the point, saying concentration on a single internal
+    line "is real and is not modelled". So the assertion is that such a part is
+    not filed as not-applicable. A constant cannot change that; only modelling
+    internal capacity can.
+    """
+    verdicts = {"MAKE-1": "made_in_house", "MAKE-2": "made_in_house"}
+    # No external supplier, so nothing here can express the shared line.
+    dependencies = {"MAKE-1": (), "MAKE-2": ()}
+    report = analyse(verdicts, dependencies)
+
+    for part in ("MAKE-1", "MAKE-2"):
+        score = report.scores.get(part)
+        assert score is not None, f"{part} produced no concentration score"
+        assert score.completeness != C.NOT_APPLICABLE, (
+            f"{part} is made in-house on a shared internal line and is filed "
+            f"not-applicable for concentration, so a real correlation is "
+            f"reported as a question that does not attach")
 
 
 if __name__ == "__main__":  # keep last: classes below an entrypoint never run

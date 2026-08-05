@@ -16,6 +16,8 @@ list by scanning this file.
 AUTONOMY IS AN AFFORDANCE. Rows that execute get no button. That is checked in
 the model, which refuses to construct such a row, and again here.
 """
+from datetime import datetime, timezone
+
 import streamlit as st
 
 from src import governance as gov
@@ -514,9 +516,17 @@ def render_confirm(surface, result):
         for column, control in zip(control_columns, row.controls):
             if column.button(control.action.title(), key=f"{control.action}-{row.key}"):
                 try:
+                    # THE CLOCK LIVES HERE, at the edge, and nowhere deeper.
+                    # `actions.apply` defaults `at` to the Unix epoch so that
+                    # src/ and every test stay deterministic. Nothing was
+                    # passing it, so every decision the deployed app recorded
+                    # was stamped 1970-01-01. Reading the time at the interface
+                    # keeps the record real without putting a clock inside a
+                    # module whose output is golden-pinned.
                     actions.apply(st.session_state.setdefault(
                         "log", gov.DecisionLog()), control, reviewer,
-                        reason_code=reason or "", note=note)
+                        reason_code=reason or "", note=note,
+                        at=datetime.now(timezone.utc).isoformat())
                     st.success(f"Recorded: {control.action} {row.key}")
                 except ValueError as refusal:
                     st.warning(str(refusal))

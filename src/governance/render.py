@@ -20,7 +20,8 @@ An event that cannot answer one of these omits that clause rather than
 inventing it. A renderer that fabricates a plausible number is worse than one
 that says nothing.
 """
-from . import (EXECUTES, KIND_CLUSTER_CONTINGENT, KIND_CLUSTER_FLAGGED,
+from . import (ACT_RESOLVE_CONFLICT,
+               EXECUTES, KIND_CLUSTER_CONTINGENT, KIND_CLUSTER_FLAGGED,
                KIND_DIMENSION_ABSTAINED, KIND_DIMENSION_SCORED,
                KIND_PART_RANKED,
                KIND_HUMAN_DECISION, KIND_MERGE_UNCERTAIN,
@@ -153,12 +154,24 @@ def _decision_clause(event):
     # a search for the person who made the decision.
     clause = (f"{STATUS_PROSE.get(event.status, event.status)} by "
               f"{event.decided_by}")
-    if event.at:
-        clause += f" on {event.at}"
+    # (see _act_opening for why the arity is rendered and not only counted)
+    # TIME BELONGS IN THE RECORD, NOT IN THE SENTENCE, and this is a
+    # determinism constraint rather than a wording preference. Every sentence
+    # this module produces is golden-pinned, so a real clock reaching this line
+    # would make the goldens either frozen at a fake time or meaningless. The
+    # timestamp is carried on `DecisionEvent.at` and read directly by whatever
+    # displays the log, which keeps `render` a pure function of structure.
     if event.reason_code:
         clause += f", reason: {event.reason_code}"
     if event.note:
         clause += f" ({event.note})"
+    # A CORRECTION CITES THE LINE IT CORRECTS. The log is append-only, so a
+    # reviewer who changes their mind produces a second judgment rather than an
+    # edit, and without this reference two contradictory sentences about one
+    # subject sit in the list with nothing saying which one stands.
+    replaces = (event.evidence or {}).get("replaces")
+    if replaces:
+        clause += f", replacing decision {replaces}"
     return clause
 
 
@@ -288,6 +301,44 @@ RANKED_ABSENT = {
 }
 
 
+def _blocked_volume_absent(clause):
+    """The structural reach, when the volume behind it could not be counted.
+
+    "blocks at least 0 finished good units" was a true statement carrying no
+    information: zero is the trivial lower bound of any non-negative quantity, so
+    the bound prefix promised a figure and then delivered nothing. Worse, in every
+    occurrence it sat beside a correct example of the opposite treatment, "no
+    on-hand record, so cover is unknown", forty characters away. One absence in
+    words, one absence as the number zero, in the same sentence.
+
+    THE MODEL WAS NEVER WRONG. `blast_radius` carries two facets: the structural
+    reach, which is KNOWN, and the blocked volume, which inherits the demand
+    plan's gaps. Its own reason text says so. The renderer was rendering only the
+    volumetric facet, so a part that certainly stops a finished good read as
+    blocking nothing. Rendering this as a plain absence would have discarded the
+    known facet too, which is why the fix names the reach.
+
+    Keyed on `usage_completeness`, the branch that set the completeness, NEVER on
+    `value == 0`. Partial usage whose recorded goods total zero is a recorded
+    zero, and reading that as an absence is the same missing-versus-zero collapse
+    this function exists to prevent.
+    """
+    # The literal, matching this module's existing convention for completeness
+    # values (see RANKED_ABSENT). Importing src.demand here would add a layer
+    # dependency from the renderer to the model for one string; a test pins the
+    # correspondence instead, so drift is loud.
+    detail = clause.get("detail") or {}
+    if detail.get("usage_completeness") != "cannot_tell":
+        return ""
+    goods = detail.get("finished_goods_blocked")
+    if not goods:
+        return ""
+    plural = "" if goods == 1 else "s"
+    return (f"blocks {goods} finished good{plural}, "
+            f"{'' if goods == 1 else 'all '}absent from the demand plan, so no "
+            f"units could be counted")
+
+
 def _ranked_clause(clause):
     """One clause of the ranked sentence, with its unit and its bound direction.
 
@@ -313,6 +364,10 @@ def _ranked_clause(clause):
         return "unbounded cover, nothing consuming it"
     if dimension == "concentration" and clause.get("value") in (1, None):
         return ""
+    if dimension == "blast_radius":
+        absent = _blocked_volume_absent(clause)
+        if absent:
+            return absent
 
     prefix = BOUND_WORDS.get(completeness, "")
     return RANKED_CLAUSE[dimension].format(
@@ -371,10 +426,8 @@ def render(event):
         parts.append(sentence + ".")
 
     elif event.kind == KIND_HUMAN_DECISION:
-        opening = _strings_clause(evidence)
-        parts.append(
-            f"{_subject_clause(event)}: " +
-            (opening + "." if opening else "a review decision was recorded."))
+        opening = _strings_clause(evidence) or _act_opening(event)
+        parts.append(f"{_subject_clause(event)}: {opening}.")
         score = _score_clause(evidence)
         if score:
             parts.append("The system had them " + score + ".")
@@ -398,6 +451,28 @@ def render(event):
         parts.append(f"{_subject_clause(event)}: {event.kind}.")
 
     return " ".join(p for p in parts if p)
+
+
+def _act_opening(event):
+    """What kind of act this was, and over how many members.
+
+    ONE ACT OVER N MEMBERS IS THE POINT OF A CLUSTER DECISION. The model refuses
+    to flatten a cluster to its parts precisely so that a reviewer confirms one
+    judgment once instead of once per member, and `member_count` is the field
+    carrying that. A renderer that drops it undoes at the point of display what
+    the model is built to protect, which is the same failure as a palette that
+    ranks perceptually while the arithmetic says it cannot: the guarantee holds
+    everywhere except where somebody reads it.
+
+    `bulk_approve` differs from `approve` only in arity, so the count carries the
+    act kind for those two. `resolve_conflict` is a different act and is named.
+    """
+    if event.act_kind == ACT_RESOLVE_CONFLICT:
+        return "a conflict between two readings was resolved by review"
+    if event.member_count > 1:
+        return (f"one review decision covering {event.member_count} members "
+                f"was recorded")
+    return "a review decision was recorded"
 
 
 def render_all(log):

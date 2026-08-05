@@ -15,6 +15,13 @@ from src.demand import USAGE_KNOWN, Usage
 from src.interface import actions
 from src.interface import model as view
 
+# A LITERAL, NOT A CLOCK. `actions.apply` requires `at` and deliberately has no
+# default, because the default it used to have was the Unix epoch and the painter
+# never overrode it, so every decision the deployed app recorded claimed to have
+# been made in 1970. Tests pass a fixed instant so that src/ stays deterministic
+# and the golden sentences keep their meaning.
+AT = "2026-08-04T10:02:00+00:00"
+
 
 def build(part="AA-P-01", on_hand=100, tooling="company",
           lead_times=((30, 45),), verdict="single_source"):
@@ -276,36 +283,116 @@ class TestActionsHaveNoWritePath(unittest.TestCase):
             subject="Alpha Works", requires_reason=requires_reason,
             member_count=9, reason_codes=view.CLUSTER_REASONS)
 
+    # A literal, not a clock. `actions.apply` requires `at` and has no default
+    # so that a real decision cannot be silently stamped at the epoch; tests
+    # supply a fixed one so src/ and the goldens stay deterministic.
     def test_confirming_a_cluster_writes_one_event_with_member_count(self):
         log = gov.DecisionLog()
-        actions.apply(log, self.control(), "r.okafor")
+        actions.apply(log, self.control(), "r.okafor", at=AT)
         self.assertEqual(len(log), 1)
         event = list(log)[0]
         self.assertEqual(event.member_count, 9)
         self.assertEqual(event.act_kind, gov.ACT_BULK_APPROVE)
         self.assertEqual(event.decided_by, "r.okafor")
 
+    def test_an_unchanged_repeat_decision_is_refused(self):
+        """A double click is one judgment arriving twice, not two judgments.
+
+        Append-only constrains what happens to events that already exist. It
+        says nothing about which acts are admissible, and this module already
+        refuses four kinds of append, so refusing a fifth is not a violation of
+        it. The alternative, recording the repeat, puts two byte-identical
+        sentences in the record with nothing distinguishing them.
+        """
+        log = gov.DecisionLog()
+        actions.apply(log, self.control(), "r.okafor", at=AT)
+        with self.assertRaises(ValueError) as caught:
+            actions.apply(log, self.control(), "r.okafor", at=AT)
+        self.assertIn("unchanged decision", str(caught.exception))
+        self.assertEqual(len(log), 1, "the refusal must not append")
+
+    def test_a_changed_decision_is_recorded_and_cites_what_it_replaces(self):
+        log = gov.DecisionLog()
+        first = actions.apply(log, self.control(), "r.okafor", at=AT)
+        second = actions.apply(
+            log, self.control("reject", requires_reason=True), "r.okafor",
+            at=AT, reason_code=gov.REASON_CORRELATION_REJECTED)
+
+        self.assertEqual(len(log), 2, "append-only: nothing is edited away")
+        self.assertEqual(second.evidence["replaces"], first.event_id)
+        self.assertNotIn("replaces", first.evidence,
+                         "the earlier event is never stamped after the fact")
+        self.assertEqual(first.status, gov.STATUS_APPROVED,
+                         "the earlier decision keeps its own status")
+
+    def test_the_relation_lives_in_evidence_not_in_agent_ones_envelope(self):
+        """`act_id` belongs to agent 1 and its meaning is agent 1's to define.
+
+        Giving it a second meaning here would be worse than renaming a column: a
+        cross-agent join reads the envelope and would silently pick up a relation
+        agent 1 never wrote. `evidence` is the additive agent-3 field that such a
+        join does not see.
+        """
+        log = gov.DecisionLog()
+        actions.apply(log, self.control(), "r.okafor", at=AT)
+        second = actions.apply(
+            log, self.control("reject", requires_reason=True), "r.okafor",
+            at=AT, reason_code=gov.REASON_CORRELATION_REJECTED)
+        self.assertIsNone(second.act_id)
+        self.assertIn("replaces", second.evidence)
+        self.assertNotIn("replaces", second.envelope())
+
+    def test_a_second_reviewer_agreeing_is_a_recordable_judgment(self):
+        # Corroboration is not duplication. The decider is part of the identity
+        # so that a two-person sign-off is expressible.
+        log = gov.DecisionLog()
+        actions.apply(log, self.control(), "r.okafor", at=AT)
+        actions.apply(log, self.control(), "a.chen", at=AT)
+        self.assertEqual(len(log), 2)
+
     def test_an_anonymous_decision_is_refused(self):
         with self.assertRaises(ValueError):
-            actions.apply(gov.DecisionLog(), self.control(), "   ")
+            actions.apply(gov.DecisionLog(), self.control(), "   ", at=AT)
+
+    def test_an_undated_decision_is_refused(self):
+        """The same doctrine as the anonymous check, for the same reason.
+
+        `at` used to default to the Unix epoch and nothing passed it, so the
+        deployed app recorded every decision as having been made in 1970 and no
+        test noticed, because nothing rendered the field. A refusal is the only
+        treatment that cannot go quiet: a default would put the wrong value back
+        one layer down.
+        """
+        with self.assertRaises(ValueError):
+            actions.apply(gov.DecisionLog(), self.control(), "r.okafor", at="")
+        with self.assertRaises(ValueError):
+            actions.apply(gov.DecisionLog(), self.control(), "r.okafor",
+                          at="   ")
+
+    def test_the_decider_is_checked_before_the_date(self):
+        """Order matters: the anonymous refusal is the one users already see."""
+        with self.assertRaises(ValueError) as caught:
+            actions.apply(gov.DecisionLog(), self.control(), "", at="")
+        self.assertIn("anonymous decision", str(caught.exception))
 
     def test_a_rejection_requires_a_reason_code(self):
         with self.assertRaises(ValueError):
             actions.apply(gov.DecisionLog(),
                           self.control("reject", requires_reason=True),
-                          "r.okafor")
+                          "r.okafor", at=AT)
 
     def test_other_requires_the_note_it_promises(self):
         with self.assertRaises(ValueError):
             actions.apply(gov.DecisionLog(),
                           self.control("reject", requires_reason=True),
-                          "r.okafor", reason_code=gov.REASON_OTHER)
+                          "r.okafor", reason_code=gov.REASON_OTHER, at=AT)
 
     def test_a_reason_code_not_offered_by_the_control_is_refused(self):
         with self.assertRaises(ValueError):
             actions.apply(gov.DecisionLog(),
                           self.control("reject", requires_reason=True),
-                          "r.okafor", reason_code=gov.REASON_MERGE_CONFIRMED)
+                          "r.okafor", reason_code=gov.REASON_MERGE_CONFIRMED,
+                          at=AT)
 
     def test_the_actions_module_imports_nothing_that_writes(self):
         # "Validation flags, never fixes" has to hold where fixing would feel

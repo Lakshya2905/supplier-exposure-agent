@@ -282,7 +282,12 @@ reason that had drifted away from what the test was supposed to establish. Code
 that is wrong announces itself. A test that is about the wrong thing announces
 that everything is fine.
 
-Three instances so far, and they are the same shape.
+Three instances of the original shape, then two of a second, then three more that
+sharpen it. Entries 1, 2, 3 and 6 are a proxy standing in for the property.
+Entries 4 and 5 are a check that malfunctioned on correct code. Entry 7 is the
+property held everywhere except at the exit. Entry 8 is not about a test at all:
+it is the same failure performed by a reviewer rather than by an assertion, which
+is why it belongs here rather than in a postmortem.
 
 **1. The clean-world control stopped being clean.** `zeroed()` enumerated the
 damage knobs inline. Two knobs added later were not added to the list, so
@@ -324,13 +329,111 @@ one character away from the one intended.
 first line of the theme file: "Light only. No dark variant and no toggle." The
 scan found the commitment and reported it as the breach.
 
-The common thread across the first three: a proxy stood in for the property that
-mattered, was correlated with it most of the time, and diverged precisely at the
-interesting case. The counter-practice is to state what a test is establishing
-in one sentence and then check that the assertion establishes THAT, rather than
-something that usually travels with it. Hand-written expectations and the
-self-agreement guard exist for the same reason and are not sufficient alone:
-instance 3 had hand-written expectations and still passed.
+**6. Three guards enforced one guarantee and all three checked the notation.**
+The chip palette guaranteed that "no chip is darker, stronger or warmer than
+another, so no reading of the set produces an order." Three mechanisms enforced
+it: a comment in `.streamlit/config.toml`, the `.badge` rule declaring one
+background and one colour, and
+`test_the_category_palette_is_nominal_by_arithmetic` asserting equal HSL
+saturation and lightness. All three passed. The guarantee was false. HSL
+lightness is not perceptual lightness, and in CIELAB the six completeness
+entries spanned 15.3 L\* points and sorted into a clean brightness ramp in
+declaration order, so the enum's own order was leaking into the perceptual
+channel. Two of the three guards were also bypassed at runtime by inline styles
+that `chip_colour()` wrote per category, including a per-category text tint.
+Fixed by deleting the hue map: the label already carried the category, and
+`CLAUDE.md` already required that stripping colour lose no information.
+
+**7. The rule held for eight stages and collapsed at the sentence.** Missing and
+zero are different facts, and this codebase enforces that harder than anything
+else it does: `read_part_master` refuses to coerce a blank to zero, `buffer_cover`
+separates the two before any arithmetic and says so in capitals, and
+`TestMissingOnHandVersusRecordedZero` asserts they differ at every level. Then
+`blast_radius` rendered "blocks at least 0 finished good units" ten times on the
+landing surface. The dimension carries two facets, a structural reach that is
+KNOWN and a blocked volume that inherits the demand plan's gaps, and its own
+reason text says exactly that. The renderer rendered only the volumetric facet,
+so a part that certainly stops a finished good read as blocking nothing, and the
+absence arrived as the number zero wearing a bound prefix that promised a figure.
+
+Forty characters earlier in the same sentence sat the correct treatment of the
+same problem: "no on-hand record, so cover is unknown". One absence in words, one
+as a zero, in one sentence.
+
+> A guarantee enforced through a pipeline is not enforced at its exits. Every
+> layer that turns structure into something a person reads is a place the
+> guarantee has to be restated, because a renderer that drops a facet is
+> indistinguishable, to a reader, from a model that never had it.
+
+The near-miss is worth recording with it. The obvious fix keys on `value == 0`,
+and that is wrong for the same reason the bug is wrong: partial usage whose
+recorded goods happen to total zero is a RECORDED zero, so inferring the branch
+from the value reintroduces the collapse inside its own repair. It does not occur
+on seed 42, which makes it latent rather than absent, and latent is the worse of
+the two for something a renderer keys on. The fix keys on the branch that set the
+completeness, named rather than reduced to a boolean so that a third usage state
+must declare itself instead of inheriting a reading.
+
+**8. Trust inherited from a subagent, reported as verification.** A review agent
+reported that all four gap xfails asserted the existence of a name rather than a
+behaviour. Two were checked directly against the code. The other two were not,
+and all four were reported upward as verified. One of them,
+`test_fractional_quantities_are_supported`, was already behavioural: it runs the
+generator and asserts a non-integer quantity appears in real BOM rows. The claim
+that shipped was "all four", the evidence supported "two, and a pattern".
+
+This happened in the same session, and in the same commit, as the fix for
+accepting a proxy in place of the property. It is the second instance of the same
+shape here. Earlier in the same session a measured claim about the chip palette
+was passed upward with a severity ("two chips fail WCAG AA today") that direct
+verification later reduced to a latent defect in unreachable code, and a learning
+was written with `source: cross-model` when the second voice was another instance
+of the same model.
+
+> A subagent's finding is evidence, not verification. Delegating the search does
+> not delegate the checking, and the plausibility of a claim rises with the effort
+> that produced it, which is exactly what makes an expensive report the easiest
+> one to forward unchecked.
+
+The counter-practice is mechanical, because judgment is what fails here: state
+the count, then check each member and mark it. "Three of four, verified
+individually" and "all four, per the agent" are different claims, and only the
+first is a finding. Where a claim is forwarded unchecked, forward it labelled.
+
+Entry 6 is instances 1 to 3 again, with one addition worth stating on its own.
+
+> **Redundant guards that share an assumption read as confirmation while
+> providing none.** Independence is not about how many guards exist, or how far
+> apart they live in the tree. It is about whether they can fail SEPARATELY.
+> Guards that inherit the same premise fail together and silently, and their
+> agreement is what stops anybody looking.
+
+Three checks agreeing looked like triangulation. It was one check performed three
+times. This is the sharper form of the defect this log is about: testing the
+wrong thing leaves you with no evidence, and redundantly testing the wrong thing
+leaves you with false evidence, because the count of passing guards becomes the
+argument against investigating. When adding a guard, the question is not "is this
+covered elsewhere" but "what premise does this share with the guards already
+there." If the answer is the same one, it adds confidence without adding
+coverage.
+
+A corollary for review: a guarantee defended by several mechanisms deserves MORE
+suspicion of its premise, not less. Ask what all of them assume, and verify that
+assumption directly and numerically at least once.
+
+Severity, stated accurately, because it matters to how this entry is read: nine
+of the eleven hues never reached a badge, so no reader ever saw the ramp. It was
+a latent trap rather than a live defect. That is the more dangerous timing, not
+the less: a wrong guard is most trusted before the code it guards is written,
+which is exactly when somebody first relies on it.
+
+The common thread across the first three, and six: a proxy stood in for the
+property that mattered, was correlated with it most of the time, and diverged
+precisely at the interesting case. The counter-practice is to state what a test
+is establishing in one sentence and then check that the assertion establishes
+THAT, rather than something that usually travels with it. Hand-written
+expectations and the self-agreement guard exist for the same reason and are not
+sufficient alone: instance 3 had hand-written expectations and still passed.
 
 **Instances 4 and 5 are a hazard specific to this codebase, and it will keep
 recurring, so it is stated as a rule rather than continued as a list.**

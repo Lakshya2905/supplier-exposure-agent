@@ -10,6 +10,7 @@ import pathlib
 import unittest
 
 from src import governance as gov
+from src.governance import render as render_module
 from src.governance.render import (STATUS_PROSE, VERDICT_PROSE, render,
                                    render_all)
 
@@ -43,6 +44,37 @@ def human_decision_event():
         evidence={"raw_a": "Marrow Corporation", "raw_b": "Yarrow Corporation",
                   "score": 0.9444444444444444, "threshold": 0.90,
                   "resulting_verdict": "multi_source"})
+
+
+def _cluster_decision(member_count, act_kind, **overrides):
+    """A cluster judgment, which is what the Confirm surface actually records.
+
+    Hand-written rather than produced by `actions.apply`, so the fixture does not
+    import a value from the code under test.
+    """
+    fields = dict(
+        event_id=3, at="2026-08-04T10:02:00+00:00",
+        status=gov.STATUS_APPROVED, sku_id="south_asia",
+        field="concentration", value="confirm", decided_by="r.okafor",
+        reason_code=gov.REASON_CORRELATION_CONFIRMED, act_id=11,
+        act_kind=act_kind, member_count=member_count,
+        kind=gov.KIND_HUMAN_DECISION,
+        evidence={"members": (), "member_count": member_count,
+                  "resulting_verdict": ""})
+    fields.update(overrides)
+    return gov.DecisionEvent(**fields)
+
+
+def bulk_decision_event():
+    return _cluster_decision(28, gov.ACT_BULK_APPROVE)
+
+
+def single_decision_event():
+    return _cluster_decision(1, gov.ACT_APPROVE)
+
+
+def conflict_resolved_event():
+    return _cluster_decision(1, gov.ACT_RESOLVE_CONFLICT)
 
 
 def readings_disagree_event():
@@ -151,6 +183,94 @@ class TestGoldens(unittest.TestCase):
     def test_merge_uncertain_golden(self):
         self.assertEqual(render(merge_uncertain_event()),
                          read_golden("golden_merge_uncertain.txt"))
+
+    def _blast_clause(self, value, usage_completeness, goods=1):
+        return {"dimension": "blast_radius", "completeness": "lower_bound",
+                "value": value, "unit": "finished_good_units",
+                "detail": {"finished_goods_blocked": goods,
+                           "usage_completeness": usage_completeness}}
+
+    def test_an_uncountable_blocked_volume_names_the_reach_it_does_know(self):
+        """"blocks at least 0" was true and carried nothing.
+
+        Zero is the trivial lower bound of any non-negative quantity, so the
+        bound prefix promised a figure and delivered none. In every occurrence it
+        sat beside the correct treatment of the same problem, "no on-hand record,
+        so cover is unknown", in the same sentence. The model always knew the
+        structural reach; only the renderer dropped it.
+        """
+        clause = render_module._ranked_clause(
+            self._blast_clause(0, "cannot_tell"))
+        self.assertNotIn("at least 0", clause)
+        self.assertIn("blocks 1 finished good", clause)
+        self.assertIn("absent from the demand plan", clause)
+        self.assertIn("no units could be counted", clause)
+
+    def test_a_genuine_lower_bound_still_renders_its_bound_direction(self):
+        # The mechanism is correct and load-bearing; only the degenerate case
+        # was wrong. A reader who never sees "at least" cannot recover it.
+        clause = render_module._ranked_clause(
+            self._blast_clause(16500, "partial"))
+        self.assertIn("at least 16500", clause)
+
+    def test_a_recorded_zero_under_partial_usage_is_not_read_as_an_absence(self):
+        """The collision the fix must not reintroduce.
+
+        Partial usage whose recorded finished goods total zero is a RECORDED
+        zero. Keying the absence on `value == 0` would render it as "absent from
+        the demand plan", which is the missing-versus-zero collapse that this
+        whole change exists to repair. It does not occur on seed 42, which is
+        exactly why it needs a test rather than a dataset.
+        """
+        clause = render_module._ranked_clause(
+            self._blast_clause(0, "partial"))
+        self.assertNotIn("absent from the demand plan", clause)
+        self.assertIn("at least 0", clause)
+
+    def test_the_renderers_usage_literal_matches_the_model(self):
+        # render.py uses the bare string, matching its own convention for
+        # completeness values, rather than importing the model for one constant.
+        # This is the pin that makes drift loud.
+        from src.demand import USAGE_CANNOT_TELL
+        self.assertEqual(USAGE_CANNOT_TELL, "cannot_tell")
+
+    def test_more_than_one_uncountable_good_reads_as_a_plural(self):
+        # Unexercised on seed 42, where every affected part blocks exactly one.
+        clause = render_module._ranked_clause(
+            self._blast_clause(0, "cannot_tell", goods=3))
+        self.assertIn("blocks 3 finished goods", clause)
+        self.assertIn("all absent from the demand plan", clause)
+
+    def test_bulk_decision_golden(self):
+        self.assertEqual(render(bulk_decision_event()),
+                         read_golden("golden_bulk_decision.txt"))
+
+    def test_a_cluster_decision_says_how_many_members_it_covered(self):
+        """One act over N members is the point, so the renderer must say N.
+
+        The model refuses to flatten a cluster to its parts so that a reviewer
+        confirms one judgment once rather than once per member, and
+        `member_count` is the field carrying that. Before this, a 28-member bulk
+        approval and a single-part decision rendered identically as "a review
+        decision was recorded", so the renderer undid the design at the point of
+        display: the guarantee held everywhere except where somebody read it.
+        """
+        sentence = render(bulk_decision_event())
+        self.assertIn("28 members", sentence)
+        self.assertNotEqual(sentence, render(single_decision_event()))
+        self.assertNotIn("28", render(single_decision_event()))
+
+    def test_a_single_member_decision_does_not_claim_an_arity(self):
+        # One member is not "covering 1 members", and it is not a bulk act.
+        self.assertIn("a review decision was recorded",
+                      render(single_decision_event()))
+
+    def test_resolving_a_conflict_is_named_rather_than_counted(self):
+        # bulk_approve differs from approve only in arity, so the count carries
+        # it. resolve_conflict is a different act and says so in words.
+        sentence = render(conflict_resolved_event())
+        self.assertIn("conflict", sentence)
+        self.assertIn("two readings", sentence)
 
     def test_human_decision_golden(self):
         self.assertEqual(render(human_decision_event()),
@@ -298,11 +418,28 @@ class TestRendererHonesty(unittest.TestCase):
 
     def test_sentence_case_does_not_corrupt_the_data_it_capitalises(self):
         # str.capitalize() lowercases the remainder, which turns "r.okafor"
-        # into "R.okafor" and an ISO timestamp's "T" into "t". Both appear
-        # verbatim in this output, so that is corruption, not cosmetics.
+        # into "R.okafor". A username is an identifier rather than a word, so
+        # changing its case makes the output stop matching a search for the
+        # person who decided. The ISO timestamp used to be the second example
+        # here and no longer appears in any sentence: time is carried on
+        # DecisionEvent.at and read directly, so that the rendered wording stays
+        # a pure function of structure and the goldens keep their meaning.
         sentence = render(human_decision_event())
         self.assertIn("r.okafor", sentence)
-        self.assertIn("2026-08-04T10:02:00+00:00", sentence)
+
+    def test_no_rendered_sentence_carries_a_timestamp(self):
+        """A clock in golden-pinned output makes the goldens a liability.
+
+        Either they freeze at a fake time, which is what shipped (every decision
+        in the app was stamped at the Unix epoch), or they change on every run.
+        The record carries time; the sentence does not.
+        """
+        for event in (human_decision_event(), merge_uncertain_event(),
+                      part_ranked_event()):
+            with self.subTest(kind=event.kind):
+                self.assertTrue(event.at, "the record must still carry a time")
+                self.assertNotIn(event.at, render(event))
+                self.assertNotIn("T00:00:00", render(event))
 
 
 class TestProseIsNeverStored(unittest.TestCase):
