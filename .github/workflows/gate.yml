@@ -1,0 +1,36 @@
+# The ship gate. One command, the same one that runs locally before a commit,
+# so CI is a second opinion rather than a different opinion.
+#
+# eval_build.py is deliberately absent: rebuilding the frozen set in CI would
+# mean the expectations were produced by the code under test on the same run,
+# which is the drift this whole arrangement exists to prevent.
+name: gate
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Generate the working dataset
+        # data/ is gitignored and regenerated from a documented seed. The eval
+        # set under evals/ is NOT regenerated here; it is read as committed.
+        run: python -m src.generate_data --seed 42
+
+      - name: Ship gate
+        # Blocks on a failing test, a PASSING xfail (xfail_strict), a manifest
+        # mismatch, or a missed floor. Does not block on the snapshot moving.
+        run: python eval_harness.py

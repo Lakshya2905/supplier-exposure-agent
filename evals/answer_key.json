@@ -1,0 +1,1670 @@
+{
+  "absent_demand_finished_good": "SEA-FG-03",
+  "config_hash": "3f5c985faba66c9b",
+  "confusable_suppliers": [
+    {
+      "a": {
+        "name": "Yarrow Corporation",
+        "supplier_id": "SEA-SUP-000"
+      },
+      "b": {
+        "name": "Yarrow Holdings",
+        "supplier_id": "SEA-SUP-000-B"
+      }
+    }
+  ],
+  "cross_file_divergences": [
+    {
+      "name_in_lead_times": "Pellworth Corp.",
+      "name_in_suppliers": "Pellworth Corporation",
+      "part_number": "SEA-P-0090",
+      "supplier_id": "SEA-SUP-018"
+    },
+    {
+      "name_in_lead_times": "Fairmont Inds.",
+      "name_in_suppliers": "Fairmont Industries",
+      "part_number": "SEA-P-0090",
+      "supplier_id": "SEA-SUP-021"
+    },
+    {
+      "name_in_lead_times": "Jasper  Works",
+      "name_in_suppliers": "jasper works",
+      "part_number": "SEA-P-0093",
+      "supplier_id": "SEA-SUP-015"
+    },
+    {
+      "name_in_lead_times": "yarrow corporation",
+      "name_in_suppliers": "Yarrow Corporation",
+      "part_number": "SEA-P-0095",
+      "supplier_id": "SEA-SUP-000"
+    },
+    {
+      "name_in_lead_times": "harrowgate works",
+      "name_in_suppliers": "Harrowgate Wks.",
+      "part_number": "SEA-P-0098",
+      "supplier_id": "SEA-SUP-004"
+    },
+    {
+      "name_in_lead_times": "ravensford corporation",
+      "name_in_suppliers": "Ravensford Corp.",
+      "part_number": "SEA-P-0100",
+      "supplier_id": "SEA-SUP-023"
+    },
+    {
+      "name_in_lead_times": "Marrow Corporation ",
+      "name_in_suppliers": "Marrow Corporation",
+      "part_number": "SEA-P-0102",
+      "supplier_id": "SEA-SUP-010"
+    },
+    {
+      "name_in_lead_times": "Underhill Inds.",
+      "name_in_suppliers": "underhill industries",
+      "part_number": "SEA-P-0102",
+      "supplier_id": "SEA-SUP-019"
+    },
+    {
+      "name_in_lead_times": "pellworth corporation",
+      "name_in_suppliers": "Pellworth Corporation ",
+      "part_number": "SEA-P-0107",
+      "supplier_id": "SEA-SUP-018"
+    },
+    {
+      "name_in_lead_times": "KESTREL CORPORATION",
+      "name_in_suppliers": "Kestrel Corporation",
+      "part_number": "SEA-P-0111",
+      "supplier_id": "SEA-SUP-002"
+    },
+    {
+      "name_in_lead_times": "HARROWGATE WORKS",
+      "name_in_suppliers": "Harrowgate  Works",
+      "part_number": "SEA-P-0111",
+      "supplier_id": "SEA-SUP-004"
+    },
+    {
+      "name_in_lead_times": "calder corporation",
+      "name_in_suppliers": "Calder Corporation",
+      "part_number": "SEA-P-0119",
+      "supplier_id": "SEA-SUP-008"
+    },
+    {
+      "name_in_lead_times": "Oakhaven Mfg.",
+      "name_in_suppliers": "Oakhaven Manufacturing",
+      "part_number": "SEA-P-0125",
+      "supplier_id": "SEA-SUP-003"
+    },
+    {
+      "name_in_lead_times": "Deepwater Corp.",
+      "name_in_suppliers": "Deepwater Corporation",
+      "part_number": "SEA-P-0126",
+      "supplier_id": "SEA-SUP-012"
+    },
+    {
+      "name_in_lead_times": "Norbury  Corporation",
+      "name_in_suppliers": "Norbury Corporation",
+      "part_number": "SEA-P-0126",
+      "supplier_id": "SEA-SUP-013"
+    },
+    {
+      "name_in_lead_times": "Eastvale Industries ",
+      "name_in_suppliers": "Eastvale Industries",
+      "part_number": "SEA-P-0129",
+      "supplier_id": "SEA-SUP-011"
+    },
+    {
+      "name_in_lead_times": "Vantage  Works",
+      "name_in_suppliers": "Vantage Works",
+      "part_number": "SEA-P-0130",
+      "supplier_id": "SEA-SUP-009"
+    },
+    {
+      "name_in_lead_times": "underhill industries",
+      "name_in_suppliers": "Underhill Industries",
+      "part_number": "SEA-P-0133",
+      "supplier_id": "SEA-SUP-019"
+    },
+    {
+      "name_in_lead_times": "westmere corporation",
+      "name_in_suppliers": "Westmere Corporation",
+      "part_number": "SEA-P-0137",
+      "supplier_id": "SEA-SUP-022"
+    },
+    {
+      "name_in_lead_times": "EASTVALE INDUSTRIES",
+      "name_in_suppliers": "Eastvale Industries",
+      "part_number": "SEA-P-0137",
+      "supplier_id": "SEA-SUP-011"
+    },
+    {
+      "name_in_lead_times": "Kestrel Corp.",
+      "name_in_suppliers": "Kestrel Corporation",
+      "part_number": "SEA-P-0142",
+      "supplier_id": "SEA-SUP-002"
+    },
+    {
+      "name_in_lead_times": "THACKERY INDUSTRIES",
+      "name_in_suppliers": "Thackery Industries",
+      "part_number": "SEA-P-0143",
+      "supplier_id": "SEA-SUP-001"
+    },
+    {
+      "name_in_lead_times": "KESTREL CORPORATION",
+      "name_in_suppliers": "Kestrel Corporation",
+      "part_number": "SEA-P-0146",
+      "supplier_id": "SEA-SUP-002"
+    },
+    {
+      "name_in_lead_times": "Westmere Corporation ",
+      "name_in_suppliers": "Westmere Corporation",
+      "part_number": "SEA-P-0147",
+      "supplier_id": "SEA-SUP-022"
+    },
+    {
+      "name_in_lead_times": "Northwind  Corporation",
+      "name_in_suppliers": "Northwind Corporation",
+      "part_number": "SEA-P-0149",
+      "supplier_id": "SEA-SUP-006"
+    },
+    {
+      "name_in_lead_times": "Thackery Inds.",
+      "name_in_suppliers": "Thackery Industries",
+      "part_number": "SEA-P-0150",
+      "supplier_id": "SEA-SUP-001"
+    },
+    {
+      "name_in_lead_times": "marrow corporation",
+      "name_in_suppliers": "Marrow Corporation ",
+      "part_number": "SEA-P-0150",
+      "supplier_id": "SEA-SUP-010"
+    },
+    {
+      "name_in_lead_times": "Vantage Works ",
+      "name_in_suppliers": "Vantage Works",
+      "part_number": "SEA-P-0151",
+      "supplier_id": "SEA-SUP-009"
+    },
+    {
+      "name_in_lead_times": "Calder Corporation ",
+      "name_in_suppliers": "CALDER CORPORATION",
+      "part_number": "SEA-P-0152",
+      "supplier_id": "SEA-SUP-008"
+    },
+    {
+      "name_in_lead_times": "Westmere  Corporation",
+      "name_in_suppliers": "Westmere Corporation",
+      "part_number": "SEA-P-0155",
+      "supplier_id": "SEA-SUP-022"
+    },
+    {
+      "name_in_lead_times": "Glenmoor Corporation ",
+      "name_in_suppliers": "Glenmoor Corporation",
+      "part_number": "SEA-P-0162",
+      "supplier_id": "SEA-SUP-020"
+    },
+    {
+      "name_in_lead_times": "Jasper  Works",
+      "name_in_suppliers": "Jasper Works",
+      "part_number": "SEA-P-0164",
+      "supplier_id": "SEA-SUP-015"
+    },
+    {
+      "name_in_lead_times": "Marrow Corporation ",
+      "name_in_suppliers": "Marrow Corporation",
+      "part_number": "SEA-P-0167",
+      "supplier_id": "SEA-SUP-010"
+    },
+    {
+      "name_in_lead_times": "norbury corporation",
+      "name_in_suppliers": "Norbury Corporation",
+      "part_number": "SEA-P-0168",
+      "supplier_id": "SEA-SUP-013"
+    },
+    {
+      "name_in_lead_times": "CALDER CORPORATION",
+      "name_in_suppliers": "Calder Corporation",
+      "part_number": "SEA-P-0168",
+      "supplier_id": "SEA-SUP-008"
+    },
+    {
+      "name_in_lead_times": "Norbury  Corporation",
+      "name_in_suppliers": "Norbury Corporation",
+      "part_number": "SEA-P-0174",
+      "supplier_id": "SEA-SUP-013"
+    },
+    {
+      "name_in_lead_times": "Kestrel Corp",
+      "name_in_suppliers": "Kestrel  Corporation",
+      "part_number": "SEA-P-0176",
+      "supplier_id": "SEA-SUP-002"
+    },
+    {
+      "name_in_lead_times": "marrow corporation",
+      "name_in_suppliers": "Marrow Corporation",
+      "part_number": "SEA-P-0177",
+      "supplier_id": "SEA-SUP-010"
+    },
+    {
+      "name_in_lead_times": "Harrowgate Wks",
+      "name_in_suppliers": "Harrowgate Works",
+      "part_number": "SEA-P-0181",
+      "supplier_id": "SEA-SUP-004"
+    },
+    {
+      "name_in_lead_times": "Lindholm  Works",
+      "name_in_suppliers": "Lindholm Works",
+      "part_number": "SEA-P-0183",
+      "supplier_id": "SEA-SUP-007"
+    },
+    {
+      "name_in_lead_times": "Eastvale Industries ",
+      "name_in_suppliers": "Eastvale  Industries",
+      "part_number": "SEA-P-0184",
+      "supplier_id": "SEA-SUP-011"
+    },
+    {
+      "name_in_lead_times": "Ironside  Manufacturing",
+      "name_in_suppliers": "Ironside Manufacturing",
+      "part_number": "SEA-P-0185",
+      "supplier_id": "SEA-SUP-017"
+    },
+    {
+      "name_in_lead_times": "stanmore manufacturing",
+      "name_in_suppliers": "Stanmore Mfg",
+      "part_number": "SEA-P-0187",
+      "supplier_id": "SEA-SUP-005"
+    },
+    {
+      "name_in_lead_times": "underhill industries",
+      "name_in_suppliers": "Underhill Industries",
+      "part_number": "SEA-P-0189",
+      "supplier_id": "SEA-SUP-019"
+    },
+    {
+      "name_in_lead_times": "Ironside Mfg.",
+      "name_in_suppliers": "Ironside Manufacturing",
+      "part_number": "SEA-P-0192",
+      "supplier_id": "SEA-SUP-017"
+    },
+    {
+      "name_in_lead_times": "marrow corporation",
+      "name_in_suppliers": "Marrow Corporation",
+      "part_number": "SEA-P-0192",
+      "supplier_id": "SEA-SUP-010"
+    },
+    {
+      "name_in_lead_times": "vantage works",
+      "name_in_suppliers": "Vantage Works",
+      "part_number": "SEA-P-0193",
+      "supplier_id": "SEA-SUP-009"
+    },
+    {
+      "name_in_lead_times": "stanmore manufacturing",
+      "name_in_suppliers": "Stanmore Manufacturing",
+      "part_number": "SEA-P-0196",
+      "supplier_id": "SEA-SUP-005"
+    },
+    {
+      "name_in_lead_times": "QUILLON MANUFACTURING",
+      "name_in_suppliers": "Quillon Mfg",
+      "part_number": "SEA-P-0203",
+      "supplier_id": "SEA-SUP-016"
+    },
+    {
+      "name_in_lead_times": "deepwater corporation",
+      "name_in_suppliers": "Deepwater Corporation",
+      "part_number": "SEA-P-0207",
+      "supplier_id": "SEA-SUP-012"
+    },
+    {
+      "name_in_lead_times": "Deepwater  Corporation",
+      "name_in_suppliers": "Deepwater Corporation",
+      "part_number": "SEA-P-0209",
+      "supplier_id": "SEA-SUP-012"
+    },
+    {
+      "name_in_lead_times": "Lindholm Wks.",
+      "name_in_suppliers": "Lindholm Works",
+      "part_number": "SEA-P-0210",
+      "supplier_id": "SEA-SUP-007"
+    },
+    {
+      "name_in_lead_times": "BRAXTON INDUSTRIES",
+      "name_in_suppliers": "Braxton Industries",
+      "part_number": "SEA-P-0210",
+      "supplier_id": "SEA-SUP-014"
+    },
+    {
+      "name_in_lead_times": "Lindholm Wks",
+      "name_in_suppliers": "Lindholm Works",
+      "part_number": "SEA-P-0211",
+      "supplier_id": "SEA-SUP-007"
+    },
+    {
+      "name_in_lead_times": "Pellworth  Corporation",
+      "name_in_suppliers": "Pellworth Corporation",
+      "part_number": "SEA-P-0212",
+      "supplier_id": "SEA-SUP-018"
+    },
+    {
+      "name_in_lead_times": "Ironside Mfg.",
+      "name_in_suppliers": "Ironside Manufacturing",
+      "part_number": "SEA-P-0214",
+      "supplier_id": "SEA-SUP-017"
+    },
+    {
+      "name_in_lead_times": "Ironside Manufacturing ",
+      "name_in_suppliers": "Ironside Manufacturing",
+      "part_number": "SEA-P-0216",
+      "supplier_id": "SEA-SUP-017"
+    },
+    {
+      "name_in_lead_times": "Glenmoor  Corporation",
+      "name_in_suppliers": "Glenmoor Corporation",
+      "part_number": "SEA-P-0222",
+      "supplier_id": "SEA-SUP-020"
+    },
+    {
+      "name_in_lead_times": "FAIRMONT INDUSTRIES",
+      "name_in_suppliers": "Fairmont Industries",
+      "part_number": "SEA-P-0222",
+      "supplier_id": "SEA-SUP-021"
+    },
+    {
+      "name_in_lead_times": "Deepwater  Corporation",
+      "name_in_suppliers": "Deepwater Corporation",
+      "part_number": "SEA-P-0231",
+      "supplier_id": "SEA-SUP-012"
+    },
+    {
+      "name_in_lead_times": "CALDER CORPORATION",
+      "name_in_suppliers": "Calder Corporation",
+      "part_number": "SEA-P-0234",
+      "supplier_id": "SEA-SUP-008"
+    },
+    {
+      "name_in_lead_times": "Underhill Inds.",
+      "name_in_suppliers": "Underhill Industries",
+      "part_number": "SEA-P-0236",
+      "supplier_id": "SEA-SUP-019"
+    },
+    {
+      "name_in_lead_times": "RAVENSFORD CORPORATION",
+      "name_in_suppliers": "Ravensford Corporation",
+      "part_number": "SEA-P-0241",
+      "supplier_id": "SEA-SUP-023"
+    },
+    {
+      "name_in_lead_times": "Ravensford  Corporation",
+      "name_in_suppliers": "Ravensford Corporation",
+      "part_number": "SEA-P-0242",
+      "supplier_id": "SEA-SUP-023"
+    },
+    {
+      "name_in_lead_times": "Braxton Inds",
+      "name_in_suppliers": "Braxton Industries",
+      "part_number": "SEA-P-0242",
+      "supplier_id": "SEA-SUP-014"
+    },
+    {
+      "name_in_lead_times": "ravensford corporation",
+      "name_in_suppliers": "Ravensford Corporation",
+      "part_number": "SEA-P-0247",
+      "supplier_id": "SEA-SUP-023"
+    },
+    {
+      "name_in_lead_times": "Harrowgate Wks.",
+      "name_in_suppliers": "harrowgate works",
+      "part_number": "SEA-P-0247",
+      "supplier_id": "SEA-SUP-004"
+    },
+    {
+      "name_in_lead_times": "jasper works",
+      "name_in_suppliers": "Jasper Works",
+      "part_number": "SEA-P-0251",
+      "supplier_id": "SEA-SUP-015"
+    },
+    {
+      "name_in_lead_times": "stanmore manufacturing",
+      "name_in_suppliers": "Stanmore Manufacturing ",
+      "part_number": "SEA-P-0253",
+      "supplier_id": "SEA-SUP-005"
+    },
+    {
+      "name_in_lead_times": "Eastvale Industries ",
+      "name_in_suppliers": "Eastvale Industries",
+      "part_number": "SEA-P-0253",
+      "supplier_id": "SEA-SUP-011"
+    },
+    {
+      "name_in_lead_times": "Vantage  Works",
+      "name_in_suppliers": "Vantage Works",
+      "part_number": "SEA-P-0256",
+      "supplier_id": "SEA-SUP-009"
+    },
+    {
+      "name_in_lead_times": "Harrowgate Works ",
+      "name_in_suppliers": "harrowgate works",
+      "part_number": "SEA-P-0261",
+      "supplier_id": "SEA-SUP-004"
+    },
+    {
+      "name_in_lead_times": "Kestrel  Corporation",
+      "name_in_suppliers": "Kestrel Corporation",
+      "part_number": "SEA-P-0262",
+      "supplier_id": "SEA-SUP-002"
+    },
+    {
+      "name_in_lead_times": "Deepwater Corp.",
+      "name_in_suppliers": "Deepwater Corporation",
+      "part_number": "SEA-P-0262",
+      "supplier_id": "SEA-SUP-012"
+    },
+    {
+      "name_in_lead_times": "Quillon Mfg",
+      "name_in_suppliers": "Quillon Manufacturing",
+      "part_number": "SEA-P-0262",
+      "supplier_id": "SEA-SUP-016"
+    },
+    {
+      "name_in_lead_times": "northwind corporation",
+      "name_in_suppliers": "Northwind Corporation",
+      "part_number": "SEA-P-0263",
+      "supplier_id": "SEA-SUP-006"
+    },
+    {
+      "name_in_lead_times": "Yarrow  Corporation",
+      "name_in_suppliers": "Yarrow Corporation",
+      "part_number": "SEA-P-0264",
+      "supplier_id": "SEA-SUP-000"
+    },
+    {
+      "name_in_lead_times": "Harrowgate Works ",
+      "name_in_suppliers": "Harrowgate Wks",
+      "part_number": "SEA-P-0270",
+      "supplier_id": "SEA-SUP-004"
+    },
+    {
+      "name_in_lead_times": "Yarrow Corporation ",
+      "name_in_suppliers": "Yarrow Corporation",
+      "part_number": "SEA-P-0273",
+      "supplier_id": "SEA-SUP-000"
+    },
+    {
+      "name_in_lead_times": "Ravensford Corporation",
+      "name_in_suppliers": "Ravensford Corp",
+      "part_number": "SEA-P-0278",
+      "supplier_id": "SEA-SUP-023"
+    },
+    {
+      "name_in_lead_times": "YARROW CORPORATION",
+      "name_in_suppliers": "Yarrow Corporation",
+      "part_number": "SEA-P-0278",
+      "supplier_id": "SEA-SUP-000"
+    },
+    {
+      "name_in_lead_times": "PELLWORTH CORPORATION",
+      "name_in_suppliers": "Pellworth Corporation",
+      "part_number": "SEA-P-0279",
+      "supplier_id": "SEA-SUP-018"
+    },
+    {
+      "name_in_lead_times": "THACKERY INDUSTRIES",
+      "name_in_suppliers": "Thackery Industries",
+      "part_number": "SEA-P-0281",
+      "supplier_id": "SEA-SUP-001"
+    },
+    {
+      "name_in_lead_times": "Jasper Wks",
+      "name_in_suppliers": "Jasper Works",
+      "part_number": "SEA-P-0282",
+      "supplier_id": "SEA-SUP-015"
+    },
+    {
+      "name_in_lead_times": "norbury corporation",
+      "name_in_suppliers": "NORBURY CORPORATION",
+      "part_number": "SEA-P-0284",
+      "supplier_id": "SEA-SUP-013"
+    },
+    {
+      "name_in_lead_times": "Stanmore Manufacturing ",
+      "name_in_suppliers": "Stanmore Manufacturing",
+      "part_number": "SEA-P-0290",
+      "supplier_id": "SEA-SUP-005"
+    },
+    {
+      "name_in_lead_times": "Kestrel  Corporation",
+      "name_in_suppliers": "kestrel corporation",
+      "part_number": "SEA-P-0292",
+      "supplier_id": "SEA-SUP-002"
+    },
+    {
+      "name_in_lead_times": "Pellworth Corporation",
+      "name_in_suppliers": "Pellworth Corporation ",
+      "part_number": "SEA-P-0293",
+      "supplier_id": "SEA-SUP-018"
+    },
+    {
+      "name_in_lead_times": "Lindholm  Works",
+      "name_in_suppliers": "Lindholm Works",
+      "part_number": "SEA-P-0294",
+      "supplier_id": "SEA-SUP-007"
+    },
+    {
+      "name_in_lead_times": "lindholm works",
+      "name_in_suppliers": "Lindholm Works",
+      "part_number": "SEA-P-0295",
+      "supplier_id": "SEA-SUP-007"
+    }
+  ],
+  "intents": {
+    "SEA-FG-00": [
+      "on_hand_genuine_zero",
+      "tooling_unknown"
+    ],
+    "SEA-P-0000": [
+      "make_with_suppliers",
+      "make_with_suppliers_missing_lead_time"
+    ],
+    "SEA-P-0003": [
+      "make_with_suppliers",
+      "on_hand_unknown"
+    ],
+    "SEA-P-0006": [
+      "tooling_unknown"
+    ],
+    "SEA-P-0008": [
+      "tooling_unknown"
+    ],
+    "SEA-P-0015": [
+      "on_hand_genuine_zero"
+    ],
+    "SEA-P-0016": [
+      "on_hand_unknown"
+    ],
+    "SEA-P-0019": [
+      "tooling_unknown"
+    ],
+    "SEA-P-0021": [
+      "on_hand_genuine_zero"
+    ],
+    "SEA-P-0025": [
+      "on_hand_genuine_zero"
+    ],
+    "SEA-P-0027": [
+      "make_with_suppliers",
+      "tooling_unknown"
+    ],
+    "SEA-P-0036": [
+      "on_hand_unknown"
+    ],
+    "SEA-P-0037": [
+      "on_hand_unknown"
+    ],
+    "SEA-P-0039": [
+      "on_hand_genuine_zero"
+    ],
+    "SEA-P-0040": [
+      "make_with_suppliers"
+    ],
+    "SEA-P-0044": [
+      "on_hand_unknown"
+    ],
+    "SEA-P-0051": [
+      "on_hand_unknown"
+    ],
+    "SEA-P-0052": [
+      "on_hand_unknown"
+    ],
+    "SEA-P-0053": [
+      "on_hand_unknown"
+    ],
+    "SEA-P-0054": [
+      "tooling_unknown"
+    ],
+    "SEA-P-0058": [
+      "tooling_unknown"
+    ],
+    "SEA-P-0060": [
+      "on_hand_unknown"
+    ],
+    "SEA-P-0061": [
+      "tooling_unknown"
+    ],
+    "SEA-P-0064": [
+      "make_with_suppliers",
+      "tooling_unknown"
+    ],
+    "SEA-P-0069": [
+      "tooling_unknown"
+    ],
+    "SEA-P-0071": [
+      "on_hand_unknown"
+    ],
+    "SEA-P-0074": [
+      "tooling_unknown"
+    ],
+    "SEA-P-0076": [
+      "on_hand_unknown"
+    ],
+    "SEA-P-0078": [
+      "on_hand_unknown"
+    ],
+    "SEA-P-0080": [
+      "on_hand_genuine_zero"
+    ],
+    "SEA-P-0081": [
+      "on_hand_unknown"
+    ],
+    "SEA-P-0089": [
+      "tooling_unknown"
+    ],
+    "SEA-P-0092": [
+      "list_unverified"
+    ],
+    "SEA-P-0096": [
+      "hidden_single_source",
+      "tooling_unknown"
+    ],
+    "SEA-P-0098": [
+      "on_hand_unknown",
+      "list_unverified"
+    ],
+    "SEA-P-0100": [
+      "on_hand_unknown"
+    ],
+    "SEA-P-0101": [
+      "list_unverified"
+    ],
+    "SEA-P-0105": [
+      "on_hand_unknown"
+    ],
+    "SEA-P-0107": [
+      "tooling_unknown"
+    ],
+    "SEA-P-0116": [
+      "list_unverified"
+    ],
+    "SEA-P-0117": [
+      "list_unverified"
+    ],
+    "SEA-P-0118": [
+      "on_hand_unknown"
+    ],
+    "SEA-P-0121": [
+      "list_unverified"
+    ],
+    "SEA-P-0124": [
+      "duplicate_vendor_row",
+      "tooling_unknown",
+      "list_unverified"
+    ],
+    "SEA-P-0127": [
+      "tooling_unknown"
+    ],
+    "SEA-P-0129": [
+      "list_status_blank"
+    ],
+    "SEA-P-0130": [
+      "on_hand_genuine_zero"
+    ],
+    "SEA-P-0133": [
+      "list_unverified"
+    ],
+    "SEA-P-0134": [
+      "on_hand_unknown"
+    ],
+    "SEA-P-0136": [
+      "list_unverified"
+    ],
+    "SEA-P-0139": [
+      "on_hand_unknown"
+    ],
+    "SEA-P-0140": [
+      "hidden_single_source"
+    ],
+    "SEA-P-0142": [
+      "list_status_blank"
+    ],
+    "SEA-P-0145": [
+      "tooling_unknown"
+    ],
+    "SEA-P-0146": [
+      "on_hand_unknown"
+    ],
+    "SEA-P-0149": [
+      "on_hand_unknown"
+    ],
+    "SEA-P-0150": [
+      "list_unverified"
+    ],
+    "SEA-P-0151": [
+      "on_hand_unknown"
+    ],
+    "SEA-P-0152": [
+      "on_hand_genuine_zero"
+    ],
+    "SEA-P-0155": [
+      "on_hand_unknown"
+    ],
+    "SEA-P-0159": [
+      "on_hand_unknown"
+    ],
+    "SEA-P-0164": [
+      "supplier_list_unknown",
+      "on_hand_unknown"
+    ],
+    "SEA-P-0165": [
+      "on_hand_unknown",
+      "list_status_blank"
+    ],
+    "SEA-P-0166": [
+      "duplicate_vendor_row",
+      "list_unverified"
+    ],
+    "SEA-P-0167": [
+      "tooling_unknown"
+    ],
+    "SEA-P-0169": [
+      "on_hand_unknown",
+      "list_status_blank"
+    ],
+    "SEA-P-0171": [
+      "list_unverified"
+    ],
+    "SEA-P-0173": [
+      "on_hand_genuine_zero",
+      "list_unverified"
+    ],
+    "SEA-P-0174": [
+      "tooling_unknown"
+    ],
+    "SEA-P-0175": [
+      "list_unverified"
+    ],
+    "SEA-P-0177": [
+      "tooling_unknown"
+    ],
+    "SEA-P-0178": [
+      "on_hand_unknown",
+      "list_status_blank"
+    ],
+    "SEA-P-0181": [
+      "no_qualified_supplier"
+    ],
+    "SEA-P-0185": [
+      "on_hand_unknown"
+    ],
+    "SEA-P-0186": [
+      "list_status_blank"
+    ],
+    "SEA-P-0189": [
+      "on_hand_unknown"
+    ],
+    "SEA-P-0191": [
+      "on_hand_genuine_zero",
+      "tooling_unknown",
+      "list_status_blank"
+    ],
+    "SEA-P-0192": [
+      "list_unverified"
+    ],
+    "SEA-P-0193": [
+      "on_hand_unknown"
+    ],
+    "SEA-P-0196": [
+      "multi_source_no_lead_times",
+      "list_status_blank"
+    ],
+    "SEA-P-0199": [
+      "on_hand_unknown"
+    ],
+    "SEA-P-0203": [
+      "tooling_unknown"
+    ],
+    "SEA-P-0205": [
+      "on_hand_unknown"
+    ],
+    "SEA-P-0208": [
+      "on_hand_unknown"
+    ],
+    "SEA-P-0209": [
+      "list_unverified"
+    ],
+    "SEA-P-0210": [
+      "list_unverified"
+    ],
+    "SEA-P-0214": [
+      "tooling_unknown"
+    ],
+    "SEA-P-0216": [
+      "list_unverified"
+    ],
+    "SEA-P-0217": [
+      "list_status_blank"
+    ],
+    "SEA-P-0220": [
+      "tooling_unknown"
+    ],
+    "SEA-P-0221": [
+      "list_status_blank"
+    ],
+    "SEA-P-0223": [
+      "supplier_list_unknown"
+    ],
+    "SEA-P-0224": [
+      "on_hand_unknown",
+      "tooling_unknown"
+    ],
+    "SEA-P-0225": [
+      "duplicate_vendor_row",
+      "list_unverified"
+    ],
+    "SEA-P-0226": [
+      "on_hand_unknown",
+      "list_status_blank"
+    ],
+    "SEA-P-0227": [
+      "tooling_unknown",
+      "list_status_blank"
+    ],
+    "SEA-P-0228": [
+      "on_hand_unknown"
+    ],
+    "SEA-P-0229": [
+      "tooling_unknown"
+    ],
+    "SEA-P-0230": [
+      "on_hand_unknown"
+    ],
+    "SEA-P-0231": [
+      "multi_source_no_lead_times",
+      "on_hand_unknown"
+    ],
+    "SEA-P-0233": [
+      "list_unverified"
+    ],
+    "SEA-P-0234": [
+      "list_unverified"
+    ],
+    "SEA-P-0235": [
+      "tooling_unknown",
+      "list_unverified"
+    ],
+    "SEA-P-0236": [
+      "list_status_blank"
+    ],
+    "SEA-P-0238": [
+      "on_hand_genuine_zero"
+    ],
+    "SEA-P-0239": [
+      "list_unverified"
+    ],
+    "SEA-P-0240": [
+      "tooling_unknown"
+    ],
+    "SEA-P-0241": [
+      "tooling_unknown"
+    ],
+    "SEA-P-0243": [
+      "list_unverified"
+    ],
+    "SEA-P-0245": [
+      "on_hand_unknown",
+      "list_unverified"
+    ],
+    "SEA-P-0247": [
+      "supplier_list_unknown"
+    ],
+    "SEA-P-0249": [
+      "on_hand_genuine_zero"
+    ],
+    "SEA-P-0253": [
+      "on_hand_unknown",
+      "list_unverified"
+    ],
+    "SEA-P-0255": [
+      "tooling_unknown"
+    ],
+    "SEA-P-0256": [
+      "hidden_single_source",
+      "list_unverified"
+    ],
+    "SEA-P-0257": [
+      "list_unverified"
+    ],
+    "SEA-P-0261": [
+      "on_hand_genuine_zero",
+      "tooling_unknown"
+    ],
+    "SEA-P-0264": [
+      "hidden_single_source",
+      "list_status_blank"
+    ],
+    "SEA-P-0265": [
+      "hidden_single_source",
+      "on_hand_unknown"
+    ],
+    "SEA-P-0266": [
+      "tooling_unknown",
+      "list_status_blank"
+    ],
+    "SEA-P-0267": [
+      "on_hand_unknown",
+      "list_unverified"
+    ],
+    "SEA-P-0269": [
+      "duplicate_vendor_row"
+    ],
+    "SEA-P-0270": [
+      "on_hand_unknown"
+    ],
+    "SEA-P-0273": [
+      "hidden_single_source",
+      "list_status_blank"
+    ],
+    "SEA-P-0275": [
+      "list_unverified"
+    ],
+    "SEA-P-0276": [
+      "list_unverified"
+    ],
+    "SEA-P-0279": [
+      "list_status_blank"
+    ],
+    "SEA-P-0280": [
+      "no_qualified_supplier"
+    ],
+    "SEA-P-0283": [
+      "on_hand_unknown",
+      "tooling_unknown"
+    ],
+    "SEA-P-0284": [
+      "on_hand_unknown"
+    ],
+    "SEA-P-0287": [
+      "tooling_unknown"
+    ],
+    "SEA-P-0288": [
+      "on_hand_unknown"
+    ],
+    "SEA-P-0292": [
+      "links_confusable_pair"
+    ],
+    "SEA-P-0294": [
+      "on_hand_unknown",
+      "list_unverified"
+    ]
+  },
+  "omitted_lead_times": [
+    {
+      "part_number": "SEA-P-0090",
+      "supplier_id": "SEA-SUP-018"
+    },
+    {
+      "part_number": "SEA-P-0101",
+      "supplier_id": "SEA-SUP-003"
+    },
+    {
+      "part_number": "SEA-P-0105",
+      "supplier_id": "SEA-SUP-007"
+    },
+    {
+      "part_number": "SEA-P-0106",
+      "supplier_id": "SEA-SUP-011"
+    },
+    {
+      "part_number": "SEA-P-0107",
+      "supplier_id": "SEA-SUP-018"
+    },
+    {
+      "part_number": "SEA-P-0108",
+      "supplier_id": "SEA-SUP-001"
+    },
+    {
+      "part_number": "SEA-P-0108",
+      "supplier_id": "SEA-SUP-023"
+    },
+    {
+      "part_number": "SEA-P-0111",
+      "supplier_id": "SEA-SUP-004"
+    },
+    {
+      "part_number": "SEA-P-0113",
+      "supplier_id": "SEA-SUP-020"
+    },
+    {
+      "part_number": "SEA-P-0120",
+      "supplier_id": "SEA-SUP-010"
+    },
+    {
+      "part_number": "SEA-P-0123",
+      "supplier_id": "SEA-SUP-013"
+    },
+    {
+      "part_number": "SEA-P-0125",
+      "supplier_id": "SEA-SUP-003"
+    },
+    {
+      "part_number": "SEA-P-0133",
+      "supplier_id": "SEA-SUP-019"
+    },
+    {
+      "part_number": "SEA-P-0146",
+      "supplier_id": "SEA-SUP-010"
+    },
+    {
+      "part_number": "SEA-P-0147",
+      "supplier_id": "SEA-SUP-020"
+    },
+    {
+      "part_number": "SEA-P-0148",
+      "supplier_id": "SEA-SUP-023"
+    },
+    {
+      "part_number": "SEA-P-0149",
+      "supplier_id": "SEA-SUP-006"
+    },
+    {
+      "part_number": "SEA-P-0154",
+      "supplier_id": "SEA-SUP-002"
+    },
+    {
+      "part_number": "SEA-P-0161",
+      "supplier_id": "SEA-SUP-007"
+    },
+    {
+      "part_number": "SEA-P-0165",
+      "supplier_id": "SEA-SUP-022"
+    },
+    {
+      "part_number": "SEA-P-0167",
+      "supplier_id": "SEA-SUP-002"
+    },
+    {
+      "part_number": "SEA-P-0174",
+      "supplier_id": "SEA-SUP-016"
+    },
+    {
+      "part_number": "SEA-P-0179",
+      "supplier_id": "SEA-SUP-013"
+    },
+    {
+      "part_number": "SEA-P-0192",
+      "supplier_id": "SEA-SUP-017"
+    },
+    {
+      "part_number": "SEA-P-0200",
+      "supplier_id": "SEA-SUP-014"
+    },
+    {
+      "part_number": "SEA-P-0211",
+      "supplier_id": "SEA-SUP-007"
+    },
+    {
+      "part_number": "SEA-P-0213",
+      "supplier_id": "SEA-SUP-001"
+    },
+    {
+      "part_number": "SEA-P-0216",
+      "supplier_id": "SEA-SUP-017"
+    },
+    {
+      "part_number": "SEA-P-0222",
+      "supplier_id": "SEA-SUP-021"
+    },
+    {
+      "part_number": "SEA-P-0226",
+      "supplier_id": "SEA-SUP-000"
+    },
+    {
+      "part_number": "SEA-P-0228",
+      "supplier_id": "SEA-SUP-007"
+    },
+    {
+      "part_number": "SEA-P-0232",
+      "supplier_id": "SEA-SUP-022"
+    },
+    {
+      "part_number": "SEA-P-0249",
+      "supplier_id": "SEA-SUP-007"
+    },
+    {
+      "part_number": "SEA-P-0253",
+      "supplier_id": "SEA-SUP-005"
+    },
+    {
+      "part_number": "SEA-P-0258",
+      "supplier_id": "SEA-SUP-023"
+    },
+    {
+      "part_number": "SEA-P-0262",
+      "supplier_id": "SEA-SUP-002"
+    },
+    {
+      "part_number": "SEA-P-0262",
+      "supplier_id": "SEA-SUP-012"
+    },
+    {
+      "part_number": "SEA-P-0279",
+      "supplier_id": "SEA-SUP-018"
+    },
+    {
+      "part_number": "SEA-P-0279",
+      "supplier_id": "SEA-SUP-021"
+    },
+    {
+      "part_number": "SEA-P-0281",
+      "supplier_id": "SEA-SUP-002"
+    },
+    {
+      "part_number": "SEA-P-0291",
+      "supplier_id": "SEA-SUP-014"
+    },
+    {
+      "part_number": "SEA-P-0295",
+      "supplier_id": "SEA-SUP-016"
+    },
+    {
+      "part_number": "SEA-P-0264",
+      "supplier_id": "SEA-SUP-014"
+    },
+    {
+      "part_number": "SEA-P-0256",
+      "supplier_id": "SEA-SUP-007"
+    },
+    {
+      "part_number": "SEA-P-0256",
+      "supplier_id": "SEA-SUP-009"
+    },
+    {
+      "part_number": "SEA-P-0096",
+      "supplier_id": "SEA-SUP-019"
+    },
+    {
+      "part_number": "SEA-P-0096",
+      "supplier_id": "SEA-SUP-022"
+    },
+    {
+      "part_number": "SEA-P-0265",
+      "supplier_id": "SEA-SUP-008"
+    },
+    {
+      "part_number": "SEA-P-0140",
+      "supplier_id": "SEA-SUP-015"
+    },
+    {
+      "part_number": "SEA-P-0140",
+      "supplier_id": "SEA-SUP-014"
+    },
+    {
+      "part_number": "SEA-P-0273",
+      "supplier_id": "SEA-SUP-002"
+    },
+    {
+      "part_number": "SEA-P-0273",
+      "supplier_id": "SEA-SUP-000"
+    },
+    {
+      "part_number": "SEA-P-0000",
+      "supplier_id": "SEA-SUP-002"
+    },
+    {
+      "part_number": "SEA-P-0231",
+      "supplier_id": "SEA-SUP-012"
+    },
+    {
+      "part_number": "SEA-P-0231",
+      "supplier_id": "SEA-SUP-002"
+    },
+    {
+      "part_number": "SEA-P-0196",
+      "supplier_id": "SEA-SUP-005"
+    },
+    {
+      "part_number": "SEA-P-0196",
+      "supplier_id": "SEA-SUP-013"
+    }
+  ],
+  "seed": 42,
+  "supplier_variants": {
+    "BRAXTON INDUSTRIES": "SEA-SUP-014",
+    "Braxton  Industries": "SEA-SUP-014",
+    "Braxton Inds": "SEA-SUP-014",
+    "Braxton Inds.": "SEA-SUP-014",
+    "Braxton Industries": "SEA-SUP-014",
+    "Braxton Industries ": "SEA-SUP-014",
+    "CALDER CORPORATION": "SEA-SUP-008",
+    "Calder Corporation": "SEA-SUP-008",
+    "Calder Corporation ": "SEA-SUP-008",
+    "DEEPWATER CORPORATION": "SEA-SUP-012",
+    "Deepwater  Corporation": "SEA-SUP-012",
+    "Deepwater Corp.": "SEA-SUP-012",
+    "Deepwater Corporation": "SEA-SUP-012",
+    "Deepwater Corporation ": "SEA-SUP-012",
+    "EASTVALE INDUSTRIES": "SEA-SUP-011",
+    "Eastvale  Industries": "SEA-SUP-011",
+    "Eastvale Inds": "SEA-SUP-011",
+    "Eastvale Inds.": "SEA-SUP-011",
+    "Eastvale Industries": "SEA-SUP-011",
+    "Eastvale Industries ": "SEA-SUP-011",
+    "FAIRMONT INDUSTRIES": "SEA-SUP-021",
+    "Fairmont  Industries": "SEA-SUP-021",
+    "Fairmont Inds": "SEA-SUP-021",
+    "Fairmont Inds.": "SEA-SUP-021",
+    "Fairmont Industries": "SEA-SUP-021",
+    "GLENMOOR CORPORATION": "SEA-SUP-020",
+    "Glenmoor  Corporation": "SEA-SUP-020",
+    "Glenmoor Corporation": "SEA-SUP-020",
+    "Glenmoor Corporation ": "SEA-SUP-020",
+    "HARROWGATE WORKS": "SEA-SUP-004",
+    "Harrowgate  Works": "SEA-SUP-004",
+    "Harrowgate Wks": "SEA-SUP-004",
+    "Harrowgate Wks.": "SEA-SUP-004",
+    "Harrowgate Works": "SEA-SUP-004",
+    "Harrowgate Works ": "SEA-SUP-004",
+    "Ironside  Manufacturing": "SEA-SUP-017",
+    "Ironside Manufacturing": "SEA-SUP-017",
+    "Ironside Manufacturing ": "SEA-SUP-017",
+    "Ironside Mfg": "SEA-SUP-017",
+    "Ironside Mfg.": "SEA-SUP-017",
+    "Jasper  Works": "SEA-SUP-015",
+    "Jasper Wks": "SEA-SUP-015",
+    "Jasper Wks.": "SEA-SUP-015",
+    "Jasper Works": "SEA-SUP-015",
+    "Jasper Works ": "SEA-SUP-015",
+    "KESTREL CORPORATION": "SEA-SUP-002",
+    "Kestrel  Corporation": "SEA-SUP-002",
+    "Kestrel Corp": "SEA-SUP-002",
+    "Kestrel Corp.": "SEA-SUP-002",
+    "Kestrel Corporation": "SEA-SUP-002",
+    "Kestrel Corporation ": "SEA-SUP-002",
+    "Lindholm  Works": "SEA-SUP-007",
+    "Lindholm Wks": "SEA-SUP-007",
+    "Lindholm Wks.": "SEA-SUP-007",
+    "Lindholm Works": "SEA-SUP-007",
+    "MARROW CORPORATION": "SEA-SUP-010",
+    "Marrow  Corporation": "SEA-SUP-010",
+    "Marrow Corporation": "SEA-SUP-010",
+    "Marrow Corporation ": "SEA-SUP-010",
+    "NORBURY CORPORATION": "SEA-SUP-013",
+    "NORTHWIND CORPORATION": "SEA-SUP-006",
+    "Norbury  Corporation": "SEA-SUP-013",
+    "Norbury Corp.": "SEA-SUP-013",
+    "Norbury Corporation": "SEA-SUP-013",
+    "Norbury Corporation ": "SEA-SUP-013",
+    "Northwind  Corporation": "SEA-SUP-006",
+    "Northwind Corp.": "SEA-SUP-006",
+    "Northwind Corporation": "SEA-SUP-006",
+    "Oakhaven  Manufacturing": "SEA-SUP-003",
+    "Oakhaven Manufacturing": "SEA-SUP-003",
+    "Oakhaven Manufacturing ": "SEA-SUP-003",
+    "Oakhaven Mfg": "SEA-SUP-003",
+    "Oakhaven Mfg.": "SEA-SUP-003",
+    "PELLWORTH CORPORATION": "SEA-SUP-018",
+    "Pellworth  Corporation": "SEA-SUP-018",
+    "Pellworth Corp.": "SEA-SUP-018",
+    "Pellworth Corporation": "SEA-SUP-018",
+    "Pellworth Corporation ": "SEA-SUP-018",
+    "QUILLON MANUFACTURING": "SEA-SUP-016",
+    "Quillon  Manufacturing": "SEA-SUP-016",
+    "Quillon Manufacturing": "SEA-SUP-016",
+    "Quillon Mfg": "SEA-SUP-016",
+    "Quillon Mfg.": "SEA-SUP-016",
+    "RAVENSFORD CORPORATION": "SEA-SUP-023",
+    "Ravensford  Corporation": "SEA-SUP-023",
+    "Ravensford Corp": "SEA-SUP-023",
+    "Ravensford Corp.": "SEA-SUP-023",
+    "Ravensford Corporation": "SEA-SUP-023",
+    "Stanmore Manufacturing": "SEA-SUP-005",
+    "Stanmore Manufacturing ": "SEA-SUP-005",
+    "Stanmore Mfg": "SEA-SUP-005",
+    "THACKERY INDUSTRIES": "SEA-SUP-001",
+    "Thackery  Industries": "SEA-SUP-001",
+    "Thackery Inds": "SEA-SUP-001",
+    "Thackery Inds.": "SEA-SUP-001",
+    "Thackery Industries": "SEA-SUP-001",
+    "Thackery Industries ": "SEA-SUP-001",
+    "Underhill Inds": "SEA-SUP-019",
+    "Underhill Inds.": "SEA-SUP-019",
+    "Underhill Industries": "SEA-SUP-019",
+    "Underhill Industries ": "SEA-SUP-019",
+    "VANTAGE WORKS": "SEA-SUP-009",
+    "Vantage  Works": "SEA-SUP-009",
+    "Vantage Wks.": "SEA-SUP-009",
+    "Vantage Works": "SEA-SUP-009",
+    "Vantage Works ": "SEA-SUP-009",
+    "WESTMERE CORPORATION": "SEA-SUP-022",
+    "Westmere  Corporation": "SEA-SUP-022",
+    "Westmere Corp": "SEA-SUP-022",
+    "Westmere Corp.": "SEA-SUP-022",
+    "Westmere Corporation": "SEA-SUP-022",
+    "Westmere Corporation ": "SEA-SUP-022",
+    "YARROW CORPORATION": "SEA-SUP-000",
+    "Yarrow  Corporation": "SEA-SUP-000",
+    "Yarrow Corp": "SEA-SUP-000",
+    "Yarrow Corporation": "SEA-SUP-000",
+    "Yarrow Corporation ": "SEA-SUP-000",
+    "Yarrow Holdings": "SEA-SUP-000-B",
+    "braxton industries": "SEA-SUP-014",
+    "calder corporation": "SEA-SUP-008",
+    "deepwater corporation": "SEA-SUP-012",
+    "eastvale industries": "SEA-SUP-011",
+    "fairmont industries": "SEA-SUP-021",
+    "glenmoor corporation": "SEA-SUP-020",
+    "harrowgate works": "SEA-SUP-004",
+    "jasper works": "SEA-SUP-015",
+    "kestrel corporation": "SEA-SUP-002",
+    "lindholm works": "SEA-SUP-007",
+    "marrow corporation": "SEA-SUP-010",
+    "norbury corporation": "SEA-SUP-013",
+    "northwind corporation": "SEA-SUP-006",
+    "pellworth corporation": "SEA-SUP-018",
+    "ravensford corporation": "SEA-SUP-023",
+    "stanmore manufacturing": "SEA-SUP-005",
+    "underhill industries": "SEA-SUP-019",
+    "vantage works": "SEA-SUP-009",
+    "westmere corporation": "SEA-SUP-022",
+    "yarrow corporation": "SEA-SUP-000"
+  },
+  "verdicts": {
+    "SEA-FG-00": "made_in_house",
+    "SEA-FG-01": "made_in_house",
+    "SEA-FG-02": "made_in_house",
+    "SEA-FG-03": "made_in_house",
+    "SEA-P-0000": "readings_disagree",
+    "SEA-P-0001": "made_in_house",
+    "SEA-P-0002": "made_in_house",
+    "SEA-P-0003": "multi_source",
+    "SEA-P-0004": "made_in_house",
+    "SEA-P-0005": "made_in_house",
+    "SEA-P-0006": "made_in_house",
+    "SEA-P-0007": "made_in_house",
+    "SEA-P-0008": "made_in_house",
+    "SEA-P-0009": "made_in_house",
+    "SEA-P-0010": "made_in_house",
+    "SEA-P-0011": "made_in_house",
+    "SEA-P-0012": "made_in_house",
+    "SEA-P-0013": "made_in_house",
+    "SEA-P-0014": "made_in_house",
+    "SEA-P-0015": "made_in_house",
+    "SEA-P-0016": "made_in_house",
+    "SEA-P-0017": "made_in_house",
+    "SEA-P-0018": "made_in_house",
+    "SEA-P-0019": "made_in_house",
+    "SEA-P-0020": "made_in_house",
+    "SEA-P-0021": "made_in_house",
+    "SEA-P-0022": "made_in_house",
+    "SEA-P-0023": "made_in_house",
+    "SEA-P-0024": "made_in_house",
+    "SEA-P-0025": "made_in_house",
+    "SEA-P-0026": "made_in_house",
+    "SEA-P-0027": "readings_disagree",
+    "SEA-P-0028": "made_in_house",
+    "SEA-P-0029": "made_in_house",
+    "SEA-P-0030": "made_in_house",
+    "SEA-P-0031": "made_in_house",
+    "SEA-P-0032": "made_in_house",
+    "SEA-P-0033": "made_in_house",
+    "SEA-P-0034": "made_in_house",
+    "SEA-P-0035": "made_in_house",
+    "SEA-P-0036": "made_in_house",
+    "SEA-P-0037": "made_in_house",
+    "SEA-P-0038": "made_in_house",
+    "SEA-P-0039": "made_in_house",
+    "SEA-P-0040": "readings_disagree",
+    "SEA-P-0041": "made_in_house",
+    "SEA-P-0042": "made_in_house",
+    "SEA-P-0043": "made_in_house",
+    "SEA-P-0044": "made_in_house",
+    "SEA-P-0045": "made_in_house",
+    "SEA-P-0046": "made_in_house",
+    "SEA-P-0047": "made_in_house",
+    "SEA-P-0048": "made_in_house",
+    "SEA-P-0049": "made_in_house",
+    "SEA-P-0050": "made_in_house",
+    "SEA-P-0051": "made_in_house",
+    "SEA-P-0052": "made_in_house",
+    "SEA-P-0053": "made_in_house",
+    "SEA-P-0054": "made_in_house",
+    "SEA-P-0055": "made_in_house",
+    "SEA-P-0056": "made_in_house",
+    "SEA-P-0057": "made_in_house",
+    "SEA-P-0058": "made_in_house",
+    "SEA-P-0059": "made_in_house",
+    "SEA-P-0060": "made_in_house",
+    "SEA-P-0061": "made_in_house",
+    "SEA-P-0062": "made_in_house",
+    "SEA-P-0063": "made_in_house",
+    "SEA-P-0064": "readings_disagree",
+    "SEA-P-0065": "made_in_house",
+    "SEA-P-0066": "made_in_house",
+    "SEA-P-0067": "made_in_house",
+    "SEA-P-0068": "made_in_house",
+    "SEA-P-0069": "made_in_house",
+    "SEA-P-0070": "made_in_house",
+    "SEA-P-0071": "made_in_house",
+    "SEA-P-0072": "made_in_house",
+    "SEA-P-0073": "made_in_house",
+    "SEA-P-0074": "made_in_house",
+    "SEA-P-0075": "made_in_house",
+    "SEA-P-0076": "made_in_house",
+    "SEA-P-0077": "made_in_house",
+    "SEA-P-0078": "made_in_house",
+    "SEA-P-0079": "made_in_house",
+    "SEA-P-0080": "made_in_house",
+    "SEA-P-0081": "made_in_house",
+    "SEA-P-0082": "made_in_house",
+    "SEA-P-0083": "made_in_house",
+    "SEA-P-0084": "made_in_house",
+    "SEA-P-0085": "made_in_house",
+    "SEA-P-0086": "made_in_house",
+    "SEA-P-0087": "made_in_house",
+    "SEA-P-0088": "made_in_house",
+    "SEA-P-0089": "multi_source",
+    "SEA-P-0090": "multi_source",
+    "SEA-P-0091": "multi_source",
+    "SEA-P-0092": "multi_source",
+    "SEA-P-0093": "multi_source",
+    "SEA-P-0094": "multi_source",
+    "SEA-P-0095": "multi_source",
+    "SEA-P-0096": "hidden_single_source",
+    "SEA-P-0097": "multi_source",
+    "SEA-P-0098": "multi_source",
+    "SEA-P-0099": "multi_source",
+    "SEA-P-0100": "multi_source",
+    "SEA-P-0101": "hidden_single_source",
+    "SEA-P-0102": "multi_source",
+    "SEA-P-0103": "multi_source",
+    "SEA-P-0104": "multi_source",
+    "SEA-P-0105": "hidden_single_source",
+    "SEA-P-0106": "hidden_single_source",
+    "SEA-P-0107": "hidden_single_source",
+    "SEA-P-0108": "hidden_single_source",
+    "SEA-P-0109": "multi_source",
+    "SEA-P-0110": "multi_source",
+    "SEA-P-0111": "hidden_single_source",
+    "SEA-P-0112": "multi_source",
+    "SEA-P-0113": "hidden_single_source",
+    "SEA-P-0114": "single_source",
+    "SEA-P-0115": "multi_source",
+    "SEA-P-0116": "multi_source",
+    "SEA-P-0117": "supplier_list_unknown",
+    "SEA-P-0118": "multi_source",
+    "SEA-P-0119": "multi_source",
+    "SEA-P-0120": "single_source_no_lead_time",
+    "SEA-P-0121": "multi_source",
+    "SEA-P-0122": "single_source",
+    "SEA-P-0123": "hidden_single_source",
+    "SEA-P-0124": "supplier_list_unknown",
+    "SEA-P-0125": "hidden_single_source",
+    "SEA-P-0126": "multi_source",
+    "SEA-P-0127": "multi_source",
+    "SEA-P-0128": "multi_source",
+    "SEA-P-0129": "multi_source",
+    "SEA-P-0130": "single_source",
+    "SEA-P-0131": "multi_source",
+    "SEA-P-0132": "multi_source",
+    "SEA-P-0133": "hidden_single_source",
+    "SEA-P-0134": "multi_source",
+    "SEA-P-0135": "multi_source",
+    "SEA-P-0136": "multi_source",
+    "SEA-P-0137": "multi_source",
+    "SEA-P-0138": "multi_source",
+    "SEA-P-0139": "single_source",
+    "SEA-P-0140": "hidden_single_source",
+    "SEA-P-0141": "single_source",
+    "SEA-P-0142": "supplier_list_unknown",
+    "SEA-P-0143": "multi_source",
+    "SEA-P-0144": "single_source",
+    "SEA-P-0145": "multi_source",
+    "SEA-P-0146": "hidden_single_source",
+    "SEA-P-0147": "hidden_single_source",
+    "SEA-P-0148": "hidden_single_source",
+    "SEA-P-0149": "hidden_single_source",
+    "SEA-P-0150": "multi_source",
+    "SEA-P-0151": "multi_source",
+    "SEA-P-0152": "single_source",
+    "SEA-P-0153": "single_source",
+    "SEA-P-0154": "multi_source",
+    "SEA-P-0155": "single_source",
+    "SEA-P-0156": "multi_source",
+    "SEA-P-0157": "multi_source",
+    "SEA-P-0158": "single_source",
+    "SEA-P-0159": "single_source",
+    "SEA-P-0160": "multi_source",
+    "SEA-P-0161": "single_source_no_lead_time",
+    "SEA-P-0162": "multi_source",
+    "SEA-P-0163": "single_source",
+    "SEA-P-0164": "supplier_list_unknown",
+    "SEA-P-0165": "supplier_list_unknown",
+    "SEA-P-0166": "supplier_list_unknown",
+    "SEA-P-0167": "hidden_single_source",
+    "SEA-P-0168": "multi_source",
+    "SEA-P-0169": "multi_source",
+    "SEA-P-0170": "multi_source",
+    "SEA-P-0171": "supplier_list_unknown",
+    "SEA-P-0172": "multi_source",
+    "SEA-P-0173": "multi_source",
+    "SEA-P-0174": "hidden_single_source",
+    "SEA-P-0175": "multi_source",
+    "SEA-P-0176": "multi_source",
+    "SEA-P-0177": "multi_source",
+    "SEA-P-0178": "multi_source",
+    "SEA-P-0179": "single_source_no_lead_time",
+    "SEA-P-0180": "multi_source",
+    "SEA-P-0181": "no_qualified_supplier",
+    "SEA-P-0182": "single_source",
+    "SEA-P-0183": "multi_source",
+    "SEA-P-0184": "multi_source",
+    "SEA-P-0185": "multi_source",
+    "SEA-P-0186": "multi_source",
+    "SEA-P-0187": "multi_source",
+    "SEA-P-0188": "multi_source",
+    "SEA-P-0189": "multi_source",
+    "SEA-P-0190": "single_source",
+    "SEA-P-0191": "multi_source",
+    "SEA-P-0192": "hidden_single_source",
+    "SEA-P-0193": "multi_source",
+    "SEA-P-0194": "multi_source",
+    "SEA-P-0195": "multi_source",
+    "SEA-P-0196": "multi_source_no_lead_times",
+    "SEA-P-0197": "single_source",
+    "SEA-P-0198": "single_source",
+    "SEA-P-0199": "multi_source",
+    "SEA-P-0200": "multi_source",
+    "SEA-P-0201": "multi_source",
+    "SEA-P-0202": "multi_source",
+    "SEA-P-0203": "multi_source",
+    "SEA-P-0204": "multi_source",
+    "SEA-P-0205": "multi_source",
+    "SEA-P-0206": "multi_source",
+    "SEA-P-0207": "multi_source",
+    "SEA-P-0208": "single_source",
+    "SEA-P-0209": "multi_source",
+    "SEA-P-0210": "multi_source",
+    "SEA-P-0211": "multi_source",
+    "SEA-P-0212": "multi_source",
+    "SEA-P-0213": "hidden_single_source",
+    "SEA-P-0214": "multi_source",
+    "SEA-P-0215": "single_source",
+    "SEA-P-0216": "multi_source",
+    "SEA-P-0217": "supplier_list_unknown",
+    "SEA-P-0218": "multi_source",
+    "SEA-P-0219": "multi_source",
+    "SEA-P-0220": "single_source",
+    "SEA-P-0221": "supplier_list_unknown",
+    "SEA-P-0222": "hidden_single_source",
+    "SEA-P-0223": "supplier_list_unknown",
+    "SEA-P-0224": "single_source",
+    "SEA-P-0225": "supplier_list_unknown",
+    "SEA-P-0226": "hidden_single_source",
+    "SEA-P-0227": "supplier_list_unknown",
+    "SEA-P-0228": "multi_source",
+    "SEA-P-0229": "single_source",
+    "SEA-P-0230": "multi_source",
+    "SEA-P-0231": "multi_source_no_lead_times",
+    "SEA-P-0232": "hidden_single_source",
+    "SEA-P-0233": "multi_source",
+    "SEA-P-0234": "multi_source",
+    "SEA-P-0235": "multi_source",
+    "SEA-P-0236": "supplier_list_unknown",
+    "SEA-P-0237": "multi_source",
+    "SEA-P-0238": "single_source",
+    "SEA-P-0239": "supplier_list_unknown",
+    "SEA-P-0240": "multi_source",
+    "SEA-P-0241": "multi_source",
+    "SEA-P-0242": "multi_source",
+    "SEA-P-0243": "multi_source",
+    "SEA-P-0244": "multi_source",
+    "SEA-P-0245": "multi_source",
+    "SEA-P-0246": "multi_source",
+    "SEA-P-0247": "supplier_list_unknown",
+    "SEA-P-0248": "multi_source",
+    "SEA-P-0249": "hidden_single_source",
+    "SEA-P-0250": "multi_source",
+    "SEA-P-0251": "single_source",
+    "SEA-P-0252": "multi_source",
+    "SEA-P-0253": "hidden_single_source",
+    "SEA-P-0254": "multi_source",
+    "SEA-P-0255": "multi_source",
+    "SEA-P-0256": "hidden_single_source",
+    "SEA-P-0257": "multi_source",
+    "SEA-P-0258": "single_source_no_lead_time",
+    "SEA-P-0259": "single_source",
+    "SEA-P-0260": "multi_source",
+    "SEA-P-0261": "multi_source",
+    "SEA-P-0262": "hidden_single_source",
+    "SEA-P-0263": "multi_source",
+    "SEA-P-0264": "hidden_single_source",
+    "SEA-P-0265": "hidden_single_source",
+    "SEA-P-0266": "multi_source",
+    "SEA-P-0267": "multi_source",
+    "SEA-P-0268": "multi_source",
+    "SEA-P-0269": "single_source",
+    "SEA-P-0270": "multi_source",
+    "SEA-P-0271": "multi_source",
+    "SEA-P-0272": "multi_source",
+    "SEA-P-0273": "hidden_single_source",
+    "SEA-P-0274": "multi_source",
+    "SEA-P-0275": "multi_source",
+    "SEA-P-0276": "supplier_list_unknown",
+    "SEA-P-0277": "multi_source",
+    "SEA-P-0278": "multi_source",
+    "SEA-P-0279": "hidden_single_source",
+    "SEA-P-0280": "no_qualified_supplier",
+    "SEA-P-0281": "multi_source",
+    "SEA-P-0282": "multi_source",
+    "SEA-P-0283": "single_source",
+    "SEA-P-0284": "multi_source",
+    "SEA-P-0285": "multi_source",
+    "SEA-P-0286": "single_source",
+    "SEA-P-0287": "single_source",
+    "SEA-P-0288": "single_source",
+    "SEA-P-0289": "multi_source",
+    "SEA-P-0290": "single_source",
+    "SEA-P-0291": "hidden_single_source",
+    "SEA-P-0292": "multi_source",
+    "SEA-P-0293": "multi_source",
+    "SEA-P-0294": "multi_source",
+    "SEA-P-0295": "hidden_single_source"
+  }
+}

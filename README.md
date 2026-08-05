@@ -18,6 +18,14 @@ illustrate machinery firing rather than report findings about a supply chain. A
 different seed moves all of them. The floors, the thresholds and the refusals are
 properties of the system; the counts are properties of one dataset.
 
+**Which figures are gated.** The floors in the section below are checked on every
+push and block a merge. Every count in this document is an illustrative snapshot
+at seed 42 and is **not gated**: asserting each one would turn a legitimate
+change into a red build, which is worse than the drift it would catch. The prose
+does drift, and has: an earlier revision carried a stale count of 84 for four
+commits. So the counts are audited against the pipeline by hand when they change,
+and the gate reports them under a heading that says it asserts nothing.
+
 ---
 
 ## The autonomy ladder
@@ -337,6 +345,22 @@ folklore.
 wording change a reviewable diff. The interface displays the renderer's output
 and assembles nothing of its own.
 
+**A frozen eval set with a stated limit.** `evals/` holds the inputs and the
+answer key, committed in one commit, covered by a SHA-256 manifest. The manifest
+**detects** an edit to a frozen file. It does not prevent one: a commit that
+rewrites a frozen file and its manifest entry together passes the check, because
+the check compares the set against its own record of itself. The control that
+closes that is branch protection requiring the gate to be green before a merge,
+which applies on a remote and **is not in place for this repository as it stands
+locally**. The harness prints the same limit every run, because a control whose
+shape nobody knows is worse than no control.
+
+**Three layers with different standing.** Correctness against the answer key and
+the behavioural invariants both gate. The regression snapshot does not, and is
+never called a floor: it is produced by the system under test, so it tests only
+that the system agrees with itself. A number the system produced cannot also be
+the standard it is judged against.
+
 **A corrections log.** `docs/BRIEF.md` records every defect found in this
 project, because the pattern turned out to be more useful than any single entry.
 The recurring failure here is not wrong code. It is a test that passes while
@@ -356,9 +380,15 @@ has to distinguish a guard from a breach.
 python -m venv venv && source venv/bin/activate
 pip install -e ".[dev]"
 python -m src.generate_data --seed 42
-pytest -q
+python eval_harness.py          # the ship gate: tests, manifest, floors
 streamlit run review_app.py
 ```
+
+`python eval_harness.py` is the one command, run locally before every commit and
+again in CI on every push, so the two cannot diverge. It blocks on a failing
+test, a **passing** xfail, a manifest mismatch, or a missed floor. It does not
+block on the snapshot moving. `eval_build.py` rebuilds the frozen set and is run
+by hand, never by CI.
 
 `data/` is gitignored and regenerated from the seed above in under a second.
 `tests/fixtures/` is committed and frozen. The interface reads the five CSVs a
