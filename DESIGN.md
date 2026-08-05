@@ -493,6 +493,30 @@ initial, and file.
 
 > [TARGET] **Not implemented.** The banned-widget source scan ships. None of the property assertions below exist; the tests that do exist check notation, which is how the Color defect survived.
 
+**Where a contract can be a construction-time raise instead of a test, make it
+one.** A guard that runs when the value is built beats a guard that runs when CI
+does, for three reasons a test cannot match:
+
+- **A stub cannot satisfy it.** There is nothing to define to make it pass; the
+  wrong value simply fails to exist.
+- **It cannot be deleted to make the build green.** Removing a raise breaks the
+  code that depends on it, which is loud. Removing a test is quiet and is what a
+  red build teaches somebody to do.
+- **It covers paths no test enumerates.** It fires on every construction, including
+  the ones nobody thought to write a case for.
+
+`COMPLETENESS_STATES` is the example in this repo. `scoring.py:69` and `:159` raise
+on a state outside the tuple, so a `DimensionScore` carrying an unknown
+completeness cannot be built at all. The contract audit measured the difference:
+removing a member of that tuple failed 134 tests without a single test naming the
+tuple, because the guard runs everywhere a score is constructed. The two contracts
+that had nothing (`ENVELOPE_FIELDS`, the reason-code vocabulary) are both plain
+data with no constructor to guard, which is exactly why they needed hand-written
+pins instead.
+
+The rest of this section is for properties with no construction site to defend:
+perceptual measurements, source scans, and rendered output.
+
 The original defect was a test asserting a representation (equal HSL strings) and
 being wrong about the property (perceptual equality). Restating the same test in
 OKLCH would repeat the category error one colour space over. Assert properties,
