@@ -38,162 +38,172 @@ st.set_page_config(page_title="Supplier exposure review", layout="wide")
 # only on things a reviewer can act on.
 CONSOLE_CSS = """
 <style>
-  /* An operational console: dense rows, aligned columns, high information per
-     screen. Prose keeps a readable measure of its own; the CONTAINER does not,
-     because tables need the width and capping the container wastes a third of
-     the screen. */
-  .block-container {
-      max-width: 100%;
-      padding: 1.4rem 2.2rem 3rem 2.2rem;
-  }
+  /* Middle density. The earlier revision read as an essay and the one after it
+     read as congested; this sits between them. Where a region felt crowded the
+     fix was usually less on screen at once rather than more air, so the panels
+     carry the map and the sentences below carry the reading. */
+  .block-container { max-width: 100%; padding: 1.6rem 2.4rem 4rem 2.4rem; }
   html, body, [class*="css"] { -webkit-font-smoothing: antialiased; }
+
   h1 {
-      font-size: 1.3rem !important; font-weight: 600 !important;
-      letter-spacing: -0.012em; margin: 0.5rem 0 0.55rem 0 !important;
-      padding: 0 !important; color: #16181A; line-height: 1.3;
+      font-size: 1.34rem !important; font-weight: 600 !important;
+      letter-spacing: -0.01em; margin: 0.5rem 0 0.7rem 0 !important;
+      padding: 0 !important; color: #F0F2F4; line-height: 1.35;
   }
   h2 {
-      font-size: 0.92rem !important; font-weight: 600 !important;
-      text-transform: uppercase; letter-spacing: 0.06em; color: #4A4E52;
-      margin: 1.35rem 0 0.4rem 0 !important; padding: 0 !important;
-      line-height: 1.4;
+      font-size: 0.9rem !important; font-weight: 600 !important;
+      text-transform: uppercase; letter-spacing: 0.08em; color: #8FA0AD;
+      margin: 1.9rem 0 0.6rem 0 !important; padding: 0 !important;
+      line-height: 1.45;
   }
   h3, h4, h5, h6 {
-      font-size: 0.84rem !important; font-weight: 600 !important;
-      margin: 0.85rem 0 0.3rem 0 !important; padding: 0 !important;
-      line-height: 1.4;
+      font-size: 0.85rem !important; font-weight: 600 !important;
+      color: #C7CDD3;
+      margin: 1.1rem 0 0.4rem 0 !important; padding: 0 !important;
+      line-height: 1.45;
   }
   hr, [data-testid="stDivider"] hr {
-      border: none; border-top: 1px solid #E2E0D9; margin: 1rem 0 0.7rem 0;
+      border: none; border-top: 1px solid #2C3237; margin: 1.5rem 0 1.1rem 0;
   }
-  [data-testid="stVerticalBlock"] { gap: 0.5rem; }
-  p, li { line-height: 1.42; }
+  [data-testid="stVerticalBlock"] { gap: 0.7rem; }
+  p, li { line-height: 1.5; color: #D5DADE; }
+
   p.finding {
-      font-size: 0.94rem; line-height: 1.45; max-width: 96ch;
-      margin: 0.55rem 0 0.1rem 0; color: #16181A;
+      font-size: 0.94rem; line-height: 1.58; max-width: 104ch;
+      margin: 0.9rem 0 0.15rem 0; color: #E3E6E8;
   }
   p.note {
-      font-size: 0.82rem; line-height: 1.42; max-width: 96ch;
-      color: #4A4E52; margin: 0 0 0.3rem 0;
+      font-size: 0.83rem; line-height: 1.5; max-width: 104ch;
+      color: #9BA3AA; margin: 0 0 0.45rem 0;
   }
   .stCaption, [data-testid="stCaptionContainer"] p {
-      font-size: 0.76rem !important; color: #63676B !important;
-      line-height: 1.4; max-width: 100ch; margin-bottom: 0.35rem !important;
+      font-size: 0.78rem !important; color: #838C94 !important;
+      line-height: 1.5; max-width: 104ch; margin-bottom: 0.45rem !important;
   }
+  a, a:visited { color: #7FB2D9; }
+
   code, .identifier, .ids span {
       font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
                    monospace;
       font-size: 0.79rem; background: transparent !important;
-      color: #16181A !important; padding: 0 !important;
+      color: #C9D2D9 !important; padding: 0 !important;
   }
-  /* Membership as a dense block. Fourteen parts occupy three lines, not
-     fourteen, and the fixed width keeps them in columns. */
-  .ids { display: flex; flex-wrap: wrap; gap: 0 0.9rem; margin: 0.15rem 0 0 0; }
-  .ids span { display: inline-block; min-width: 6.4rem; line-height: 1.5; }
-  /* Coverage: counts right-aligned against their sentence, one glance. */
+  .ids { display: flex; flex-wrap: wrap; gap: 0.1rem 1.1rem; margin: 0.3rem 0 0 0; }
+  .ids span { display: inline-block; min-width: 6.6rem; line-height: 1.75; }
+
   table.tight { border-collapse: collapse; width: 100%; }
   table.tight td {
-      border-top: 1px solid #EDEBE4; padding: 0.22rem 0.7rem 0.22rem 0;
-      font-size: 0.82rem; line-height: 1.4; color: #4A4E52; vertical-align: top;
+      border-top: 1px solid #262B30; padding: 0.36rem 0.8rem 0.36rem 0;
+      font-size: 0.83rem; line-height: 1.5; color: #B6BEC5; vertical-align: top;
   }
+  table.tight tr:first-child td { border-top: none; }
   table.tight td.num {
       text-align: right; width: 4rem; font-variant-numeric: tabular-nums;
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      color: #16181A; white-space: nowrap;
+      color: #E3E6E8; white-space: nowrap;
   }
+
   [data-testid="stExpander"],
   [data-testid="stExpander"] details,
   [data-testid="stExpanderDetails"] {
       border: none !important; border-radius: 0 !important;
       box-shadow: none !important; background: transparent !important;
   }
-  [data-testid="stExpander"] { margin: 0 0 0.55rem 0; }
+  [data-testid="stExpander"] { margin: 0 0 0.8rem 0; }
   [data-testid="stExpander"] summary {
-      font-size: 0.78rem !important; color: #2C4A63 !important;
+      font-size: 0.79rem !important; color: #7FB2D9 !important;
       padding: 0 !important; width: max-content;
   }
-  [data-testid="stExpander"] summary p { font-size: 0.78rem !important; }
+  [data-testid="stExpander"] summary p { font-size: 0.79rem !important; }
   [data-testid="stExpanderDetails"] {
-      border-left: 1px solid #E2E0D9 !important;
-      padding: 0.3rem 0 0.1rem 0.9rem !important; margin-top: 0.35rem;
+      border-left: 1px solid #2C3237 !important;
+      padding: 0.5rem 0 0.2rem 1rem !important; margin-top: 0.5rem;
   }
+
   [data-testid="stDataFrame"], [data-testid="stTable"] {
-      border-radius: 0 !important; box-shadow: none !important;
+      border-radius: 2px !important; box-shadow: none !important;
   }
-  /* Grid cells are identifiers and counts, so they are set in monospace with
-     tabular figures: columns line up and a number reads as a number. This is
-     the console reference, and it is typography rather than encoding. */
   [data-testid="stDataFrame"] [role="gridcell"],
   [data-testid="stDataFrame"] [role="columnheader"] {
       font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
                    monospace !important;
-      font-size: 0.78rem !important;
-      font-variant-numeric: tabular-nums;
+      font-size: 0.78rem !important; font-variant-numeric: tabular-nums;
   }
+
   .stButton > button {
-      border-radius: 2px; border: 1px solid #2C4A63; background: transparent;
-      color: #2C4A63; font-size: 0.78rem; font-weight: 500;
-      padding: 0.18rem 0.8rem; box-shadow: none;
+      border-radius: 3px; border: 1px solid #3E5C74; background: #1E2933;
+      color: #9CC6E3; font-size: 0.79rem; font-weight: 500;
+      padding: 0.24rem 0.9rem; box-shadow: none;
   }
   .stButton > button:hover {
-      background: #2C4A63; color: #FCFCFA; border-color: #2C4A63;
+      background: #2A3B49; color: #D6E8F5; border-color: #7FB2D9;
   }
+
   section[data-testid="stSidebar"] {
-      background: #F2F1ED; border-right: 1px solid #E2E0D9; width: 15rem !important;
+      background: #101315; border-right: 1px solid #262B30;
+      width: 16rem !important;
   }
-  section[data-testid="stSidebar"] .block-container { padding: 1.6rem 1rem; }
-  /* Navigation reads as a deliberate list rather than a form control. */
+  section[data-testid="stSidebar"] .block-container { padding: 1.8rem 1.1rem; }
   section[data-testid="stSidebar"] [role="radiogroup"] { gap: 0 !important; }
   section[data-testid="stSidebar"] [role="radiogroup"] > label {
-      padding: 0.28rem 0 0.28rem 0.6rem; margin: 0;
+      padding: 0.5rem 0 0.5rem 0.7rem; margin: 0;
       border-left: 2px solid transparent;
   }
   section[data-testid="stSidebar"] [role="radiogroup"] > label:has(input:checked) {
-      border-left-color: #2C4A63; background: #E7E5DE;
+      border-left-color: #7FB2D9; background: #171C21;
   }
+  /* The radio control stays visible. An earlier revision hid it by position
+     and hid the label text instead, because Streamlit's internal element order
+     is not a contract. The left rule and the surface fill carry the selected
+     state; the control is left alone. */
   section[data-testid="stSidebar"] [role="radiogroup"] > label > div:first-child {
-      display: none;
+      transform: scale(0.8); opacity: 0.75;
   }
   section[data-testid="stSidebar"] [role="radiogroup"] p {
-      font-size: 0.82rem !important; line-height: 1.3;
+      font-size: 0.82rem !important; line-height: 1.45; color: #8B949C;
   }
-  /* ------------------------------------------------- panels and badges --
-     Bordered panels and surface fills carry STRUCTURE: where one group ends
-     and the next begins. Badges carry CATEGORY.
+  section[data-testid="stSidebar"] [role="radiogroup"] strong {
+      color: #DDE3E8; font-weight: 600;
+  }
 
-     EVERY BADGE IS THE SAME COLOUR AND THE SAME WEIGHT, and that is a
-     correctness constraint rather than a stylistic one. The moment one badge
-     is red and another green, the set has an order, and an ordered encoding
-     across incommensurable states is the composite this system refuses to
-     compute arriving through the palette. The label carries the meaning; the
-     chip only says "this is a label". The single exception is autonomy, where
-     filled versus outlined distinguishes two categories without ranking them,
-     mirroring the rule that an executed finding has nothing to click. */
+  /* ------------------------------------------------- panels and badges --
+     Surfaces and borders carry structure: where one group ends and the next
+     begins. Hue on a chip carries CATEGORY.
+
+     THE PALETTE IS NOMINAL BY ARITHMETIC. Every chip is drawn at one
+     saturation and one lightness and differs only in hue, and the hues are
+     confined to a cool band, because a set can be perfectly equal in weight
+     and still rank if one member is the colour of an alarm. There is no
+     red-amber-green here and no warm-to-cool progression: an ordered colour
+     encoding across incommensurable states is the composite this system
+     refuses to compute, arriving through the palette instead of the
+     arithmetic. Autonomy keeps a filled-versus-outlined distinction, which
+     separates two categories without ranking them. */
   .badge {
       display: inline-block; font-family: ui-monospace, SFMono-Regular, Menlo,
-      Consolas, monospace; font-size: 0.68rem; letter-spacing: 0.04em;
-      text-transform: uppercase; padding: 0.08rem 0.4rem; border-radius: 2px;
-      background: #E7E5DE; color: #4A4E52; border: 1px solid #DAD7CE;
-      margin-right: 0.3rem; vertical-align: 0.06rem; white-space: nowrap;
+      Consolas, monospace; font-size: 0.68rem; letter-spacing: 0.05em;
+      text-transform: uppercase; padding: 0.12rem 0.45rem; border-radius: 3px;
+      background: #242A30; color: #AAB4BC; border: 1px solid #333B42;
+      margin-right: 0.35rem; vertical-align: 0.06rem; white-space: nowrap;
   }
-  .badge.open { background: transparent; color: #2C4A63; border-color: #2C4A63; }
+  .badge.open {
+      background: transparent; color: #7FB2D9; border-color: #3E5C74;
+  }
   [data-testid="stVerticalBlockBorderWrapper"] {
-      border: 1px solid #E2E0D9 !important; border-radius: 3px;
-      background: #FFFFFF;
+      border: 1px solid #272D33 !important; border-radius: 4px;
+      background: #191D21;
   }
-  [data-testid="stVerticalBlockBorderWrapper"] > div { padding: 0.55rem 0.7rem; }
+  [data-testid="stVerticalBlockBorderWrapper"] > div { padding: 0.7rem 0.9rem; }
   .panelhead {
-      display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap;
-      border-bottom: 1px solid #EDEBE4; margin: -0.55rem -0.7rem 0.5rem -0.7rem;
-      padding: 0.4rem 0.7rem; background: #F7F6F2;
+      display: flex; align-items: baseline; gap: 0.55rem; flex-wrap: wrap;
+      border-bottom: 1px solid #272D33; margin: -0.7rem -0.9rem 0.7rem -0.9rem;
+      padding: 0.55rem 0.9rem; background: #1E242A;
+      border-radius: 4px 4px 0 0;
   }
-  .panelhead .title { font-size: 0.86rem; font-weight: 600; color: #16181A; }
-  .navglyph {
-      font-family: ui-monospace, Menlo, monospace; color: #8A8E92;
-      margin-right: 0.4rem;
-  }
+  .panelhead .title { font-size: 0.88rem; font-weight: 600; color: #E3E6E8; }
+
   [data-testid="stMetric"], [data-testid="stAlert"] {
-      border-radius: 0 !important; box-shadow: none !important;
+      border-radius: 3px !important; box-shadow: none !important;
   }
 </style>
 """
@@ -211,8 +221,11 @@ def identifier_block(items):
 
 
 def badge(text, open_style=False):
-    """A nominal chip. Same colour for every category, always."""
-    return f"<span class='badge{' open' if open_style else ''}'>{text}</span>"
+    """A nominal chip. Hue distinguishes the category; nothing ranks it."""
+    style = chip_colour(str(text))
+    return (f"<span class='badge{' open' if open_style else ''}'"
+            f"{f' style=\"{style}\"' if style and not open_style else ''}>"
+            f"{text}</span>")
 
 
 def panel_head(title, badges=()):
@@ -450,8 +463,41 @@ def render_confirm(surface, result):
         st.divider()
 
 
-# Nominal marks, one per surface. They distinguish, they do not rank.
-NAV_GLYPH = {view.EXPOSURE: "▤", view.FIND_OUT: "◷", view.CONFIRM: "◆"}
+# Short names for navigation, with the question beneath. The questions stay as
+# page headings where they carry the surface's purpose; in a sidebar a full
+# sentence per item reads as prose rather than as navigation.
+NAV_NAME = {view.EXPOSURE: "Exposure", view.FIND_OUT: "Find out",
+            view.CONFIRM: "Confirm"}
+NAV_SUBTITLE = {view.EXPOSURE: "what is worst",
+                view.FIND_OUT: "what should I go and get",
+                view.CONFIRM: "do I agree with your model"}
+
+# NOMINAL PALETTE, AND THE CONSTRAINT IS ARITHMETIC RATHER THAN AESTHETIC.
+# Every category shares one saturation and one lightness and differs only in
+# hue. That is the mathematical statement of "distinguishes but does not rank":
+# no chip is darker, stronger or warmer than any other, so no reading of the set
+# produces an order. Hues are confined to a cool band, because a palette can be
+# perfectly equal in weight and still rank if one member is the colour of an
+# alarm. An ordered colour encoding across incommensurable states is the
+# composite this system refuses to compute, arriving through the palette.
+CHIP_SATURATION = 30
+CHIP_LIGHTNESS = 34
+COOL_BAND = (150, 320)
+CATEGORY_HUE = {
+    "executes": 200, "recommends": 268,
+    "known": 190, "upper_bound": 225, "lower_bound": 245,
+    "cannot_tell": 288, "no_recovery_path": 312, "not_applicable": 165,
+    "supplier": 212, "region": 172, "catalogue": 255,
+}
+
+
+def chip_colour(label):
+    hue = CATEGORY_HUE.get(label.strip().lower().split()[0])
+    if hue is None:
+        return ""
+    return (f"background:hsl({hue} {CHIP_SATURATION}% {CHIP_LIGHTNESS}%);"
+            f"border-color:hsl({hue} {CHIP_SATURATION}% "
+            f"{CHIP_LIGHTNESS + 14}%);color:hsl({hue} 22% 88%);")
 
 REPO = "https://github.com/Lakshya2905/supplier-exposure-agent"
 
@@ -470,8 +516,8 @@ def main():
     choice = st.sidebar.radio(
         "Surface",
         (view.EXPOSURE, view.FIND_OUT, view.CONFIRM),
-        format_func=lambda name: f"{NAV_GLYPH[name]}  "
-                                 f"{view.SURFACE_QUESTION[name]}")
+        format_func=lambda name: f"**{NAV_NAME[name]}**  \n"
+                                 f"{NAV_SUBTITLE[name]}")
     st.sidebar.caption("Three surfaces, deliberately separate. Their rows are "
                        "different things: a part, a field, a cluster.")
 

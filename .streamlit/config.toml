@@ -1,16 +1,16 @@
-# Light only. No dark variant and no toggle: this is a printed diligence memo,
-# and a memo does not have a night mode.
+# Dark. Colour distinguishes categories and never ranks them.
 #
-# The palette is paper and ink. One accent, a desaturated slate blue, used only
-# on interactive elements and never on a value, because a coloured value is an
-# ordinal encoding by implication and this system refuses those everywhere else.
+# The accent is used on interactive elements. Category colour lives in the
+# stylesheet's chip palette, where every entry shares one saturation and one
+# lightness and differs only in hue: no chip is darker, stronger or warmer than
+# another, so no reading of the set produces an order.
 
 [theme]
-base = "light"
-primaryColor = "#2C4A63"
-backgroundColor = "#FCFCFA"
-secondaryBackgroundColor = "#F2F1ED"
-textColor = "#16181A"
+base = "dark"
+primaryColor = "#7FB2D9"
+backgroundColor = "#14171A"
+secondaryBackgroundColor = "#1B1F23"
+textColor = "#E3E6E8"
 font = "sans serif"
 
 [client]
