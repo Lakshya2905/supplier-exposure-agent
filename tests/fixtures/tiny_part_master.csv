@@ -1,0 +1,18 @@
+# HAND-AUTHORED FIXTURE. Never generated.
+#
+# Companion to tiny_scoring_bom.csv. The blank cells are load-bearing:
+#   MISSING-M01 has NO on_hand_units record and NO tooling_owner
+#   ONLY-M02    has on_hand_units RECORDED AS ZERO
+# Those two rows are the missing-versus-zero pair. If any reader coerces a
+# blank to 0 they become identical and the distinction is gone for good.
+part_number,description,source_type,sourcing_list_status,on_hand_units,tooling_owner,annual_spend_usd
+FG-M01,Fixture finished good 1,make,verified,0,company,0
+FG-M02,Fixture finished good 2,make,verified,0,company,0
+FG-M03,Fixture finished good 3,make,verified,0,company,0
+FG-M04,Fixture finished good 4,make,verified,0,company,0
+SHARED-M01,Fixture shared part,buy,verified,700,supplier,41000
+ONLY-M01,Fixture single-parent part,buy,verified,100,company,12000
+ONLY-M02,Fixture counted-empty part,buy,verified,0,company,8000
+MISSING-M01,Fixture no-record part,buy,verified,,,15000
+ORPHAN-M01,Fixture absent-demand-only part,buy,verified,250,company,3000
+ZEROUSE-M01,Fixture zero-demand part,buy,verified,40,supplier,500

@@ -67,6 +67,32 @@ def verdict_assigned_event():
                   "autonomy": gov.EXECUTES})
 
 
+def dimension_scored_event():
+    return gov.DecisionEvent(
+        event_id=5, at="2026-08-04T09:15:00+00:00",
+        status=gov.STATUS_PROPOSED, sku_id="SEA-P-0031",
+        field="buffer_cover", value="11", source_file="part_master.csv",
+        kind=gov.KIND_DIMENSION_SCORED,
+        evidence={"dimension": "buffer_cover", "unit": "days",
+                  "completeness": "upper_bound", "autonomy": gov.EXECUTES,
+                  "reasons": ["440 units on hand covers 11.0 days at the "
+                              "recorded consumption rate, and unrecorded "
+                              "demand can only reduce cover"]})
+
+
+def dimension_abstained_event():
+    return gov.DecisionEvent(
+        event_id=6, at="2026-08-04T09:15:00+00:00",
+        status=gov.STATUS_PROPOSED, sku_id="SEA-P-0044",
+        field="buffer_cover", value="", source_file="part_master.csv",
+        kind=gov.KIND_DIMENSION_ABSTAINED,
+        evidence={"dimension": "buffer_cover", "unit": "days",
+                  "completeness": "cannot_tell", "autonomy": gov.RECOMMENDS,
+                  "reasons": ["there is no on-hand record for this part, so "
+                              "cover cannot be computed; this is not zero "
+                              "cover"]})
+
+
 class TestGoldens(unittest.TestCase):
     """Committed sentences. A wording change is a reviewable diff, not a
     surprise in the review interface."""
@@ -83,6 +109,19 @@ class TestGoldens(unittest.TestCase):
         self.assertEqual(render(readings_disagree_event()),
                          read_golden("golden_readings_disagree.txt"))
 
+    def test_dimension_scored_golden(self):
+        self.assertEqual(render(dimension_scored_event()),
+                         read_golden("golden_dimension_scored.txt"))
+
+    def test_dimension_abstained_golden(self):
+        self.assertEqual(render(dimension_abstained_event()),
+                         read_golden("golden_dimension_abstained.txt"))
+
+    def test_a_scored_dimension_always_renders_its_unit(self):
+        # A bare number in a review interface is the first step toward somebody
+        # adding it to the one beside it, and these are not addable.
+        self.assertIn("11 days", render(dimension_scored_event()))
+
 
 class TestEveryEnumMemberRenders(unittest.TestCase):
 
@@ -90,7 +129,9 @@ class TestEveryEnumMemberRenders(unittest.TestCase):
         events = {gov.KIND_MERGE_UNCERTAIN: merge_uncertain_event(),
                   gov.KIND_HUMAN_DECISION: human_decision_event(),
                   gov.KIND_READINGS_DISAGREE: readings_disagree_event(),
-                  gov.KIND_VERDICT_ASSIGNED: verdict_assigned_event()}
+                  gov.KIND_VERDICT_ASSIGNED: verdict_assigned_event(),
+                  gov.KIND_DIMENSION_SCORED: dimension_scored_event(),
+                  gov.KIND_DIMENSION_ABSTAINED: dimension_abstained_event()}
         self.assertEqual(set(events), set(gov.EVENT_KINDS),
                          "a new event kind must arrive with a rendering, or it "
                          "reaches the review interface unreadable")

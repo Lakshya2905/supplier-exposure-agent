@@ -1,0 +1,1 @@
+SEA-P-0031: buffer cover is 11 days, an upper bound, because 440 units on hand covers 11.0 days at the recorded consumption rate, and unrecorded demand can only reduce cover.

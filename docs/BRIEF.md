@@ -205,6 +205,37 @@ that would have been a finding about the normaliser rather than a reason to
 lower a floor. The rejected threshold stays asserted in the tests, so the reason
 for the change remains evidence rather than folklore.
 
+### Recorded at stage 4: a bound is an answer, and its direction belongs to the consumer
+
+Partial demand does not abstain, it bounds. And the bound direction is not a
+property of the missing data, it is a property of where the number lands: usage
+in a denominator makes cover an UPPER bound, the same usage in a numerator makes
+blast radius a LOWER bound. So the join reports `partial` and names no
+direction, and each consuming dimension names its own.
+
+This is the third appearance of the same shape. The safe direction was not
+constant between the supplier merge and the lead-time join, and it is not
+constant between cover and blast radius either. Any future function that reports
+incompleteness to more than one consumer should report the FACT of it and let
+each consumer interpret it.
+
+### Recorded at stage 4: absence is not zero, in both directions
+
+A finished good absent from the demand plan is not a finished good with zero
+demand, and the two must stay distinguishable through scoring exactly as a blank
+on-hand and a counted zero must. The consequence is sharper than it looks: a
+part with a recorded zero on-hand and an absent finished good abstains, because
+an empty buffer is zero days of cover under any positive consumption but
+unbounded cover under none, and the data cannot say which.
+
+### Recorded at stage 4: the composite is enabled by normalisation, not by addition
+
+Refusing to sum the dimensions is the easy half and it is not the half that
+matters. Heterogeneous units cannot be added by anyone; rescaled unitless
+numbers can be added by everyone. So the rule is that **every measure keeps its
+unit**, and a dimension expressed as a 0-to-1 or 0-to-100 figure is a composite
+already assembled, whether or not anybody writes the operator.
+
 ## Autonomy levels, stated explicitly
 
 This is the point of the project, not decoration.

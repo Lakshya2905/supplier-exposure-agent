@@ -66,11 +66,16 @@ REASON_LIST_CONFIRMED = "supplier list confirmed complete"
 REASON_LIST_INCOMPLETE = "supplier list known incomplete"
 REASON_MAKE_FLAG_STALE = "make flag stale, part is purchased"
 REASON_MAKE_CAPABILITY_REAL = "in-house capability confirmed"
+REASON_ON_HAND_COUNTED = "on-hand counted, record added"
+REASON_DEMAND_RECORDED = "demand added for a finished good that had none"
+REASON_TOOLING_CONFIRMED = "tooling ownership confirmed"
 
 INHERITED_REASON_CODES = (REASON_SOURCE_DATA_WRONG, REASON_OTHER)
 AGENT_3_REASON_CODES = (REASON_MERGE_CONFIRMED, REASON_MERGE_REJECTED,
                         REASON_LIST_CONFIRMED, REASON_LIST_INCOMPLETE,
-                        REASON_MAKE_FLAG_STALE, REASON_MAKE_CAPABILITY_REAL)
+                        REASON_MAKE_FLAG_STALE, REASON_MAKE_CAPABILITY_REAL,
+                        REASON_ON_HAND_COUNTED, REASON_DEMAND_RECORDED,
+                        REASON_TOOLING_CONFIRMED)
 REASON_CODES = INHERITED_REASON_CODES + AGENT_3_REASON_CODES
 
 # ------------------------------------------------------------ event kinds ---
@@ -78,8 +83,12 @@ KIND_MERGE_UNCERTAIN = "merge_uncertain"
 KIND_READINGS_DISAGREE = "readings_disagree"
 KIND_VERDICT_ASSIGNED = "verdict_assigned"
 KIND_HUMAN_DECISION = "human_decision"
+# stage 4. One event per dimension per part, because autonomy is per dimension.
+KIND_DIMENSION_SCORED = "dimension_scored"
+KIND_DIMENSION_ABSTAINED = "dimension_abstained"
 EVENT_KINDS = (KIND_MERGE_UNCERTAIN, KIND_READINGS_DISAGREE,
-               KIND_VERDICT_ASSIGNED, KIND_HUMAN_DECISION)
+               KIND_VERDICT_ASSIGNED, KIND_HUMAN_DECISION,
+               KIND_DIMENSION_SCORED, KIND_DIMENSION_ABSTAINED)
 
 # Autonomy, per finding rather than per stage.
 EXECUTES = "executes"

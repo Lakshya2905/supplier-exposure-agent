@@ -32,6 +32,12 @@ Agent 3 of a multi-agent supply chain system. Answers: which single points of fa
   uncertainty, not a decision. Both parts must hold before anything executes,
   the readings agree AND what they agree on is an answer. A `readings_disagree`
   verdict therefore never executes, however the readings compared.
+- Every measure keeps its unit. A dimension expressed as a unitless number in a
+  fixed range is a composite already assembled, whichever way it is displayed.
+  Refusing to sum is not sufficient; refusing to normalise is.
+- Absence is not zero, and a bound is not an abstention. Where incompleteness is
+  reported to more than one consumer, report the fact of it and let each
+  consumer name the bound direction, because the safe direction is not constant.
 - Store structured, render prose, never store the prose. The decision log holds
   no rendered text; `render(event)` produces it on demand and golden files pin
   the wording. `evals/` and `tests/fixtures/` are committed and frozen; `data/` is gitignored and regenerated from a documented seed.

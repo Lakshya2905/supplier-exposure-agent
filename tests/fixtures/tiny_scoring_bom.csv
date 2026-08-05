@@ -1,0 +1,76 @@
+# HAND-AUTHORED FIXTURE. Never generated, never regenerated.
+#
+# Companion to tiny_bom.csv, which has one finished good and therefore cannot
+# express anything about the demand plan. This one exists to be an INDEPENDENT
+# ORACLE for stage 4 scoring: every number in tiny_expected_scores.py was
+# worked out by hand from this tree and can be re-checked by hand without
+# trusting any code in this repository.
+#
+# Read with: pd.read_csv(path, comment="#")
+#
+# TREE, four finished goods
+#   FG-M01                        1000 units/year in the demand plan
+#     +- SHARED-M01 x2
+#     +- ONLY-M01 x1
+#     +- MISSING-M01 x1
+#   FG-M02                         500 units/year in the demand plan
+#     +- SHARED-M01 x3
+#     +- ONLY-M02 x1
+#   FG-M03                        DELIBERATELY ABSENT from the demand plan
+#     +- SHARED-M01 x5
+#     +- ORPHAN-M01 x2
+#   FG-M04                           0 units/year, RECORDED as zero
+#     +- ZEROUSE-M01 x1
+#
+# WHAT EACH PART IS HERE TO PROVE
+#   SHARED-M01    fed by two recorded finished goods and one absent one, so
+#                 usage is PARTIAL. The one part where both bound directions
+#                 are visible at once: cover is an UPPER bound and blast radius
+#                 a LOWER bound, from the identical missing row.
+#   ONLY-M01      fully recorded demand. The control.
+#   ONLY-M02      on-hand RECORDED AS ZERO. Cover is 0 days, which is an
+#                 answer and the worst one, and must never read "cannot tell".
+#   MISSING-M01   on-hand and tooling owner both BLANK. Cover and portability
+#                 abstain. Its cover must not equal ONLY-M02's.
+#   ORPHAN-M01    fed only by the absent finished good, so usage is the full
+#                 abstention: no known demand, therefore no bound either.
+#   ZEROUSE-M01   demand recorded AS ZERO, so usage is known and equals zero.
+#                 Cover is unbounded, which is an answer rather than a
+#                 division-by-zero error.
+#
+# EXPECTED ANNUAL USAGE, worked by hand (qty per FG x annual units of that FG):
+#   SHARED-M01    2 x 1000 + 3 x 500 = 2000 + 1500 = 3500   partial, FG-M03 absent
+#   ONLY-M01      1 x 1000                         = 1000   known
+#   ONLY-M02      1 x  500                         =  500   known
+#   MISSING-M01   1 x 1000                         = 1000   known
+#   ORPHAN-M01    (only FG-M03, absent)            =    -   cannot tell
+#   ZEROUSE-M01   1 x    0                         =    0   known
+#
+# EXPECTED BLOCKED FINISHED-GOOD UNITS (recorded finished goods only):
+#   SHARED-M01    1000 + 500 = 1500   lower bound, FG-M03 unrecorded
+#   ONLY-M01      1000               known
+#   ONLY-M02       500               known
+#   MISSING-M01   1000               known
+#   ORPHAN-M01       0               lower bound, its only FG is unrecorded
+#   ZEROUSE-M01      0               known, the demand really is zero
+#
+# EXPECTED BUFFER COVER, cover_days = on_hand x 365 / annual_usage:
+#   SHARED-M01    700 x 365 / 3500 = 255500 / 3500 = 73        days, UPPER BOUND
+#   ONLY-M01      100 x 365 / 1000 =  36500 / 1000 = 36.5      days, known
+#                                                   = 73/2 exactly, which is why
+#                                                     Fraction and not float
+#   ONLY-M02        0 x 365 /  500 =      0 /  500 = 0         days, known
+#   MISSING-M01   no on-hand record                            cannot tell
+#   ORPHAN-M01    no known consumption rate                    cannot tell
+#   ZEROUSE-M01   40 units on hand, nothing consuming them     unbounded, known
+#
+# 10 parts, 8 edges, 2 levels.
+parent_part,child_part,qty_per_parent
+FG-M01,SHARED-M01,2
+FG-M01,ONLY-M01,1
+FG-M01,MISSING-M01,1
+FG-M02,SHARED-M01,3
+FG-M02,ONLY-M02,1
+FG-M03,SHARED-M01,5
+FG-M03,ORPHAN-M01,2
+FG-M04,ZEROUSE-M01,1

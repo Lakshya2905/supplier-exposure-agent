@@ -1,0 +1,1 @@
+SEA-P-0044: buffer cover is not answerable from the data, because there is no on-hand record for this part, so cover cannot be computed; this is not zero cover.

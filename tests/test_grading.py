@@ -169,5 +169,121 @@ class TestAgainstTruth(GradingCase):
                 if v == "readings_disagree"), 0)
 
 
+class TestScoringAgainstTheAnswerKey(GradingCase):
+    """Scoring against truth, INSIDE the truth boundary.
+
+    Cover values are not checked here and cannot be: computing one requires a
+    BOM traversal, so a generator bug and a scoring bug could agree with each
+    other. What truth does record is the generator's DECISIONS, which is why
+    the abstention SETS are checkable and the numbers are not.
+    """
+
+    def profiles(self):
+        from src.demand import usage_by_part
+        from src.explosion import explode, rows_by_part
+        from src.scoring import score_part
+
+        rows = rows_by_part(explode(list(self.world.bom)))
+        demand = dict(self.world.demand)
+        built = {}
+        for number, part in self.world.parts.items():
+            if number not in rows:
+                continue
+            built[number] = score_part(
+                part_number=number, verdict=self.truth.verdicts[number],
+                rows=rows[number],
+                usage=usage_by_part({number: rows[number]}, demand)[number],
+                on_hand_units=part.on_hand_units,
+                tooling_owner=part.tooling_owner,
+                lead_times=[(lt.quoted_lead_time_days, lt.lead_time_p95_days)
+                            for lt in self.world.lead_times_for(number)])
+        return built
+
+    def test_cover_abstains_on_every_part_truth_says_lacks_on_hand(self):
+        profiles = self.profiles()
+        abstained = {number for number, profile in profiles.items()
+                     if profile.buffer_cover.completeness == "cannot_tell"}
+        missing_on_hand = {number for number, intents in self.truth.intents.items()
+                           if "on_hand_unknown" in intents and number in profiles}
+        self.assertTrue(missing_on_hand)
+        self.assertTrue(
+            missing_on_hand <= abstained,
+            "every part truth recorded as having no on-hand record must "
+            "abstain on cover")
+
+    def test_every_other_cover_abstention_is_a_demand_gap_not_an_unexplained_one(self):
+        # Cover has exactly two inputs, so it has exactly two reasons to
+        # abstain. Any abstention that is neither is a bug rather than a gap,
+        # and this is what would catch it.
+        profiles = self.profiles()
+        missing_on_hand = {number for number, intents in self.truth.intents.items()
+                           if "on_hand_unknown" in intents}
+        for number, profile in profiles.items():
+            if profile.buffer_cover.completeness != "cannot_tell":
+                continue
+            if number in missing_on_hand:
+                continue
+            with self.subTest(part=number):
+                self.assertIn("demand plan", profile.buffer_cover.reasons[0])
+
+    def test_portability_abstains_on_exactly_the_parts_truth_says_lack_tooling(self):
+        profiles = self.profiles()
+        abstained = {number for number, profile in profiles.items()
+                     if profile.portability.completeness == "cannot_tell"}
+        recorded = {number for number, intents in self.truth.intents.items()
+                    if "tooling_unknown" in intents and number in profiles}
+        self.assertTrue(recorded)
+        self.assertEqual(abstained, recorded,
+                         "tooling is portability's only input, so the two sets "
+                         "must match exactly in both directions")
+
+    def _recorded_zeroes(self, profiles):
+        return {number for number, intents in self.truth.intents.items()
+                if "on_hand_genuine_zero" in intents and number in profiles}
+
+    def test_a_recorded_zero_with_known_demand_scores_zero_days_of_cover(self):
+        # THE REGRESSION GUARD for missing-versus-zero at full scale. A counted
+        # and empty part has zero cover, which is an answer and the worst one.
+        profiles = self.profiles()
+        answered = [number for number in self._recorded_zeroes(profiles)
+                    if profiles[number].buffer_cover.completeness != "cannot_tell"]
+        self.assertTrue(answered, "the data must contain at least one counted "
+                                  "and empty part with usable demand, or this "
+                                  "guard proves nothing")
+        for number in answered:
+            with self.subTest(part=number):
+                self.assertEqual(profiles[number].buffer_cover.value, 0)
+                self.assertEqual(profiles[number].buffer_cover.completeness,
+                                 "known")
+
+    def test_a_recorded_zero_never_abstains_because_of_its_on_hand_figure(self):
+        # Where a counted-and-empty part DOES abstain it is the demand input,
+        # never the on-hand one. An empty buffer runs out instantly under any
+        # positive consumption, but ABSENCE IS NOT ZERO: an unrecorded finished
+        # good could genuinely have zero demand, and then an empty buffer never
+        # runs out at all. Zero and unbounded are the two answers, the data
+        # cannot say which, so it abstains rather than picking the likelier one.
+        profiles = self.profiles()
+        for number in self._recorded_zeroes(profiles):
+            cover = profiles[number].buffer_cover
+            if cover.completeness != "cannot_tell":
+                continue
+            with self.subTest(part=number):
+                self.assertIn("demand plan", cover.reasons[0])
+                self.assertNotIn("no on-hand record", cover.reasons[0])
+
+    def test_every_dimension_on_every_part_carries_a_reason(self):
+        for number, profile in self.profiles().items():
+            for score in profile.scored():
+                with self.subTest(part=number, dimension=score.dimension):
+                    self.assertTrue(score.reasons)
+
+    def test_no_part_is_scored_without_a_unit(self):
+        from src.scoring import UNITS
+        for profile in self.profiles().values():
+            for score in profile.scored():
+                self.assertIn(score.unit, UNITS)
+
+
 if __name__ == "__main__":  # keep last: classes below an entrypoint never run
     unittest.main()

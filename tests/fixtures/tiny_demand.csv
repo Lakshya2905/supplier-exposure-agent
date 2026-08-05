@@ -1,0 +1,13 @@
+# HAND-AUTHORED FIXTURE. Never generated.
+#
+# Companion to tiny_scoring_bom.csv. FG-M03 is DELIBERATELY ABSENT from this
+# file, and its absence is the point: it is what makes SHARED-M01's usage
+# partial and ORPHAN-M01's usage unknowable.
+#
+# FG-M04 IS PRESENT WITH A RECORDED ZERO, which is a different thing from
+# FG-M03's absence and must stay different all the way through scoring. Zero
+# means the plan says nobody is buying it; absence means the plan does not say.
+finished_good_part,annual_units
+FG-M01,1000
+FG-M02,500
+FG-M04,0

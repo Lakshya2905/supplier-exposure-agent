@@ -20,10 +20,31 @@ An event that cannot answer one of these omits that clause rather than
 inventing it. A renderer that fabricates a plausible number is worse than one
 that says nothing.
 """
-from . import (EXECUTES, KIND_HUMAN_DECISION, KIND_MERGE_UNCERTAIN,
+from . import (EXECUTES, KIND_DIMENSION_ABSTAINED, KIND_DIMENSION_SCORED,
+               KIND_HUMAN_DECISION, KIND_MERGE_UNCERTAIN,
                KIND_READINGS_DISAGREE, KIND_VERDICT_ASSIGNED,
                STATUS_APPROVED, STATUS_PROPOSED, STATUS_REJECTED,
                STATUS_SUPERSEDED)
+
+DIMENSION_PROSE = {
+    "lead_time_to_recover": "lead time to recover",
+    "blast_radius": "blast radius",
+    "buffer_cover": "buffer cover",
+    "portability": "portability",
+    "concentration": "concentration",
+}
+
+# What each completeness state means in words. A bound says which DIRECTION it
+# is wrong in, because "incomplete" alone is the thing that lets a reader take
+# an upper bound for a lower one.
+COMPLETENESS_PROSE = {
+    "known": "",
+    "upper_bound": "an upper bound",
+    "lower_bound": "a lower bound",
+    "cannot_tell": "not answerable from the data",
+    "no_recovery_path": "undefined because there is no recovery path at all",
+    "not_applicable": "not applicable to this part",
+}
 
 VERDICT_PROSE = {
     "single_source": "one qualified supplier",
@@ -143,6 +164,37 @@ def _outcome_clause(evidence):
     return f"the verdict now stands at {describe_verdict(resulting)}"
 
 
+def _dimension_clause(event, evidence):
+    """One dimension on one part, with its unit and its bound direction.
+
+    THE UNIT IS ALWAYS RENDERED ALONGSIDE THE NUMBER. A bare figure in a review
+    interface is the first step toward somebody adding it to the one beside it,
+    and these measures are deliberately not addable.
+    """
+    dimension = evidence.get("dimension", event.field)
+    name = DIMENSION_PROSE.get(dimension, dimension)
+    completeness = evidence.get("completeness", "")
+    qualifier = COMPLETENESS_PROSE.get(completeness, completeness)
+
+    if event.kind == KIND_DIMENSION_ABSTAINED:
+        sentence = f"{event.sku_id}: {name} is {qualifier or 'not answerable'}"
+    elif not event.value:
+        sentence = f"{event.sku_id}: {name} is {qualifier}" if qualifier \
+            else f"{event.sku_id}: {name} was scored"
+    else:
+        unit = evidence.get("unit", "")
+        measure = f"{event.value} {unit}" if unit and unit != "categorical" \
+            else f"{event.value}"
+        sentence = f"{event.sku_id}: {name} is {measure}"
+        if qualifier:
+            sentence += f", {qualifier}"
+
+    reasons = evidence.get("reasons") or []
+    if reasons:
+        sentence += f", because {reasons[0]}"
+    return sentence + "."
+
+
 def render(event):
     """One event, one readable paragraph. Never stored, always recomputed."""
     evidence = event.evidence or {}
@@ -193,6 +245,9 @@ def render(event):
         outcome = _outcome_clause(evidence)
         if outcome:
             parts.append(_sentence_case(outcome) + ".")
+
+    elif event.kind in (KIND_DIMENSION_SCORED, KIND_DIMENSION_ABSTAINED):
+        parts.append(_dimension_clause(event, evidence))
 
     else:  # pragma: no cover - EVENT_KINDS is closed and validated on append
         parts.append(f"{_subject_clause(event)}: {event.kind}.")

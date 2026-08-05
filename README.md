@@ -242,6 +242,190 @@ to assign truth and stage 3 uses it to classify observed data, so importing it
 into the tests would let a wrong row be wrong in both places with the suite
 agreeing.
 
+## Stage 4: exposure scoring
+
+Four dimensions per part, kept separate, with **no composite and nowhere to put
+one**. The fifth dimension, concentration, is declared and its slot reserved
+for stage 5.
+
+| dimension | measure | unit | can abstain |
+|---|---|---|---|
+| Lead time to recover | quoted and p95 together | days | yes |
+| Blast radius | finished-good units blocked, plus structural reach | finished good units | no, but bounded |
+| Buffer cover | on-hand divided by daily consumption | days | yes |
+| Portability | who owns the tooling | categorical | yes |
+| Concentration | reserved for stage 5 | | not yet assessed |
+
+**No banding.** Every dimension returns its raw measure. "Long lead" is a
+threshold and a threshold is a judgment, so introducing one would smuggle a
+modelling choice into a stage whose autonomy claim depends on having none. Both
+lead-time columns are returned rather than one, for the same reason: choosing
+quoted over p95 is a judgment, and at this stage the two give different
+durations but not different answers, so they travel as a pair. That pair becomes
+a live dual reading the moment stage 6 bands them.
+
+### The bound direction inverts, from the identical missing row
+
+Partial demand does not produce an abstention. It produces a **bound**, and
+which way the bound points depends on where the number lands:
+
+- **buffer cover** has usage in the **denominator**. Unrecorded demand can only
+  reduce cover, so cover on known demand is an **upper bound**.
+- **blast radius** has blocked units in the **numerator**. Unrecorded demand can
+  only add, so blocked units on known demand are a **lower bound**.
+
+Same finished good missing from the plan, opposite directions. So
+`annual_usage` reports `partial` and names **no direction at all**; the
+consuming dimension names it. Encoding the direction at the source would
+hard-code one consumer's perspective into a function two consumers share, and
+the second would read its bound backwards. This is the third time in this
+system that the safe direction has turned out not to be constant.
+
+One test asserts both directions on **one part with one missing row**, because
+split across two tests the inversion is invisible.
+
+### Six completeness states, because five would force a collapse
+
+| state | meaning | routes to lane |
+|---|---|---|
+| `known` | exact | no |
+| `upper_bound` | cover on partial demand | no |
+| `lower_bound` | blocked units on partial demand | no |
+| `cannot_tell` | a required input is absent | **yes** |
+| `no_recovery_path` | no supplier at all | no |
+| `not_applicable` | the dimension does not apply | no |
+
+Autonomy is derived from completeness in **one function**, so routing can never
+drift away from the value it routes. A bound is an answer *about* a bound and
+executes.
+
+`no_recovery_path` exists because `no_qualified_supplier` is not missing data.
+Somebody checked the list and found nobody, so recovery time is undefined by
+absence. Rendering that as "cannot tell" would file the most serious finding in
+the dataset as a gap in a spreadsheet.
+
+`not_applicable` exists for made-in-house parts, by the same argument. There is
+no in-house capacity model anywhere in this data and there is not going to be
+one, so a lane that keeps presenting in-house parts asks a reviewer to resolve
+them with data that will never exist. **84 parts in the generated data land in
+this state**, and every one of them would otherwise be sitting in the lane.
+
+This is a **state and not a reason code the lane filters on**, chosen
+deliberately. A filter would make `cannot_tell` stop meaning "routes to the
+lane" and would put routing in a second place, where the next consumer that
+forgets the filter silently re-admits all 84. One rule, one home.
+
+### Missing on-hand versus a recorded zero
+
+Blank means no record; `0` means counted and empty. One is a gap in a
+spreadsheet and the other is the worst cover in the dataset, and the collapse
+between them is never a decision anybody makes. It is a default: pandas reads an
+integer column containing a blank as `float64`, so `0` becomes `0.0` and blank
+becomes `NaN`, and the first `int(x or 0)` downstream fuses them permanently.
+
+So `readers.py` reads **every column as a string** with
+`keep_default_na=False` and converts explicitly, and `buffer_cover` branches on
+`is None` as its first statement, before `on_hand` is touched by any
+expression. The two are asserted unequal at every level of the result: value,
+completeness, autonomy and reason string.
+
+The same `keep_default_na=False` fixes the second trap in one stroke: a
+`supplier_region` of `NA` is North America, and pandas reads it as `NaN`, which
+would silently delete a region from stage 5's concentration analysis.
+
+**A corner worth recording.** A part with a recorded zero on-hand whose only
+finished good is absent from the demand plan still abstains. An empty buffer
+runs out instantly under any positive consumption, so cover looks like an
+obvious zero, but **absence is not zero**: an unrecorded finished good could
+genuinely have no demand, and then the empty buffer never runs out and cover is
+unbounded. Zero and unbounded are both live and the data cannot say which, so it
+abstains rather than picking the likelier one.
+
+### Unbounded is a value, not a missing one
+
+A part with stock and no recorded consumption has unbounded cover. That is an
+answer, and a division-by-zero would be the code mistaking an answer for an
+error.
+
+It is represented by a sentinel that is deliberately **neither `None` nor
+`math.inf`**. `None` means "no value" everywhere else in the module, and
+conflating them would file an answered dimension in the abstention lane. And
+`inf` is a float that compares and arithmetics happily with everything, so it
+would have been the one measure in the module that could be summed.
+
+### No composite, enforced two ways
+
+Blocking the `+` is the easy half. **What enables the `+` is normalisation.**
+Twenty-six days and three assemblies cannot be added by anybody, but "0.8
+lead-time risk" and "0.6 blast radius" add up beautifully and mean nothing. So
+the guarantee has two halves and needs both:
+
+1. no function returns a scalar combining dimensions, and the container exposes
+   no `total`, `overall`, `score`, `weighted`, `rank` or `__add__`
+2. **every measure keeps its unit**, no unit is a unitless range, and no
+   dimension exposes a normalised, scaled, indexed or percentile variant of its
+   value
+
+The second is enforced at construction: a `DimensionScore` built with a unit
+named `score`, `risk_index`, `normalised` or `percent` raises. Tests also assert
+that real values leave the [0, 1] and [0, 100] ranges, which is what makes them
+units rather than scores in disguise.
+
+The source-scanning tests parse the **code only**, with docstrings and comments
+stripped, because the docstrings in `scoring.py` discuss composites at length in
+order to refuse them and a raw scan flags the explanations rather than the
+violations.
+
+### How the review interface shows five values without inviting a sum
+
+The guarantee is structural rather than a matter of UI discipline. The units are
+heterogeneous and stay that way, so no total is expressible. Specifically: no
+radar or spider chart, because the enclosed area *is* a composite, drawn instead
+of computed. No total column, no overall badge, no default sort, and sorting is
+by one named dimension at a time with the interface stating which. Abstentions
+render as the words "cannot tell", never as a blank, a dash or a zero, because
+an empty cell invites a reader to substitute zero and zero is summable.
+
+### Autonomy is per dimension per part
+
+Not per stage. One part executes on blast radius and abstains on buffer cover
+and portability in the same breath, and neither result contaminates the other.
+The abstention lane groups by **dimension** rather than by part, because every
+part missing the same field is resolved by one trip to the same system. It is a
+separate lane from stage 3's, which sorts by exposure under the worse reading: a
+dimension abstention has no competing readings to be worse than, so that
+ordering would be meaningless here.
+
+### Measured end to end
+
+296 parts scored, 1184 dimension events, at seed 42:
+
+| completeness | count |
+|---|---|
+| known | 856 |
+| cannot_tell | 163 |
+| not_applicable | 84 |
+| lower_bound | 76 |
+| upper_bound | 3 |
+| no_recovery_path | 2 |
+
+1021 dimension results execute and 163 abstain. The lane holds 107 buffer cover,
+34 portability and 22 lead time to recover. All six completeness states occur in
+real data rather than only in unit tests.
+
+### Arithmetic
+
+Quantities are `Fraction` and stay `Fraction`; demand is `int`; usage and cover
+are therefore exact. **Nothing in scoring rounds**, so no dimension can drift by
+accumulating rounding across a three-level explosion. Rounding happens at render
+only. `100 x 365 / 1000` is `Fraction(73, 2)`, exactly 36.5 days, and the fixture
+asserts it as an exact equality rather than with a tolerance.
+
+`DAYS_PER_YEAR = 365` is a **declared modelling constant**, not a fact. Working
+days would be roughly 250 and would give about 1.46 times the cover. It stays a
+plain constant because stage 4 bands nothing, so the choice cannot change any
+answer here. It becomes a dual reading the moment stage 6 bands cover.
+
 ## Autonomy levels
 
 These are the product, not a detail.
@@ -308,6 +492,14 @@ decision.
 Marked `@pytest.mark.xfail(strict=True)`, so the gap is visible, CI stays
 green, and the test fails loudly the day someone fixes it without noticing.
 
+- **Lead time to recover does not include qualification time.** The brief
+  defines the dimension as how long to qualify an alternative *or* wait out the
+  disruption, and the data carries quoted and p95 purchase lead times, so it
+  answers the second half only. There is no qualification-lead-time field
+  anywhere in the schema, so the first half is not merely uncomputed, it is
+  unrepresentable. A part with a 30 day purchase lead time whose only supplier
+  needs 40 weeks to qualify a replacement scores identically to one that can be
+  resourced in a fortnight.
 - **Fractional quantities and units of measure are not supported.** Every
   `qty_per_parent` is a whole number of pieces, so a BOM line of 0.5 metres of
   extrusion or 2.5 kg of compound cannot be represented. This is a limitation
@@ -317,8 +509,8 @@ green, and the test fails loudly the day someone fixes it without noticing.
 
 ## What is deliberately not here
 
-Stages 4 through 8: the five scoring dimensions, concentration detection,
-ranked output, review interface, eval harness.
+Stages 5 through 8: concentration detection, ranked output, review interface,
+eval harness.
 
 Out of scope permanently: cost optimisation, supplier scorecarding, negotiation
 support, resourcing workflow. `annual_spend_usd` is carried as a display column
