@@ -7,7 +7,7 @@ Agent 3 of a multi-agent supply chain system. Answers: which single points of fa
 - Install: `pip install -e ".[dev]"`
 - Test: `pytest -q`
 - Generate data: `python -m src.generate_data --seed 42`
-- Review UI: `streamlit run app.py`
+- Review UI: `streamlit run review_app.py`
 
 ## Working rules
 
