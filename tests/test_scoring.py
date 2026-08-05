@@ -21,7 +21,8 @@ from fixtures.tiny_expected_scores import (EXPECTED_BLAST_RADIUS_COMPLETENESS,
                                            EXPECTED_PORTABILITY, SCORED_PARTS)
 from src import governance as gov
 from src import scoring
-from src.demand import Usage, usage_by_part, USAGE_CANNOT_TELL, USAGE_KNOWN
+from src.demand import (Usage, usage_by_part, USAGE_CANNOT_TELL, USAGE_KNOWN,
+                        USAGE_PARTIAL)
 from src.explosion import explode, rows_by_part
 from src.readers import read_bom, read_demand_plan, read_part_master
 from src.scoring import (CANNOT_TELL, DAYS, KNOWN, LOWER_BOUND, NOT_APPLICABLE,
@@ -168,6 +169,52 @@ class TestBlastRadius(unittest.TestCase):
             with self.subTest(part=part):
                 self.assertEqual(self.profiles[part].blast_radius.completeness,
                                  EXPECTED_BLAST_RADIUS_COMPLETENESS[part])
+
+    def test_the_detail_names_which_usage_branch_produced_the_completeness(self):
+        """LOWER_BOUND is assigned by two branches and they mean different things.
+
+        Partial usage means some finished goods are recorded, so the figure is a
+        real lower bound. Cannot-tell means none are, so the volume is absent
+        rather than small. A consumer cannot separate them from `completeness`
+        and `value` alone, and inferring it from `value == 0` is wrong: partial
+        usage whose recorded goods total zero is a RECORDED zero. Collapsing
+        those is the missing-versus-zero conflation this module separates before
+        any arithmetic.
+        """
+        for part in SCORED_PARTS:
+            with self.subTest(part=part):
+                score = self.profiles[part].blast_radius
+                self.assertIn("usage_completeness", score.detail)
+                self.assertIn(score.detail["usage_completeness"],
+                              (USAGE_KNOWN, USAGE_PARTIAL, USAGE_CANNOT_TELL))
+
+    def test_the_branch_is_named_rather_than_reduced_to_a_flag(self):
+        """A boolean would let a third usage state inherit a reading by default.
+
+        `units_countable: False` cannot distinguish "none recorded" from a state
+        nobody has written yet. A name arrives unrecognised, which forces the
+        consumer to handle it instead of silently reading it as one of these two.
+        """
+        for part in SCORED_PARTS:
+            detail = self.profiles[part].blast_radius.detail
+            with self.subTest(part=part):
+                self.assertIsInstance(detail["usage_completeness"], str)
+                self.assertNotIsInstance(detail["usage_completeness"], bool)
+
+    def test_the_detail_contract_is_pinned_so_a_removal_is_loud(self):
+        """`log_profile` splats detail into event evidence (scoring.py:491).
+
+        That makes the key set a cross-module contract, and nothing else pins it:
+        no golden and no frozen eval contains these keys, so dropping one would
+        be silent at every layer. This is the pin.
+        """
+        expected = {"finished_goods_blocked", "finished_goods",
+                    "assemblies_blocked", "usage_completeness",
+                    "min_depth", "max_depth", "spans_depths"}
+        for part in SCORED_PARTS:
+            with self.subTest(part=part):
+                self.assertEqual(
+                    set(self.profiles[part].blast_radius.detail), expected)
 
     def test_blast_radius_never_abstains(self):
         for part in SCORED_PARTS:

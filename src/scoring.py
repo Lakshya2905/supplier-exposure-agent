@@ -331,6 +331,22 @@ def blast_radius(part_number, rows, usage):
         detail={"finished_goods_blocked": len(goods),
                 "finished_goods": tuple(goods),
                 "assemblies_blocked": len(goods),
+                # WHICH BRANCH RAN, not what its value happened to be.
+                #
+                # LOWER_BOUND is assigned by two branches above: partial usage,
+                # where some finished goods are recorded, and cannot-tell, where
+                # none are. A reader downstream cannot tell them apart from
+                # `completeness` and `value` alone, and inferring it from
+                # `value == 0` would be wrong: partial usage whose recorded goods
+                # happen to total zero is a RECORDED zero, while cannot-tell is
+                # an absence. Collapsing those is exactly the missing-versus-zero
+                # conflation this file separates before any arithmetic.
+                #
+                # The branch is named rather than reduced to a boolean like
+                # `units_countable`, so a third usage state added later arrives
+                # as an unrecognised name that a consumer must handle explicitly
+                # instead of silently inheriting one of these two readings.
+                "usage_completeness": usage.completeness,
                 "min_depth": min(depths) if depths else None,
                 "max_depth": max(depths) if depths else None,
                 "spans_depths": len(depths) > 1})
