@@ -345,8 +345,19 @@ def render_confirm(surface, result):
         st.divider()
 
 
+REPO = "https://github.com/Lakshya2905/supplier-exposure-agent"
+
+# One line, stated once, in the same register as everything else on the page.
+# A reader who does not know the figures are one seed's synthetic data will read
+# a count as a finding, which is the same mistake the README's seed note exists
+# to prevent.
+STANDING = (f"Demonstration on synthetic data. Figures are illustrative at seed "
+            f"42. Source: [{REPO.split('//')[1]}]({REPO})")
+
+
 def main():
     result, built = load()
+    st.markdown(f"<p class='note'>{STANDING}</p>", unsafe_allow_html=True)
     st.sidebar.title("Supplier exposure")
     choice = st.sidebar.radio(
         "Surface",

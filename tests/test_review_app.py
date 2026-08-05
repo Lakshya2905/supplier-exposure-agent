@@ -221,6 +221,28 @@ class TestConfirmSurface(unittest.TestCase):
         self.assertIn("anonymous decision is not a decision", warnings)
 
 
+class TestStandingLine(unittest.TestCase):
+
+    def test_it_says_the_data_is_synthetic_and_the_figures_illustrative(self):
+        # A reader who does not know the counts belong to one seed will read
+        # one as a finding rather than as machinery firing.
+        rendered = text_of(run_app())
+        self.assertIn("Demonstration on synthetic data", rendered)
+        self.assertIn("illustrative at seed 42", rendered)
+
+    def test_it_links_to_the_source(self):
+        self.assertIn("github.com/Lakshya2905/supplier-exposure-agent",
+                      text_of(run_app()))
+
+    def test_it_appears_once_and_carries_no_marketing_register(self):
+        rendered = text_of(run_app())
+        self.assertEqual(rendered.count("Demonstration on synthetic data"), 1)
+        for adjective in ("powerful", "intelligent", "advanced", "seamless",
+                          "comprehensive", "cutting-edge", "smart"):
+            with self.subTest(word=adjective):
+                self.assertNotIn(adjective, rendered.lower())
+
+
 class TestSurfacesStaySeparate(unittest.TestCase):
 
     def test_only_one_surface_renders_at_a_time(self):
