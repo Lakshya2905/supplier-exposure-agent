@@ -1,5 +1,7 @@
 # Supplier Exposure Agent
 
+[![gate](https://github.com/Lakshya2905/supplier-exposure-agent/actions/workflows/gate.yml/badge.svg)](https://github.com/Lakshya2905/supplier-exposure-agent/actions/workflows/gate.yml)
+
 Which single points of failure in a bill of materials would actually stop
 production, and how badly. The agent explodes a BOM, identifies the parts with
 one real source, scores the exposure along dimensions it keeps separate, and
@@ -349,11 +351,19 @@ and assembles nothing of its own.
 answer key, committed in one commit, covered by a SHA-256 manifest. The manifest
 **detects** an edit to a frozen file. It does not prevent one: a commit that
 rewrites a frozen file and its manifest entry together passes the check, because
-the check compares the set against its own record of itself. The control that
-closes that is branch protection requiring the gate to be green before a merge,
-which applies on a remote and **is not in place for this repository as it stands
-locally**. The harness prints the same limit every run, because a control whose
-shape nobody knows is worse than no control.
+the check compares the set against its own record of itself.
+
+The control that closes it is **branch protection on `main` requiring this gate
+to pass**, and it is in effect: enforced for admins, with force pushes and branch
+deletion refused. Neither layer is sufficient alone. The manifest catches an
+ordinary edit to a frozen file, which protection would happily merge if the gate
+were green; protection catches the rewrite of a file and its manifest together,
+which the manifest cannot see.
+
+It is a property of the remote rather than of a checkout, so a commit made and
+tested purely locally is not covered until it is pushed. The harness prints the
+same limit every run, because a control whose shape nobody knows is worse than
+no control.
 
 **Three layers with different standing.** Correctness against the answer key and
 the behavioural invariants both gate. The regression snapshot does not, and is

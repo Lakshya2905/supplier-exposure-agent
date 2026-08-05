@@ -21,9 +21,11 @@ MANIFEST_LIMIT = (
     "The manifest DETECTS an edit to a frozen file. It does not PREVENT one: a\n"
     "  commit that rewrites a frozen file and its manifest entry together passes\n"
     "  this check, because the check compares the set against its own record of\n"
-    "  itself. Branch protection requiring this gate to be green before a merge\n"
-    "  is the control that closes it, and that applies on a remote only. It is\n"
-    "  NOT in place for a purely local repository."
+    "  itself. The control that closes it is branch protection requiring this\n"
+    "  gate to be green before a merge, which IS in effect on origin/main,\n"
+    "  enforced for admins, with force pushes and deletion refused. It is a\n"
+    "  property of the remote and not of a checkout: a commit made and tested\n"
+    "  purely locally is not covered by it until it is pushed."
 )
 
 
