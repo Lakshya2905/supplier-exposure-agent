@@ -1,0 +1,12 @@
+# Runtime dependencies for Streamlit Community Cloud.
+#
+# Community Cloud installs from this file. It does not reliably install a PEP
+# 621 setuptools pyproject, so without this the container starts with neither
+# pandas nor pyyaml and the app fails on import rather than on data.
+#
+# This duplicates the runtime half of pyproject.toml, which is a drift risk, so
+# tests/test_deploy_requirements.py asserts the two agree. The dev extras are
+# deliberately absent: a deployed container runs the app and never the suite.
+pandas>=2.0
+pyyaml>=6.0
+streamlit>=1.40
