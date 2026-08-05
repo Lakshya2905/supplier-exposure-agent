@@ -32,136 +32,151 @@ st.set_page_config(page_title="Supplier exposure review", layout="wide")
 # icons. Nothing here encodes a value: the single accent appears only on things
 # a reviewer can act on, because a coloured number is an ordinal encoding by
 # implication and those are refused everywhere else in this system.
-MEMO_CSS = """
+CONSOLE_CSS = """
 <style>
+  /* An operational console: dense rows, aligned columns, high information per
+     screen. Prose keeps a readable measure of its own; the CONTAINER does not,
+     because tables need the width and capping the container wastes a third of
+     the screen. */
   .block-container {
-      max-width: 60rem;
-      margin-left: 3.5rem;
-      margin-right: auto;
-      padding-top: 2.2rem;
-      padding-bottom: 4rem;
+      max-width: 100%;
+      padding: 1.4rem 2.2rem 3rem 2.2rem;
   }
-  html, body, [class*="css"] {
-      font-feature-settings: "kern" 1, "liga" 1;
-      -webkit-font-smoothing: antialiased;
-  }
+  html, body, [class*="css"] { -webkit-font-smoothing: antialiased; }
   h1 {
-      font-size: 1.45rem !important;
-      font-weight: 600 !important;
-      letter-spacing: -0.012em;
-      margin: 0 0 0.15rem 0 !important;
-      padding: 0 !important;
-      color: #16181A;
+      font-size: 1.3rem !important; font-weight: 600 !important;
+      letter-spacing: -0.012em; margin: 0.5rem 0 0.55rem 0 !important;
+      padding: 0 !important; color: #16181A; line-height: 1.3;
   }
   h2 {
-      font-size: 0.98rem !important;
-      font-weight: 600 !important;
-      letter-spacing: -0.005em;
-      margin: 2rem 0 0.8rem 0 !important;
-      padding: 0 !important;
+      font-size: 0.92rem !important; font-weight: 600 !important;
+      text-transform: uppercase; letter-spacing: 0.06em; color: #4A4E52;
+      margin: 1.35rem 0 0.4rem 0 !important; padding: 0 !important;
+      line-height: 1.4;
   }
-  h3, h4 {
-      font-size: 0.9rem !important;
-      font-weight: 600 !important;
-      margin: 1.1rem 0 0.35rem 0 !important;
-      padding: 0 !important;
+  h3, h4, h5, h6 {
+      font-size: 0.84rem !important; font-weight: 600 !important;
+      margin: 0.85rem 0 0.3rem 0 !important; padding: 0 !important;
+      line-height: 1.4;
   }
   hr, [data-testid="stDivider"] hr {
-      border: none;
-      border-top: 1px solid #E2E0D9;
-      margin: 1.4rem 0 0.9rem 0;
+      border: none; border-top: 1px solid #E2E0D9; margin: 1rem 0 0.7rem 0;
   }
-  [data-testid="stVerticalBlock"] { gap: 0.35rem; }
-  /* The finding sentence is the deliverable, so it reads as body copy rather
-     than as a cell in a grid. */
+  [data-testid="stVerticalBlock"] { gap: 0.5rem; }
+  p, li { line-height: 1.42; }
   p.finding {
-      font-size: 1.0rem;
-      line-height: 1.62;
-      max-width: 78ch;
-      margin: 1.05rem 0 0.15rem 0;
-      color: #16181A;
+      font-size: 0.94rem; line-height: 1.45; max-width: 96ch;
+      margin: 0.55rem 0 0.1rem 0; color: #16181A;
   }
   p.note {
-      font-size: 0.86rem;
-      line-height: 1.55;
-      max-width: 74ch;
-      color: #4A4E52;
-      margin: 0 0 0.7rem 0;
+      font-size: 0.82rem; line-height: 1.42; max-width: 96ch;
+      color: #4A4E52; margin: 0 0 0.3rem 0;
   }
   .stCaption, [data-testid="stCaptionContainer"] p {
-      font-size: 0.79rem !important;
-      color: #63676B !important;
-      line-height: 1.5;
-      max-width: 74ch;
+      font-size: 0.76rem !important; color: #63676B !important;
+      line-height: 1.4; max-width: 100ch; margin-bottom: 0.35rem !important;
   }
-  code, .identifier {
+  code, .identifier, .ids span {
       font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
                    monospace;
-      font-size: 0.86em;
-      background: transparent !important;
-      color: #16181A !important;
-      padding: 0 !important;
+      font-size: 0.79rem; background: transparent !important;
+      color: #16181A !important; padding: 0 !important;
   }
-  /* Flat, hairline, no card. */
+  /* Membership as a dense block. Fourteen parts occupy three lines, not
+     fourteen, and the fixed width keeps them in columns. */
+  .ids { display: flex; flex-wrap: wrap; gap: 0 0.9rem; margin: 0.15rem 0 0 0; }
+  .ids span { display: inline-block; min-width: 6.4rem; line-height: 1.5; }
+  /* Coverage: counts right-aligned against their sentence, one glance. */
+  table.tight { border-collapse: collapse; width: 100%; max-width: 110ch; }
+  table.tight td {
+      border-top: 1px solid #EDEBE4; padding: 0.22rem 0.7rem 0.22rem 0;
+      font-size: 0.82rem; line-height: 1.4; color: #4A4E52; vertical-align: top;
+  }
+  table.tight td.num {
+      text-align: right; width: 4.5rem; font-variant-numeric: tabular-nums;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: #16181A; white-space: nowrap;
+  }
   [data-testid="stExpander"],
   [data-testid="stExpander"] details,
   [data-testid="stExpanderDetails"] {
-      border: none !important;
-      border-radius: 0 !important;
-      box-shadow: none !important;
-      background: transparent !important;
+      border: none !important; border-radius: 0 !important;
+      box-shadow: none !important; background: transparent !important;
   }
-  [data-testid="stExpander"] { margin: 0 0 1.5rem 0; }
+  [data-testid="stExpander"] { margin: 0 0 0.55rem 0; }
   [data-testid="stExpander"] summary {
-      font-size: 0.82rem !important;
-      color: #2C4A63 !important;
-      padding: 0 !important;
-      width: max-content;
+      font-size: 0.78rem !important; color: #2C4A63 !important;
+      padding: 0 !important; width: max-content;
   }
-  [data-testid="stExpander"] summary p { font-size: 0.82rem !important; }
+  [data-testid="stExpander"] summary p { font-size: 0.78rem !important; }
   [data-testid="stExpanderDetails"] {
       border-left: 1px solid #E2E0D9 !important;
-      padding: 0.4rem 0 0.2rem 1rem !important;
-      margin-top: 0.5rem;
+      padding: 0.3rem 0 0.1rem 0.9rem !important; margin-top: 0.35rem;
   }
   [data-testid="stDataFrame"], [data-testid="stTable"] {
-      border-radius: 0 !important;
-      box-shadow: none !important;
+      border-radius: 0 !important; box-shadow: none !important;
+  }
+  /* Grid cells are identifiers and counts, so they are set in monospace with
+     tabular figures: columns line up and a number reads as a number. This is
+     the console reference, and it is typography rather than encoding. */
+  [data-testid="stDataFrame"] [role="gridcell"],
+  [data-testid="stDataFrame"] [role="columnheader"] {
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+                   monospace !important;
+      font-size: 0.78rem !important;
+      font-variant-numeric: tabular-nums;
   }
   .stButton > button {
-      border-radius: 2px;
-      border: 1px solid #2C4A63;
-      background: transparent;
-      color: #2C4A63;
-      font-size: 0.82rem;
-      font-weight: 500;
-      padding: 0.25rem 0.9rem;
-      box-shadow: none;
+      border-radius: 2px; border: 1px solid #2C4A63; background: transparent;
+      color: #2C4A63; font-size: 0.78rem; font-weight: 500;
+      padding: 0.18rem 0.8rem; box-shadow: none;
   }
   .stButton > button:hover {
-      background: #2C4A63;
-      color: #FCFCFA;
-      border-color: #2C4A63;
+      background: #2C4A63; color: #FCFCFA; border-color: #2C4A63;
   }
   section[data-testid="stSidebar"] {
-      background: #F2F1ED;
-      border-right: 1px solid #E2E0D9;
+      background: #F2F1ED; border-right: 1px solid #E2E0D9; width: 15rem !important;
   }
-  section[data-testid="stSidebar"] .block-container {
-      margin-left: 0;
-      padding-top: 2.4rem;
+  section[data-testid="stSidebar"] .block-container { padding: 1.6rem 1rem; }
+  /* Navigation reads as a deliberate list rather than a form control. */
+  section[data-testid="stSidebar"] [role="radiogroup"] { gap: 0 !important; }
+  section[data-testid="stSidebar"] [role="radiogroup"] > label {
+      padding: 0.28rem 0 0.28rem 0.6rem; margin: 0;
+      border-left: 2px solid transparent;
+  }
+  section[data-testid="stSidebar"] [role="radiogroup"] > label:has(input:checked) {
+      border-left-color: #2C4A63; background: #E7E5DE;
+  }
+  section[data-testid="stSidebar"] [role="radiogroup"] > label > div:first-child {
+      display: none;
+  }
+  section[data-testid="stSidebar"] [role="radiogroup"] p {
+      font-size: 0.82rem !important; line-height: 1.3;
   }
   [data-testid="stMetric"], [data-testid="stAlert"] {
-      border-radius: 0 !important;
-      box-shadow: none !important;
+      border-radius: 0 !important; box-shadow: none !important;
   }
 </style>
 """
-st.markdown(MEMO_CSS, unsafe_allow_html=True)
+st.markdown(CONSOLE_CSS, unsafe_allow_html=True)
 
 
 def identifier(text):
     return f"<span class='identifier'>{text}</span>"
+
+
+def identifier_block(items):
+    """A wrapping grid of identifiers. Fourteen parts take three lines."""
+    cells = "".join(f"<span>{item}</span>" for item in items)
+    return f"<div class='ids'>{cells}</div>"
+
+
+def tight_table(pairs):
+    """Count on the right, its sentence beside it. Aligned, one glance."""
+    body = "".join(
+        f"<tr><td class='num'>{count}</td><td>{text}</td></tr>"
+        for count, text in pairs)
+    return f"<table class='tight'>{body}</table>"
 
 
 def finding(sentence):
@@ -246,8 +261,9 @@ def render_coverage(panel):
     if panel.is_empty:
         note("Everything on this page was assessed.")
         return
-    for entry in panel.notes:
-        note(entry.sentence)
+    st.markdown(
+        tight_table([(entry.count if entry.count else "", entry.sentence)
+                     for entry in panel.notes]), unsafe_allow_html=True)
 
 
 def render_exposure(surface, find_out):
@@ -285,16 +301,38 @@ def render_exposure(surface, find_out):
                 if group.autonomy == gov.RECOMMENDS:
                     st.caption("Recommended, not applied: this grouping "
                                "depends on a modelling judgment.")
-                st.markdown(
-                    "<p class='note'>" +
-                    "<br>".join(identifier(row.key) for row in group.rows) +
-                    "</p>", unsafe_allow_html=True)
+                st.markdown(identifier_block(row.key for row in group.rows),
+                            unsafe_allow_html=True)
 
         for group in layer:
             for row in group.rows:
                 finding(row.sentence)
                 render_evidence(row)
         st.divider()
+
+    render_blocking_matrix(surface)
+
+
+def render_blocking_matrix(surface):
+    """Which finished goods each exposed part can stop.
+
+    TOPOLOGY, NOT MAGNITUDE. Every mark is identical and a cell is present or
+    absent, so nothing here reads as a quantity or a rank. A bar or a colour
+    ramp in this position would encode magnitude across incommensurable units,
+    which is the composite the arithmetic refuses, arriving through the picture.
+    """
+    parts = sorted({row.key for layer in surface.layers for group in layer
+                    for row in group.rows})
+    if not parts:
+        return
+    goods, matrix = view.blocking_matrix(parts, surface.evidence_by_part)
+    st.subheader("What each part blocks")
+    st.caption(f"A mark means the part appears in that finished good. "
+               f"{len(parts)} exposed parts, {len(goods)} finished goods. "
+               f"Marks are identical: this is which, never how much.")
+    st.dataframe(
+        list(matrix), hide_index=True, width="stretch",
+        column_config={"part": st.column_config.TextColumn("part", width=110)})
 
 
 def render_find_out(surface):
@@ -317,6 +355,14 @@ def render_confirm(surface, result):
     st.title(surface.question)
     st.caption("Every item here is a modelling judgment the system will not "
                "make alone, however complete the data is.")
+
+    grid = view.cluster_membership(result.report)
+    if grid:
+        st.subheader("Who sits with whom")
+        st.caption(f"{len(grid)} exposed parts, with the supplier and the "
+                   f"region each one is grouped under. Identifiers only: "
+                   f"nothing here is ordered or scored.")
+        st.dataframe(list(grid), hide_index=True, width="stretch")
     reviewer = st.sidebar.text_input("Your name (recorded on every decision)")
 
     for row in surface.rows:
@@ -351,8 +397,8 @@ REPO = "https://github.com/Lakshya2905/supplier-exposure-agent"
 # A reader who does not know the figures are one seed's synthetic data will read
 # a count as a finding, which is the same mistake the README's seed note exists
 # to prevent.
-STANDING = (f"Demonstration on synthetic data. Figures are illustrative at seed "
-            f"42. Source: [{REPO.split('//')[1]}]({REPO})")
+STANDING = (f"Demonstration on synthetic data. Figures are illustrative at "
+            f"seed 42. Source: <a href='{REPO}'>{REPO.split('//')[1]}</a>")
 
 
 def main():
@@ -363,10 +409,8 @@ def main():
         "Surface",
         (view.EXPOSURE, view.FIND_OUT, view.CONFIRM),
         format_func=lambda name: view.SURFACE_QUESTION[name])
-    st.sidebar.caption(
-        "Three surfaces, deliberately separate. They answer different "
-        "questions and their rows are different things: a part, a field, a "
-        "cluster.")
+    st.sidebar.caption("Three surfaces, deliberately separate. Their rows are "
+                       "different things: a part, a field, a cluster.")
 
     surface = built[choice]
     if choice == view.EXPOSURE:

@@ -221,6 +221,46 @@ class TestConfirmSurface(unittest.TestCase):
         self.assertIn("anonymous decision is not a decision", warnings)
 
 
+class TestStructuralViews(unittest.TestCase):
+    """Both encode WHICH, never HOW MUCH."""
+
+    def test_the_exposure_page_shows_a_blocking_matrix(self):
+        rendered = text_of(run_app())
+        self.assertIn("What each part blocks", rendered)
+        self.assertIn("which, never how much", rendered)
+
+    def test_the_confirm_page_shows_a_cluster_membership_grid(self):
+        app = run_app()
+        app.sidebar.radio[0].set_value("confirm").run()
+        rendered = text_of(app)
+        self.assertIn("Who sits with whom", rendered)
+        self.assertIn("nothing here is ordered or scored", rendered)
+
+    def test_the_matrix_marks_are_identical_so_nothing_reads_as_a_quantity(self):
+        from src.interface import model as view
+        from src.pipeline import run, surfaces
+        result = run()
+        surface = surfaces(result)[view.EXPOSURE]
+        parts = sorted({row.key for layer in surface.layers for group in layer
+                        for row in group.rows})
+        goods, matrix = view.blocking_matrix(parts, surface.evidence_by_part)
+        marks = {cell for row in matrix for key, cell in row.items()
+                 if key != "part"}
+        self.assertEqual(marks - {""}, {view.MARK},
+                         "a second mark would be a magnitude encoding")
+
+    def test_the_cluster_grid_holds_identifiers_and_no_numbers(self):
+        from src.interface import model as view
+        from src.pipeline import run
+        grid = view.cluster_membership(run().report)
+        self.assertTrue(grid)
+        for row in grid:
+            with self.subTest(part=row["part"]):
+                self.assertEqual(set(row), {"part", "supplier", "region"})
+                for value in row.values():
+                    self.assertIsInstance(value, str)
+
+
 class TestStandingLine(unittest.TestCase):
 
     def test_it_says_the_data_is_synthetic_and_the_figures_illustrative(self):
