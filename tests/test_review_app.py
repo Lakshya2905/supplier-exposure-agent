@@ -338,6 +338,47 @@ class TestBadgesAreNominal(unittest.TestCase):
                     self.assertNotIn("style=", review_app.badge(text, **kwargs))
                     self.assertNotIn("hsl(", review_app.badge(text, **kwargs))
 
+    def test_an_absence_is_never_dimmed_or_shrunk(self):
+        """Dimming an unknown says it matters less, which is the lie refused.
+
+        The `absent` variant may differ from a plain chip only in border style.
+        Any opacity, size or weight difference would make absence read as a
+        lesser kind of presence.
+        """
+        block = SOURCE.split(".badge.absent {")[1].split("}")[0]
+        for banned in ("opacity", "font-size", "font-weight"):
+            with self.subTest(property=banned):
+                self.assertNotIn(banned, block)
+        # border-color is form; a bare color: would restyle the label itself.
+        self.assertIsNone(re.search(r"(?<!-)\bcolor:", block),
+                          "the label keeps the same text colour as any chip")
+        self.assertIn("border-style: dashed", block,
+                      "form, not colour, so it survives greyscale and print")
+
+    def test_every_absence_kind_the_model_emits_has_a_label(self):
+        """A kind with no label renders as an unexplained absence.
+
+        This is the coupling that rots: the model gains a fourth coverage kind
+        and the painter silently drops it, so a reader sees an absence with no
+        statement of which kind it is.
+        """
+        import review_app
+        from src.interface import model as view
+        from src.pipeline import default_data_dir, run, surfaces
+        built = surfaces(run(data_dir=default_data_dir()))
+        kinds = {note.kind
+                 for note in built[view.EXPOSURE].coverage.notes}
+        self.assertTrue(kinds, "the fixture data must exercise some absence")
+        for kind in kinds:
+            with self.subTest(kind=kind):
+                self.assertIn(kind, review_app.ABSENCE_LABEL)
+                self.assertTrue(review_app.absence_chip(kind))
+
+    def test_an_unrecognised_absence_kind_gets_no_label_rather_than_a_guess(self):
+        import review_app
+        self.assertEqual(review_app.absence_chip("something new"), "")
+        self.assertEqual(review_app.absence_chip(""), "")
+
     def test_the_chip_label_is_legible_rather_than_a_dense_monogram(self):
         """0.68rem uppercase monospace was below the practical reading floor.
 

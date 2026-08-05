@@ -335,11 +335,32 @@ def render_evidence(row):
             "re-run. This interface never writes to source data.")
 
 
+# WHICH KIND OF NOT-ASSESSED. The kinds are not interchangeable and a reader who
+# cannot tell them apart will collapse them into one shrug. An unresolved supplier
+# list is a fact about the data; a question that does not attach is a fact about
+# the part; a threshold nobody has set is a deliberate decision somebody owns. The
+# sentence says which, but only in prose, and prose does not survive skimming.
+#
+# Only the three kinds the pipeline actually produces are listed. Inventing labels
+# for states the data cannot yet distinguish would be the interface claiming a
+# precision the model does not have.
+ABSENCE_LABEL = {
+    "unplaceable": "unresolved",
+    "not_applicable": "not applicable",
+    "no_thresholds": "not configured",
+}
+
+
 def render_coverage(panel):
     """Neutral by construction. Not a warning, and placed level with the groups.
 
     The counterpart to the work queue: that surface says what to go and get,
     this says what was not assessed at all.
+
+    ABSENCE IS NEVER DIMMED. Each row carries a chip naming its kind, drawn at
+    the same text weight as any asserted category and differing only by a dashed
+    rule. Dimming an unknown, or shrinking it, says it matters less, which is the
+    reading this tool exists to refuse.
     """
     with st.container(border=True):
         st.markdown(panel_head(panel.heading,
@@ -349,8 +370,20 @@ def render_coverage(panel):
             note("Everything on this page was assessed.")
             return
         st.markdown(
-            tight_table([(entry.count if entry.count else "", entry.sentence)
+            tight_table([(entry.count if entry.count else "",
+                          absence_chip(entry.kind) + entry.sentence)
                          for entry in panel.notes]), unsafe_allow_html=True)
+
+
+def absence_chip(kind):
+    """A dashed chip naming the kind of absence, or nothing for an unknown kind.
+
+    An unrecognised kind gets no chip rather than a guessed one, for the same
+    reason the palette refuses to invent a colour: a wrong label on an absence is
+    worse than no label, because the reader would act on it.
+    """
+    label = ABSENCE_LABEL.get(kind)
+    return badge(label, absent=True) + " " if label else ""
 
 
 def render_exposure(surface, find_out):
