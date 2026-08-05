@@ -406,10 +406,27 @@ test, a **passing** xfail, a manifest mismatch, or a missed floor. It does not
 block on the snapshot moving. `eval_build.py` rebuilds the frozen set and is run
 by hand, never by CI.
 
-`data/` is gitignored and regenerated from the seed above in under a second.
-`tests/fixtures/` is committed and frozen. The interface reads the five CSVs a
-real consumer would have and never the answer key, so its verdicts come from the
-analysis rather than from what the generator intended.
+### Three data directories, three rules
+
+They are not interchangeable, and the whole arrangement fails quietly if they
+are ever treated as though they were.
+
+| directory | rule |
+|---|---|
+| `evals/` | **frozen and gated.** Inputs and the answer key, committed in one commit under a manifest, never regenerated. Correctness is measured against this and nothing else. |
+| `data/` | **gitignored and regenerated** from the documented seed. What a developer and CI work against. |
+| `demo/` | **committed, display only.** Generated from the same seed and committed so a cold container has something to render on first page load. Never read by the harness or by any test. |
+
+`demo/` exists because a container waking from sleep cannot regenerate data
+during its first page load, so a visitor would meet a blank screen. It carries no
+answer key, and `tests/test_demo_dataset.py` asserts that nothing which judges
+correctness reads it. Those tests check the directory's **shape and never its
+contents**, since a test that opened a demo CSV to verify it would be the first
+breach of the rule it exists to protect.
+
+The interface reads the five CSVs a real consumer would have and never the answer
+key, so its verdicts come from the analysis rather than from what the generator
+intended. `tests/fixtures/` is committed and frozen.
 
 The dashboard has no authentication and is not built to have any.
 

@@ -22,7 +22,7 @@ from src import governance as gov
 from src import ranking
 from src.interface import actions
 from src.interface import model as view
-from src.pipeline import run, surfaces
+from src.pipeline import default_data_dir, run, surfaces
 
 st.set_page_config(page_title="Supplier exposure review", layout="wide")
 
@@ -179,7 +179,7 @@ def note(text):
 
 @st.cache_resource
 def load():
-    result = run()
+    result = run(data_dir=default_data_dir())
     return result, surfaces(result)
 
 
@@ -345,8 +345,19 @@ def render_confirm(surface, result):
         st.divider()
 
 
+REPO = "https://github.com/Lakshya2905/supplier-exposure-agent"
+
+# One line, stated once, in the same register as everything else on the page.
+# A reader who does not know the figures are one seed's synthetic data will read
+# a count as a finding, which is the same mistake the README's seed note exists
+# to prevent.
+STANDING = (f"Demonstration on synthetic data. Figures are illustrative at seed "
+            f"42. Source: [{REPO.split('//')[1]}]({REPO})")
+
+
 def main():
     result, built = load()
+    st.markdown(f"<p class='note'>{STANDING}</p>", unsafe_allow_html=True)
     st.sidebar.title("Supplier exposure")
     choice = st.sidebar.radio(
         "Surface",
