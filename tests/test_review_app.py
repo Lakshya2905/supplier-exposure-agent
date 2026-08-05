@@ -212,6 +212,23 @@ class TestConfirmSurface(unittest.TestCase):
     def test_a_reason_code_selector_is_offered(self):
         self.assertGreater(len(self.app.selectbox), 0)
 
+    # Regression: ISSUE-002 - the reason selector carried a blank first option,
+    # so "no reason" looked like a reason a reviewer could pick. Choosing it
+    # spent a click and returned the generic refusal.
+    # Found by /qa on 2026-08-05
+    # Report: .gstack/qa-reports/qa-report-supplier-exposure-agent-2026-08-05.md
+    def test_no_reason_selector_offers_a_blank_choice(self):
+        for selector in self.app.selectbox:
+            self.assertNotIn("", list(selector.options),
+                             "an unnamed reason is not a reason a reviewer "
+                             "can choose")
+
+    def test_every_reason_selector_starts_unset(self):
+        for selector in self.app.selectbox:
+            self.assertIsNone(selector.value,
+                              "a reason must be chosen deliberately, never "
+                              "carried in as a default")
+
     def test_a_decision_without_a_reviewer_name_is_refused(self):
         app = run_app()
         app.sidebar.radio[0].set_value("confirm").run()

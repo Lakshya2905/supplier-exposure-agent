@@ -454,15 +454,15 @@ def render_confirm(surface, result):
                        f"one act")
         control_columns = st.columns(len(row.controls) + 1)
         reason = control_columns[-1].selectbox(
-            "Reason", ("",) + row.controls[0].reason_codes,
-            key=f"reason-{row.key}")
+            "Reason", row.controls[0].reason_codes, index=None,
+            placeholder="Choose an option", key=f"reason-{row.key}")
         note = st.text_input("Note", key=f"note-{row.key}")
         for column, control in zip(control_columns, row.controls):
             if column.button(control.action.title(), key=f"{control.action}-{row.key}"):
                 try:
                     actions.apply(st.session_state.setdefault(
                         "log", gov.DecisionLog()), control, reviewer,
-                        reason_code=reason, note=note)
+                        reason_code=reason or "", note=note)
                     st.success(f"Recorded: {control.action} {row.key}")
                 except ValueError as refusal:
                     st.warning(str(refusal))
