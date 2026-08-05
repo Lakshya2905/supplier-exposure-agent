@@ -23,6 +23,31 @@ from .scoring import score_part
 from .synthetic import verdicts as V
 
 
+# THREE DIRECTORIES, THREE RULES, AND THEY ARE NOT INTERCHANGEABLE.
+#
+#   evals/   FROZEN and GATED. Inputs and the answer key, committed in one
+#            commit under a manifest, never regenerated. Correctness is measured
+#            against this and nothing else.
+#   data/    GITIGNORED and REGENERATED from the documented seed. What a
+#            developer and CI work against.
+#   demo/    COMMITTED FOR DISPLAY ONLY. Generated from the same seed, committed
+#            so a cold container has something to render on first page load. It
+#            is never read by the harness or by any test, because a dataset that
+#            exists to be looked at must not also be a thing correctness is
+#            judged against.
+WORKING_DIR = Path("data")
+DEMO_DIR = Path("demo")
+
+
+def default_data_dir():
+    """`data/` when it exists, otherwise the committed demo set.
+
+    The preference matters: under test and in CI `data/` is always present, so
+    the fallback never fires and `demo/` stays out of every correctness path.
+    """
+    return WORKING_DIR if (WORKING_DIR / "bom.csv").exists() else DEMO_DIR
+
+
 @dataclass(frozen=True)
 class Result:
     verdicts: dict
@@ -56,8 +81,8 @@ def _dependencies(verdicts, suppliers, lead_times):
     return dict(dependencies)
 
 
-def run(data_dir="data", config_path="config/archetypes.yaml"):
-    data_dir = Path(data_dir)
+def run(data_dir=None, config_path="config/archetypes.yaml"):
+    data_dir = Path(data_dir) if data_dir is not None else default_data_dir()
     edges = read_bom(data_dir / "bom.csv")
     parts = read_part_master(data_dir / "part_master.csv")
     demand = read_demand_plan(data_dir / "demand_plan.csv")

@@ -22,7 +22,7 @@ from src import governance as gov
 from src import ranking
 from src.interface import actions
 from src.interface import model as view
-from src.pipeline import run, surfaces
+from src.pipeline import default_data_dir, run, surfaces
 
 st.set_page_config(page_title="Supplier exposure review", layout="wide")
 
@@ -179,7 +179,7 @@ def note(text):
 
 @st.cache_resource
 def load():
-    result = run()
+    result = run(data_dir=default_data_dir())
     return result, surfaces(result)
 
 
