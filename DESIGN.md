@@ -340,6 +340,64 @@ Every claim resolves to one or more evidence records, and each record carries:
 - **Never render a bare count of sources.** "3 sources" invites reading count as strength, and three weak records do not outrank one authoritative one. Show source identity and type. Never render a tally as repeated marks.
 - **Evidence is exportable as plain text**, carrying file, retrieval time, row ids, and every transformation applied, so a citation can be pasted into a review memo intact.
 
+## The Decision Panel [TARGET]
+
+> [TARGET] **Not implemented.** Decisions are recorded and nothing displays them.
+> Everything the panel depends on now ships: `render_all` renders one sentence per
+> event with committed goldens, a cluster decision states its arity (`7ff6f14`), a
+> decision carries a real timestamp (`b898c81`), an unchanged repeat is refused and
+> a changed one cites what it replaces (`e6d1a72`). What is missing is the surface.
+
+The Confirm surface records a reviewer's judgments into an append-only log and
+shows none of them. `st.success("Recorded: ...")` appears 158px below the control
+and is erased by the next decision, so exactly one of 23 judgments has any trace
+on screen at any moment.
+
+- **The panel assembles no prose.** It renders `render_all(log)` output. Every
+  string it needs that is not an event sentence (heading, empty state, scope line,
+  order label) belongs in `render.py` beside `render_coverage_note`, in the section
+  that already exists for "wording with no event", golden-pinned with the rest.
+  Writing those strings inline in the painter is the shortest path and it makes
+  `README.md`'s claim that the interface assembles nothing of its own false.
+- **The record is session-scoped and says so in full-weight prose**, not a dimmed
+  caption. The log lives in `st.session_state` and is in-memory, so a refresh or an
+  idle reap empties it. An emptied log and a fresh session render identically
+  unless the wording distinguishes them, which is the `no record` versus
+  `none found` collapse the Absence section names.
+- **The empty state renders before the first decision**, so a reviewer learns the
+  panel exists before they need it. Zero decisions here is a **recorded** zero, the
+  reviewer's own count, so a figure is honest.
+- **The order is declared.** A linear list of 23 items with no stated order
+  violates the anti-ranking contract. Chronological is meaningful for a ledger, so
+  this is one caption, not a design problem.
+- **No control.** Append-only means no undo and no delete. A button added here also
+  shifts `app.button[0]` and breaks the three existing tests that index buttons
+  positionally.
+
+### Known trap: `note` is shadowed at the panel's insertion point
+
+**`review_app.py:515` binds `note = st.text_input("Note", ...)` inside
+`render_confirm`.** That makes `note` a function-local name for the whole of
+`render_confirm`, shadowing the module-level `note()` helper defined at
+`review_app.py:277`.
+
+A panel added at the foot of `render_confirm` that calls `note("This record covers
+this session only.")` therefore raises:
+
+```
+TypeError: 'str' object is not callable
+```
+
+and if the surface has no rows, `UnboundLocalError` instead.
+
+**Why this is written down rather than left to be discovered.** The traceback
+points at the panel, three lines of new code, and says the call is wrong. The
+actual cause is a name binding 40 lines above it that has been correct and
+harmless since it was written. Nothing about the error names the collision, and
+the first instinct will be to change the panel. Rename the widget local to
+`note_text` (and its `note=note` argument at `:528`) in the same commit as the
+panel, before writing the panel body.
+
 ## The Anti-Ranking Contract [PARTIAL]
 
 > [PARTIAL] Dimensions stay separate, no sort control exists, and the order label now declares the order meaningless as of `f4130e0`. The equal-area rule and the written no-default-sort rule are still targets, enforced by nothing.
