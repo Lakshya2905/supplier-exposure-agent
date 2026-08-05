@@ -270,6 +270,55 @@ def coverage(profiles, report, thresholds, catalogue):
                     notes=tuple(notes))
 
 
+# ---------------------------------------------------- structural views -----
+# TOPOLOGY, NOT MAGNITUDE. Both views below encode WHICH, never HOW MUCH. A mark
+# is present or absent and every mark is identical, so nothing here can be read
+# as a quantity, a rank or a severity. That is the whole reason they are
+# permissible: a bar, a gauge or a colour ramp would encode magnitude as length
+# or intensity across incommensurable units, which is the composite this system
+# spent eight stages refusing to compute, arriving through the picture instead
+# of through the arithmetic.
+
+MARK = "x"
+
+
+def blocking_matrix(part_numbers, evidence_by_part):
+    """Which finished goods each part can stop.
+
+    Returns (finished_goods, rows). Makes blast radius legible at a glance
+    without ranking anything: a part blocking three products has three marks,
+    and the reader does the comparison rather than the system.
+    """
+    parts = ranking.in_default_order(part_numbers)
+    goods = sorted({row.finished_good for part in parts
+                    for row in evidence_by_part[part].demand_rows})
+    matrix = []
+    for part in parts:
+        blocks = {row.finished_good for row in evidence_by_part[part].demand_rows}
+        entry = {"part": part}
+        entry.update({good: (MARK if good in blocks else "") for good in goods})
+        matrix.append(entry)
+    return tuple(goods), tuple(matrix)
+
+
+def cluster_membership(report):
+    """Which parts sit with which supplier and which region.
+
+    One row per part in a concentrated cluster, so a reviewer confirming a
+    grouping can see the grouping rather than read about it. Nominal throughout:
+    the cells are identifiers.
+    """
+    supplier_of, region_of = {}, {}
+    for cluster in report.concentrated():
+        for member in cluster.members:
+            target = supplier_of if cluster.basis == "supplier" else region_of
+            target.setdefault(member, cluster.key)
+    parts = ranking.in_default_order(set(supplier_of) | set(region_of))
+    return tuple({"part": part,
+                  "supplier": supplier_of.get(part, ""),
+                  "region": region_of.get(part, "")} for part in parts)
+
+
 # ------------------------------------------------------------- surfaces ----
 
 @dataclass(frozen=True)
@@ -291,6 +340,7 @@ class Surface:
     rows: tuple = ()
     coverage: object = None
     notices: tuple = ()
+    evidence_by_part: dict = field(default_factory=dict)
 
     def all_rows(self):
         return tuple(row for layer in self.layers for group in layer
@@ -347,7 +397,7 @@ def exposure_surface(profiles, verdicts, catalogue, evidence_by_part,
 
     return Surface(name=EXPOSURE, question=SURFACE_QUESTION[EXPOSURE],
                    verb=SURFACE_VERB[EXPOSURE], row_entity=PART,
-                   layers=tuple(layers),
+                   layers=tuple(layers), evidence_by_part=dict(evidence_by_part),
                    coverage=coverage(profiles, report, thresholds, catalogue),
                    notices=notices)
 
