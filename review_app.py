@@ -435,7 +435,13 @@ def render_confirm(surface, result):
                    f"region each one is grouped under. Identifiers only: "
                    f"nothing here is ordered or scored.")
         st.dataframe(list(grid), hide_index=True, width="stretch")
-    reviewer = st.sidebar.text_input("Your name (recorded on every decision)")
+    # Held outside the widget. This input exists only on this surface, so
+    # Streamlit discards its state the moment a reviewer navigates away, and
+    # they would come back anonymous with nothing on screen saying so.
+    reviewer = st.sidebar.text_input(
+        "Your name (recorded on every decision)",
+        key="reviewer-input", value=st.session_state.get("reviewer", ""))
+    st.session_state["reviewer"] = reviewer
 
     for row in surface.rows:
         st.markdown(f"## `{row.key}`")

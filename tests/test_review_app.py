@@ -220,6 +220,36 @@ class TestConfirmSurface(unittest.TestCase):
         warnings = "\n".join(str(w.value) for w in app.warning)
         self.assertIn("anonymous decision is not a decision", warnings)
 
+    # Regression: ISSUE-001 - the reviewer name was cleared by any navigation
+    # away from this surface, so a reviewer who checked a figure on another
+    # surface came back anonymous and their next decision was refused.
+    # Found by /qa on 2026-08-05
+    # Report: .gstack/qa-reports/qa-report-supplier-exposure-agent-2026-08-05.md
+    def test_the_reviewer_name_survives_leaving_and_returning(self):
+        app = run_app()
+        app.sidebar.radio[0].set_value("confirm").run()
+        app.sidebar.text_input[0].set_value("Ada Lovelace").run()
+
+        app.sidebar.radio[0].set_value("exposure").run()
+        app.sidebar.radio[0].set_value("confirm").run()
+
+        self.assertEqual(app.sidebar.text_input[0].value, "Ada Lovelace",
+                         "a reviewer who navigates away must not silently "
+                         "become anonymous on returning")
+
+    def test_a_decision_after_navigating_away_and_back_is_recorded(self):
+        app = run_app()
+        app.sidebar.radio[0].set_value("confirm").run()
+        app.sidebar.text_input[0].set_value("Ada Lovelace").run()
+        app.sidebar.radio[0].set_value("find_out").run()
+        app.sidebar.radio[0].set_value("confirm").run()
+
+        app.button[0].click().run()
+        self.assertFalse(app.exception)
+        warnings = "\n".join(str(w.value) for w in app.warning)
+        self.assertNotIn("anonymous decision is not a decision", warnings)
+        self.assertTrue(any("Recorded:" in str(s.value) for s in app.success))
+
 
 class TestBadgesAreNominal(unittest.TestCase):
     """A badge set with an order is a severity scale in disguise."""
