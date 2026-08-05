@@ -9,6 +9,9 @@ description = "Agent 3: which single points of failure in a BOM would actually s
 requires-python = ">=3.11"
 dependencies = [
     "pandas>=2.0",
+    # Pinned with a floor like the rest. Carries config/archetypes.yaml, which
+    # holds the reviewer-owned magnitude thresholds.
+    "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]

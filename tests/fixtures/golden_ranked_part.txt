@@ -1,0 +1,1 @@
+SEA-P-0248: one qualified supplier (single_source), 182 days quoted lead time (266 at p95), at most 11.1 days of cover, blocks at least 16500 finished good units, supplier-owned tooling. This matches the resourcing trap.

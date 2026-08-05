@@ -22,6 +22,7 @@ that says nothing.
 """
 from . import (EXECUTES, KIND_CLUSTER_CONTINGENT, KIND_CLUSTER_FLAGGED,
                KIND_DIMENSION_ABSTAINED, KIND_DIMENSION_SCORED,
+               KIND_PART_RANKED,
                KIND_HUMAN_DECISION, KIND_MERGE_UNCERTAIN,
                KIND_READINGS_DISAGREE, KIND_VERDICT_ASSIGNED,
                STATUS_APPROVED, STATUS_PROPOSED, STATUS_REJECTED,
@@ -239,6 +240,100 @@ def _cluster_clause(event, evidence):
     return " ".join(parts)
 
 
+# THE ONLY PLACE ROUNDING HAPPENS. Quantities stay exact Fractions from stage 2
+# to here, so nothing accumulates drift across a three-level explosion.
+def _measure(value):
+    if isinstance(value, list) and len(value) == 2 and all(
+            isinstance(part, int) for part in value):
+        numerator, denominator = value
+        if denominator == 1:
+            return str(numerator)
+        return f"{numerator / denominator:.1f}"
+    return str(value)
+
+
+# BOUND DIRECTION IN WORDS. Rendering an upper bound as a bare number is a lie
+# by omission: "11 days of cover" reads as a measurement when the true figure
+# could be anything below it. This is where carrying the direction since stage 4
+# is paid out, and a reader who never sees "at most" has no way to recover it.
+BOUND_WORDS = {
+    "upper_bound": "at most ",
+    "lower_bound": "at least ",
+}
+
+RANKED_CLAUSE = {
+    "lead_time_to_recover": "{measure} days quoted lead time",
+    "buffer_cover": "{prefix}{measure} days of cover",
+    "blast_radius": "blocks {prefix}{measure} finished good units",
+    "portability": "{measure}-owned tooling",
+    "concentration": "correlated with {measure} other exposed parts",
+}
+
+RANKED_ABSENT = {
+    "lead_time_to_recover": {
+        "cannot_tell": "no quotable lead time on file",
+        "no_recovery_path": "no recovery path at all",
+        "not_applicable": "made in-house, so no purchase lead time",
+    },
+    "buffer_cover": {
+        "cannot_tell": "no on-hand record, so cover is unknown",
+    },
+    "portability": {
+        "cannot_tell": "no tooling owner recorded",
+    },
+    "concentration": {
+        "cannot_tell": "correlation depends on an unresolved supplier merge",
+        "not_applicable": "nobody to be correlated with",
+    },
+}
+
+
+def _ranked_clause(clause):
+    """One clause of the ranked sentence, with its unit and its bound direction.
+
+    An absent value renders as WORDS, never as a blank or a zero. A gap in a
+    sentence invites the reader to substitute zero, and zero is both a real
+    measurement and the worst one.
+    """
+    dimension = clause["dimension"]
+    completeness = clause.get("completeness", "")
+    if completeness in RANKED_ABSENT.get(dimension, {}):
+        return RANKED_ABSENT[dimension][completeness]
+
+    value = clause.get("value")
+    if value is None:
+        return ""
+    if dimension == "lead_time_to_recover":
+        detail = clause.get("detail") or {}
+        quoted, p95 = detail.get("quoted_days"), detail.get("p95_days")
+        if quoted is None:
+            return ""
+        return f"{quoted} days quoted lead time ({p95} at p95)"
+    if dimension == "buffer_cover" and value == "unbounded":
+        return "unbounded cover, nothing consuming it"
+    if dimension == "concentration" and clause.get("value") in (1, None):
+        return ""
+
+    prefix = BOUND_WORDS.get(completeness, "")
+    return RANKED_CLAUSE[dimension].format(
+        prefix=prefix, measure=_measure(value))
+
+
+def _ranked_sentence(event, evidence):
+    parts = [f"{event.sku_id}: "
+             f"{describe_verdict(evidence.get('verdict', ''))}"]
+    for clause in evidence.get("clauses", []):
+        rendered = _ranked_clause(clause)
+        if rendered:
+            parts.append(rendered)
+    sentence = ", ".join(part for part in parts if part) + "."
+
+    names = evidence.get("archetypes") or []
+    if names:
+        sentence += (" This matches " + ", ".join(names) + ".")
+    return sentence
+
+
 def render(event):
     """One event, one readable paragraph. Never stored, always recomputed."""
     evidence = event.evidence or {}
@@ -295,6 +390,9 @@ def render(event):
 
     elif event.kind in (KIND_CLUSTER_FLAGGED, KIND_CLUSTER_CONTINGENT):
         parts.append(_cluster_clause(event, evidence))
+
+    elif event.kind == KIND_PART_RANKED:
+        parts.append(_ranked_sentence(event, evidence))
 
     else:  # pragma: no cover - EVENT_KINDS is closed and validated on append
         parts.append(f"{_subject_clause(event)}: {event.kind}.")

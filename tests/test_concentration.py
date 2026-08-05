@@ -22,6 +22,7 @@ from fixtures.tiny_expected_clusters import (CONTINGENT_CLUSTERS,
                                              EXPECTED_UNCONCENTRATED_SUPPLIERS,
                                              FIXTURE_THRESHOLD,
                                              NOT_APPLICABLE_PARTS, VERDICTS)
+from codescan import code_of
 from src import concentration as C
 from src import governance as gov
 from src import scoring
@@ -112,22 +113,7 @@ class TestArityNotMagnitude(unittest.TestCase):
     def test_no_banding_constant_exists_anywhere_in_the_module(self):
         # CODE ONLY, docstrings and comments stripped, as at stage 4: the
         # docstrings explain at length why there is no band.
-        source = inspect.getsource(C)
-        import ast
-        tree = ast.parse(source)
-        code = []
-        for node in tree.body:
-            if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
-                body = list(node.body)
-                if (body and isinstance(body[0], ast.Expr)
-                        and isinstance(body[0].value, ast.Constant)
-                        and isinstance(body[0].value.value, str)):
-                    body = body[1:]
-                code.extend(ast.unparse(item) for item in body)
-            elif not (isinstance(node, ast.Expr)
-                      and isinstance(node.value, ast.Constant)):
-                code.append(ast.unparse(node))
-        joined = "\n".join(code)
+        joined = code_of(C)
         # WORD BOUNDARIES, not substrings: "LOW" occurs inside LOWER_BOUND,
         # which is a bound direction rather than a band label. A substring scan
         # here fails on correct code and teaches the next person to delete the

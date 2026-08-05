@@ -12,6 +12,7 @@ import pytest
 from fractions import Fraction
 from pathlib import Path
 
+from codescan import code_of
 from fixtures.tiny_expected_scores import (EXPECTED_BLAST_RADIUS_COMPLETENESS,
                                            EXPECTED_BLOCKED_UNITS,
                                            EXPECTED_COVER_COMPLETENESS,
@@ -30,26 +31,6 @@ from src.scoring import (CANNOT_TELL, DAYS, KNOWN, LOWER_BOUND, NOT_APPLICABLE,
                          score_part)
 
 FIXTURES = Path(__file__).parent / "fixtures"
-
-
-def code_of(function):
-    """A function's CODE, with its docstring and comments removed.
-
-    Several tests below assert that a word does not appear in an
-    implementation. The words in question ("composite", "band", "weight") are
-    exactly the words the docstrings use to explain why the thing is refused,
-    so scanning raw source flags the explanations and not the violations.
-    `ast.unparse` drops comments, and the docstring is stripped explicitly.
-    """
-    import ast
-    tree = ast.parse(textwrap.dedent(inspect.getsource(function)))
-    node = tree.body[0]
-    body = list(node.body)
-    if (body and isinstance(body[0], ast.Expr)
-            and isinstance(body[0].value, ast.Constant)
-            and isinstance(body[0].value.value, str)):
-        body = body[1:]
-    return "\n".join(ast.unparse(statement) for statement in body)
 
 
 def fixture_profiles():
@@ -363,24 +344,13 @@ class TestNoComposite(unittest.TestCase):
             left + right
 
     def test_no_module_function_combines_dimensions_in_code(self):
-        # Scans CODE only. Docstrings and comments in this module discuss
-        # composites at length in order to refuse them, so scanning raw source
-        # would flag the very explanations that make the refusal legible.
-        import ast
-        tree = ast.parse(inspect.getsource(scoring))
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.FunctionDef):
-                continue
-            body = list(node.body)
-            if (body and isinstance(body[0], ast.Expr)
-                    and isinstance(body[0].value, ast.Constant)
-                    and isinstance(body[0].value.value, str)):
-                body = body[1:]           # drop the docstring
-            code = "\n".join(ast.unparse(statement) for statement in body)
-            with self.subTest(function=node.name):
-                for forbidden in ("weight", "composite", "overall_score",
-                                  "normalise", "normalize"):
-                    self.assertNotIn(forbidden, code)
+        # functions_only: FORBIDDEN_UNIT_WORDS declares these words as data
+        # so a unit named any of them can be refused at construction.
+        code = code_of(scoring, functions_only=True)
+        for forbidden in ("weight", "composite", "overall_score",
+                          "normalise", "normalize"):
+            with self.subTest(word=forbidden):
+                self.assertNotIn(forbidden, code)
 
     # --------------------------------------------------------------- units --
     def test_every_measure_keeps_a_unit(self):

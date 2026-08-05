@@ -94,10 +94,13 @@ KIND_DIMENSION_ABSTAINED = "dimension_abstained"
 # the size, which is what agent 1's envelope field was always for.
 KIND_CLUSTER_FLAGGED = "cluster_flagged"
 KIND_CLUSTER_CONTINGENT = "cluster_contingent"
+# stage 6. The sentence a sourcing manager reads.
+KIND_PART_RANKED = "part_ranked"
 EVENT_KINDS = (KIND_MERGE_UNCERTAIN, KIND_READINGS_DISAGREE,
                KIND_VERDICT_ASSIGNED, KIND_HUMAN_DECISION,
                KIND_DIMENSION_SCORED, KIND_DIMENSION_ABSTAINED,
-               KIND_CLUSTER_FLAGGED, KIND_CLUSTER_CONTINGENT)
+               KIND_CLUSTER_FLAGGED, KIND_CLUSTER_CONTINGENT,
+               KIND_PART_RANKED)
 
 # Autonomy, per finding rather than per stage.
 EXECUTES = "executes"

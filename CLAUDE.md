@@ -43,6 +43,13 @@ Agent 3 of a multi-agent supply chain system. Answers: which single points of fa
   disagreement is structure and is reported as a finding. Routing a
   complementary disagreement buries a real result among things that look like
   errors.
+- Any default ordering must be arbitrary AND stable. Insertion order and dict
+  order are arbitrary today and silently become meaningful when an upstream
+  function changes how it iterates. Sort by an explicit key and label the order
+  in the output, because a plausible default is read as a ranking.
+- Never impute a missing value in order to rank something. Evaluate the actual
+  conditions with the field unknown. A list ordered by a guessed value is a
+  forecast wearing a work queue's clothes.
 - Store structured, render prose, never store the prose. The decision log holds
   no rendered text; `render(event)` produces it on demand and golden files pin
   the wording. `evals/` and `tests/fixtures/` are committed and frozen; `data/` is gitignored and regenerated from a documented seed.

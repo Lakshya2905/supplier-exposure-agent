@@ -646,6 +646,168 @@ a separate frozen scenario, not in the primary generator. What that scenario has
 to exercise, and what it must not do, is written down in
 [docs/EVAL_SCENARIO.md](docs/EVAL_SCENARIO.md).
 
+## Stage 6: ranked output
+
+**The constraint, stated first.** Ranking requires an order, an order requires
+comparison, and comparison across incommensurable units is what this design has
+spent four stages refusing. The pressure to write a weighted sum peaks here and
+it looks reasonable, because "rank these" presupposes a total order exists. It
+does not. Anything that produces one has manufactured it, and the manufacture is
+always the same move: strip the unit, rescale, add.
+
+So there is no single ranking. There are three things instead:
+
+| output | order | why it is honest |
+|---|---|---|
+| rank by a named dimension | total | everything compared is measured in the same unit |
+| archetype groups | partial, by subset inclusion | needs no weights and no common unit |
+| the work queue | none; grouped and arbitrary | ordering it would require imputing the missing value |
+
+### Archetypes: conjunctions, not scores
+
+"Single source and long lead and thin cover and supplier-owned tooling, all true
+at once" is a pattern with a name, not a number, and it is what the brief's
+headline sentence actually describes. Two families, governed differently.
+
+**Structural archetypes ship with the system and contain no threshold**, because
+every condition is a state the pipeline already computes: a verdict, a
+categorical value, a completeness state. *The resourcing trap* (single source
+plus supplier-owned tooling), *nobody to call* (`no_qualified_supplier`),
+*counted empty* (on-hand recorded as zero, which is cover of zero by arithmetic
+rather than by a band).
+
+**Magnitude archetypes are defined by a reviewer, not by the system.** "Long"
+and "thin" are bands and stage 4 refused to band a measure, so the band is not
+hidden here, it is moved out:
+
+- **the measure stays unbanded.** `buffer_cover` still returns raw `Fraction`
+  days. Stage 4's refusal was about banding inside the scoring, and it holds.
+  What happens here is a reviewer's filter applied to an unbanded measure.
+- **there is no default.** `config/archetypes.yaml` ships with every threshold
+  commented out, so out of the box the system can name the resourcing trap and
+  **cannot say "long lead"** until somebody states what long means.
+- **the number and its config version appear in the sentence.** Never "thin
+  cover"; always "cover of 14 days or less, a threshold set in archetypes.yaml
+  v1". The claim is attributed to the person who made it, reusing agent 1's
+  practice of recording the tolerance-config version on the event.
+
+### Autonomy: the ceiling sits on the catalogue
+
+| what | autonomy | why |
+|---|---|---|
+| the catalogue | `recommends`, permanently | which conjunctions are worth naming is a modelling judgment |
+| structural membership | `executes` | a conjunction of facts each computed at `executes` is a fact |
+| magnitude membership | `recommends` | the threshold is a live judgment |
+| any conjunction touching concentration | `recommends` | a conjunct that may not be claimed alone may not be claimed inside a conjunction |
+
+This looks like a weakening of stage 5's rule and is not. **The ceiling belongs
+where the judgment is.** At stage 5 each cluster is a separate grouping claim,
+so the ceiling is per finding. Here one catalogue is reused across every part,
+so confirming it per part would be three hundred confirmations of a single
+decision, which makes review worse rather than stronger.
+
+### Three-valued membership, and why the third value is the useful output
+
+A part that is single source with supplier-owned tooling and `cannot_tell` on
+cover can neither match nor be excluded honestly. So membership is Kleene, not
+boolean:
+
+```
+matched      every condition true
+excluded     at least one condition definitely FALSE
+cannot tell  nothing false, something unknown
+```
+
+**The middle row is load-bearing.** A definitely false condition excludes the
+part even while another condition is unknown. Without it every part carrying any
+abstention falls into "cannot tell", the bucket swallows the dataset, and its
+one genuinely useful property is lost.
+
+That property: **the cannot-tell bucket is a work queue, and its members are
+exactly the parts a missing field could still move.** For each one the system
+knows which field is missing and which archetype the part would join. So it can
+say: *fetch on-hand for these twenty-six parts and you will learn whether they
+are counted empty on a single source.* This is only possible because abstention
+was kept as a first-class state for five stages instead of being defaulted to
+zero.
+
+**The queue imputes nothing.** The membership test is the ranking criterion, and
+it is evaluated against the conditions as they actually stand with the field
+unknown. No plausible cover is assumed and nothing is ordered by a guessed
+value. Six parts where supplying on-hand could flip them into an archetype is an
+honest queue; six parts ordered by a projected cover is a forecast wearing a
+work queue's clothes. Asserted directly: two parts differing sixtyfold in blast
+radius and lead time come back in part-number order, and swapping their values
+does not move them.
+
+### The default order is arbitrary and stable
+
+Both halves matter, for different reasons.
+
+**Arbitrary**, because any plausible default is read as a ranking within minutes
+and nobody checks afterwards. The order is by part number and the view says so:
+*ordered by part number; choose a dimension to rank by*.
+
+**Stable**, because insertion order and dict order are arbitrary *today* and
+become a meaningful order the moment an upstream function changes how it
+iterates, at which point the display has acquired an ordering nobody chose and
+nobody can see. Sorting is by an explicit key, and tests assert the output is
+identical across a dozen shuffled inputs.
+
+### The default view is a grouping, not a ranking
+
+Archetypes come back in **dominance layers**. One archetype dominates another
+when its conditions are a strict superset: everything the weaker one asserts,
+plus more. That is a partial order needing no weights, and it is the only
+cross-archetype ordering permitted. Archetypes in the same layer are
+**incomparable**, and a display places them side by side rather than stacked, so
+the layout itself declines to imply an order that does not exist.
+
+The work queue sits **at the same level as the groups**, not beneath them.
+Burying it would say it matters less, and it is frequently the most actionable
+list on the page.
+
+### Two orderings refused, on the record
+
+- **Counting matched archetypes** is a weighted sum with every weight set to 1.
+  Two matches is not worse than one unless one dominates the other, and
+  dominance is already expressed properly. A test asserts no such count exists.
+- **Pareto dominance across parts** would be a legitimate weightless partial
+  order and is deliberately not built. Across three hundred parts with
+  abstentions the frontier is large and almost everything is incomparable, and a
+  large frontier presented as "the answer" invites exactly the mental averaging
+  the design refuses. Recorded so the decision is on file rather than
+  rediscovered.
+
+### The sentence
+
+> `SEA-P-0101`: several suppliers on paper, only one quotable
+> (hidden_single_source), 41 days quoted lead time (53 at p95), 19.7 days of
+> cover, blocks 12000 finished good units, supplier-owned tooling, correlated
+> with 28 other exposed parts. This matches the resourcing trap.
+
+Three rules on it:
+
+- **Bound direction is rendered in words.** "At most 11.1 days of cover", "blocks
+  at least 16500 units". Rendering a bound as a bare number is a lie by
+  omission, and a reader who never sees "at most" has no way to recover it. This
+  is where carrying the direction since stage 4 gets paid out.
+- **Abstentions render as words**, never a blank or a zero: "no on-hand record,
+  so cover is unknown".
+- **This is the only place rounding happens.** `Fraction(73, 2)` becomes "36.5
+  days" here and nowhere earlier, consistent with the rule since stage 2.
+
+### Measured end to end
+
+At seed 42 with the shipped config, so magnitude archetypes are off: five
+structural archetypes across two dominance layers. 14 parts in the resourcing
+trap, 14 in the correlated resourcing trap, 4 with no quotable source, 2 counted
+empty, 2 with nobody to call. The work queue holds 26 parts whose on-hand would
+settle whether they are counted empty on a single source, and 9 each for the two
+tooling-dependent traps. Ranking by cover puts three parts at zero days at the
+top; 107 parts are not comparable on cover and are listed separately rather than
+placed at either end.
+
 ## Autonomy levels
 
 These are the product, not a detail.
@@ -738,7 +900,7 @@ green, and the test fails loudly the day someone fixes it without noticing.
 
 ## What is deliberately not here
 
-Stages 6 through 8: ranked output, review interface, eval harness.
+Stages 7 and 8: the review interface and the eval harness.
 
 Out of scope permanently: cost optimisation, supplier scorecarding, negotiation
 support, resourcing workflow. `annual_spend_usd` is carried as a display column

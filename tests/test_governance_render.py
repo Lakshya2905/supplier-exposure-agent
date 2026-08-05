@@ -121,6 +121,29 @@ def cluster_contingent_event():
                               "suppliers"]})
 
 
+def part_ranked_event():
+    return gov.DecisionEvent(
+        event_id=9, at="2026-08-04T09:15:00+00:00",
+        status=gov.STATUS_PROPOSED, sku_id="SEA-P-0248",
+        field="ranked_summary", value="single_source",
+        source_file="part_master.csv", kind=gov.KIND_PART_RANKED,
+        evidence={
+            "verdict": "single_source",
+            "clauses": [
+                {"dimension": "lead_time_to_recover", "unit": "days",
+                 "completeness": "known", "value": [182, 266],
+                 "detail": {"quoted_days": 182, "p95_days": 266}},
+                {"dimension": "buffer_cover", "unit": "days",
+                 "completeness": "upper_bound", "value": [389, 35],
+                 "detail": {}},
+                {"dimension": "blast_radius", "unit": "finished_good_units",
+                 "completeness": "lower_bound", "value": 16500, "detail": {}},
+                {"dimension": "portability", "unit": "categorical",
+                 "completeness": "known", "value": "supplier", "detail": {}},
+            ],
+            "archetypes": ["the resourcing trap"]})
+
+
 class TestGoldens(unittest.TestCase):
     """Committed sentences. A wording change is a reviewable diff, not a
     surprise in the review interface."""
@@ -167,6 +190,23 @@ class TestGoldens(unittest.TestCase):
                 self.assertIn("modelling judgment", render(event))
                 self.assertIn("never applied automatically", render(event))
 
+    def test_part_ranked_golden(self):
+        self.assertEqual(render(part_ranked_event()),
+                         read_golden("golden_ranked_part.txt"))
+
+    def test_the_ranked_sentence_renders_bound_direction_in_words(self):
+        # A bare number reads as a measurement when the true figure could be
+        # anything below it. This is where carrying the bound direction since
+        # stage 4 is paid out, and a reader who never sees "at most" has no way
+        # to recover it.
+        sentence = render(part_ranked_event())
+        self.assertIn("at most", sentence)
+        self.assertIn("at least", sentence)
+
+    def test_the_ranked_sentence_rounds_only_here(self):
+        # 389/35 is 11.114..., carried exactly all the way from stage 2.
+        self.assertIn("11.1 days of cover", render(part_ranked_event()))
+
     def test_a_scored_dimension_always_renders_its_unit(self):
         # A bare number in a review interface is the first step toward somebody
         # adding it to the one beside it, and these are not addable.
@@ -183,7 +223,8 @@ class TestEveryEnumMemberRenders(unittest.TestCase):
                   gov.KIND_DIMENSION_SCORED: dimension_scored_event(),
                   gov.KIND_DIMENSION_ABSTAINED: dimension_abstained_event(),
                   gov.KIND_CLUSTER_FLAGGED: cluster_flagged_event(),
-                  gov.KIND_CLUSTER_CONTINGENT: cluster_contingent_event()}
+                  gov.KIND_CLUSTER_CONTINGENT: cluster_contingent_event(),
+                  gov.KIND_PART_RANKED: part_ranked_event()}
         self.assertEqual(set(events), set(gov.EVENT_KINDS),
                          "a new event kind must arrive with a rendering, or it "
                          "reaches the review interface unreadable")

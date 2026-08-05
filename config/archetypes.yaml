@@ -1,0 +1,27 @@
+# Magnitude thresholds for archetype matching. REVIEWER-OWNED.
+#
+# THIS FILE SHIPS WITH NO THRESHOLDS SET, AND THAT IS DELIBERATE.
+#
+# "Long lead" and "thin cover" are bands. Stage 4 refused to band a measure
+# inside the scoring, and stage 6 does not smuggle one back in: the band is
+# moved OUT of the system and into this file, where a named person owns it.
+#
+# With every threshold commented out, the system can name the structural
+# archetypes (single source with supplier-owned tooling, counted and empty,
+# nobody to call) and CANNOT say "long lead" until somebody states what long
+# means. That is the intended out-of-the-box behaviour, not a gap.
+#
+# Whatever you set here is quoted back inside every sentence that uses it, with
+# this file's version, so the claim is attributed rather than assumed. Bump
+# `version` whenever a number changes: the version is recorded on the decision
+# event, so a finding from last month can still be read against the threshold
+# that produced it.
+#
+# There is no correct value below. A 90 day threshold is right for a business
+# that can requalify in a quarter and wrong for one that cannot.
+
+version: v1
+
+thresholds:
+  # long_lead_days: 90
+  # thin_cover_days: 14
