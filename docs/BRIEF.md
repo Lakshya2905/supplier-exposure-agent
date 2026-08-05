@@ -282,9 +282,12 @@ reason that had drifted away from what the test was supposed to establish. Code
 that is wrong announces itself. A test that is about the wrong thing announces
 that everything is fine.
 
-Three instances of the original shape, then two of a second shape, then one that
-sharpens the first. Entries 1, 2, 3 and 6 are a proxy standing in for the
-property. Entries 4 and 5 are a check that malfunctioned on correct code.
+Three instances of the original shape, then two of a second, then three more that
+sharpen it. Entries 1, 2, 3 and 6 are a proxy standing in for the property.
+Entries 4 and 5 are a check that malfunctioned on correct code. Entry 7 is the
+property held everywhere except at the exit. Entry 8 is not about a test at all:
+it is the same failure performed by a reviewer rather than by an assertion, which
+is why it belongs here rather than in a postmortem.
 
 **1. The clean-world control stopped being clean.** `zeroed()` enumerated the
 damage knobs inline. Two knobs added later were not added to the list, so
@@ -340,6 +343,62 @@ channel. Two of the three guards were also bypassed at runtime by inline styles
 that `chip_colour()` wrote per category, including a per-category text tint.
 Fixed by deleting the hue map: the label already carried the category, and
 `CLAUDE.md` already required that stripping colour lose no information.
+
+**7. The rule held for eight stages and collapsed at the sentence.** Missing and
+zero are different facts, and this codebase enforces that harder than anything
+else it does: `read_part_master` refuses to coerce a blank to zero, `buffer_cover`
+separates the two before any arithmetic and says so in capitals, and
+`TestMissingOnHandVersusRecordedZero` asserts they differ at every level. Then
+`blast_radius` rendered "blocks at least 0 finished good units" ten times on the
+landing surface. The dimension carries two facets, a structural reach that is
+KNOWN and a blocked volume that inherits the demand plan's gaps, and its own
+reason text says exactly that. The renderer rendered only the volumetric facet,
+so a part that certainly stops a finished good read as blocking nothing, and the
+absence arrived as the number zero wearing a bound prefix that promised a figure.
+
+Forty characters earlier in the same sentence sat the correct treatment of the
+same problem: "no on-hand record, so cover is unknown". One absence in words, one
+as a zero, in one sentence.
+
+> A guarantee enforced through a pipeline is not enforced at its exits. Every
+> layer that turns structure into something a person reads is a place the
+> guarantee has to be restated, because a renderer that drops a facet is
+> indistinguishable, to a reader, from a model that never had it.
+
+The near-miss is worth recording with it. The obvious fix keys on `value == 0`,
+and that is wrong for the same reason the bug is wrong: partial usage whose
+recorded goods happen to total zero is a RECORDED zero, so inferring the branch
+from the value reintroduces the collapse inside its own repair. It does not occur
+on seed 42, which makes it latent rather than absent, and latent is the worse of
+the two for something a renderer keys on. The fix keys on the branch that set the
+completeness, named rather than reduced to a boolean so that a third usage state
+must declare itself instead of inheriting a reading.
+
+**8. Trust inherited from a subagent, reported as verification.** A review agent
+reported that all four gap xfails asserted the existence of a name rather than a
+behaviour. Two were checked directly against the code. The other two were not,
+and all four were reported upward as verified. One of them,
+`test_fractional_quantities_are_supported`, was already behavioural: it runs the
+generator and asserts a non-integer quantity appears in real BOM rows. The claim
+that shipped was "all four", the evidence supported "two, and a pattern".
+
+This happened in the same session, and in the same commit, as the fix for
+accepting a proxy in place of the property. It is the second instance of the same
+shape here. Earlier in the same session a measured claim about the chip palette
+was passed upward with a severity ("two chips fail WCAG AA today") that direct
+verification later reduced to a latent defect in unreachable code, and a learning
+was written with `source: cross-model` when the second voice was another instance
+of the same model.
+
+> A subagent's finding is evidence, not verification. Delegating the search does
+> not delegate the checking, and the plausibility of a claim rises with the effort
+> that produced it, which is exactly what makes an expensive report the easiest
+> one to forward unchecked.
+
+The counter-practice is mechanical, because judgment is what fails here: state
+the count, then check each member and mark it. "Three of four, verified
+individually" and "all four, per the agent" are different claims, and only the
+first is a finding. Where a claim is forwarded unchecked, forward it labelled.
 
 Entry 6 is instances 1 to 3 again, with one addition worth stating on its own.
 
