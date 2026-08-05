@@ -477,10 +477,33 @@ class TestLogging(unittest.TestCase):
     "replacement scores identically to one that can be resourced in a "
     "fortnight."))
 def test_lead_time_to_recover_covers_qualification_time():
-    from src.synthetic.model import QUOTED_LEAD_TIME_DAYS
-    import src.synthetic.model as model
-    assert hasattr(model, "QUALIFICATION_LEAD_TIME_DAYS"), (
-        "no field records how long qualifying an alternative source takes")
+    """BEHAVIOURAL, and deliberately not `hasattr`.
+
+    The predecessor asserted `hasattr(model, "QUALIFICATION_LEAD_TIME_DAYS")`.
+    A bare constant satisfies that, flipping a strict xfail to XPASS and turning
+    the gate red while the dimension still answers half the brief's question, so
+    the cheapest route back to green is a name with no logic behind it. That is a
+    proxy standing in for the property, which is the defect shape this project's
+    corrections log is about.
+
+    This asserts the exact scenario the gap is named for. Two parts have
+    identical purchase lead times; one supplier needs 40 weeks to qualify a
+    replacement and the other a fortnight. The brief defines this dimension as
+    how long to QUALIFY an alternative or wait out the disruption, so the two
+    must not score the same. Qualification days ride in third position, which is
+    one shape the future input could take; today the function reads pairs and
+    ignores anything beyond them, so both parts score identically and this fails
+    on the assertion rather than on the input. That equality is the gap.
+    """
+    slow = scoring.lead_time_to_recover(
+        "SLOW-Q", "single_source", ((30, 45, 280),))
+    fast = scoring.lead_time_to_recover(
+        "FAST-Q", "single_source", ((30, 45, 14),))
+
+    assert slow.value != fast.value, (
+        "a part whose only supplier needs 40 weeks to qualify a replacement "
+        "scores identically to one resourceable in a fortnight, so the "
+        "dimension answers only the wait-it-out half of its definition")
 
 
 if __name__ == "__main__":  # keep last: classes below an entrypoint never run
