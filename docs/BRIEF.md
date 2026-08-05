@@ -172,8 +172,20 @@ lane. Four parts in the generated data are exactly this. So a verdict of
 `readings_disagree` is disqualifying **on its own**, independent of whether the
 readings agreed.
 
-The general form, which stages 4 and 5 inherit: *agreement between two readings
-is not sufficient for autonomy if what they agree on is itself an abstention.*
+**The abstention rule, stated generally.** Autonomy requires agreement on a
+*settled answer*. Agreement is necessary and not sufficient. Two readings
+agreeing on an abstention is unanimous uncertainty, not a decision, and
+unanimous uncertainty is exactly as undecided as disagreement is.
+
+The test is therefore two-part and both parts must hold before anything
+executes:
+
+1. the readings agree, and
+2. what they agree on is an answer rather than an abstention
+
+Stages 4 through 8 inherit this unchanged. It applies per dimension per part at
+stage 4, not per stage: a dimension that abstains on a part cannot be rescued by
+the fact that both of its readings abstained identically.
 
 ### Recorded at stage 3: `readings_disagree` cannot be ranked
 

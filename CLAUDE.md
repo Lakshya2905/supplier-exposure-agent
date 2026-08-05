@@ -27,9 +27,11 @@ Agent 3 of a multi-agent supply chain system. Answers: which single points of fa
 - Where a judgment carries a threshold, the floors come from what the task
   requires and the threshold moves to meet them, never the reverse. If no
   threshold meets both floors, that is a finding, not a reason to lower one.
-- Agreement between two readings is not sufficient for autonomy if what they
-  agree on is itself an abstention. A `readings_disagree` verdict never
-  executes, however the readings compared.
+- Autonomy requires agreement on a settled answer. Agreement is necessary and
+  not sufficient: two readings agreeing on an abstention is unanimous
+  uncertainty, not a decision. Both parts must hold before anything executes,
+  the readings agree AND what they agree on is an answer. A `readings_disagree`
+  verdict therefore never executes, however the readings compared.
 - Store structured, render prose, never store the prose. The decision log holds
   no rendered text; `render(event)` produces it on demand and golden files pin
   the wording. `evals/` and `tests/fixtures/` are committed and frozen; `data/` is gitignored and regenerated from a documented seed.

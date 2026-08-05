@@ -194,11 +194,22 @@ Against the generator's answer key at seed 42: **300 parts, 300 verdicts
 matching truth, 296 executing automatically, 4 in the exception lane**, all four
 genuine make-flag contradictions, ordered worst reading first.
 
-The merge-uncertain lane is **empty at the shipped threshold**, which is the
-normaliser being good enough rather than the machinery going unused: at 0.95
-nothing is genuinely ambiguous in this data. That path is covered by unit tests
-and by the committed golden, both of which pin it at 0.90 where the case is
-live.
+**The merge-uncertain lane did not fire.** It is empty at the shipped threshold
+because the normaliser resolved every case in this dataset: at 0.95 nothing here
+is genuinely ambiguous. That is a finding, and it belongs next to the threshold
+evidence above rather than in the known-gaps list.
+
+It was tempting to engineer a supplier pair landing between 0.95 and 1.0 so the
+lane had live traffic. That was rejected, because **the threshold is derived
+from the floors, so fitting data to the threshold inverts the whole
+derivation**: the number would stop being evidence about the normaliser and
+start being a consequence of a case built to justify it. The coverage that is
+correct here is the unit tests plus the committed golden, both pinned at 0.90
+where the case is genuinely live.
+
+A harder supplier-name distribution is a real thing to test, and it belongs in
+the eval set at stage 8 as a **separate frozen scenario**, not in the primary
+generator.
 
 ### The decision log renders, it does not store prose
 
