@@ -298,11 +298,28 @@ class TestRendererHonesty(unittest.TestCase):
 
     def test_sentence_case_does_not_corrupt_the_data_it_capitalises(self):
         # str.capitalize() lowercases the remainder, which turns "r.okafor"
-        # into "R.okafor" and an ISO timestamp's "T" into "t". Both appear
-        # verbatim in this output, so that is corruption, not cosmetics.
+        # into "R.okafor". A username is an identifier rather than a word, so
+        # changing its case makes the output stop matching a search for the
+        # person who decided. The ISO timestamp used to be the second example
+        # here and no longer appears in any sentence: time is carried on
+        # DecisionEvent.at and read directly, so that the rendered wording stays
+        # a pure function of structure and the goldens keep their meaning.
         sentence = render(human_decision_event())
         self.assertIn("r.okafor", sentence)
-        self.assertIn("2026-08-04T10:02:00+00:00", sentence)
+
+    def test_no_rendered_sentence_carries_a_timestamp(self):
+        """A clock in golden-pinned output makes the goldens a liability.
+
+        Either they freeze at a fake time, which is what shipped (every decision
+        in the app was stamped at the Unix epoch), or they change on every run.
+        The record carries time; the sentence does not.
+        """
+        for event in (human_decision_event(), merge_uncertain_event(),
+                      part_ranked_event()):
+            with self.subTest(kind=event.kind):
+                self.assertTrue(event.at, "the record must still carry a time")
+                self.assertNotIn(event.at, render(event))
+                self.assertNotIn("T00:00:00", render(event))
 
 
 class TestProseIsNeverStored(unittest.TestCase):

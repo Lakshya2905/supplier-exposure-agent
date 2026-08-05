@@ -17,11 +17,25 @@ from .. import governance as gov
 # field for precisely this.
 
 
-def apply(log, control, decided_by, reason_code="", note="",
-          at="1970-01-01T00:00:00+00:00", act_id=None):
-    """Record one act. Raises rather than guessing anything."""
+def apply(log, control, decided_by, reason_code="", note="", *, at,
+          act_id=None):
+    """Record one act. Raises rather than guessing anything.
+
+    `at` IS KEYWORD-ONLY AND HAS NO DEFAULT, deliberately. It used to default to
+    the Unix epoch, and the painter never passed it, so every decision the
+    deployed app recorded was stamped 1970-01-01. Nothing displayed the field, so
+    a governance record carrying a false date was invisible for as long as it
+    took somebody to render it.
+
+    A default clock here would be the same trap one layer down: it would make
+    the wrong value silent again, and it would put a clock inside a module whose
+    output is golden-pinned. So the caller supplies the time, and omitting it is
+    a loud failure in the same register as omitting the decider.
+    """
     if not (decided_by or "").strip():
         raise ValueError("an anonymous decision is not a decision")
+    if not (at or "").strip():
+        raise ValueError("an undated decision is not a decision")
     if control.requires_reason and not reason_code:
         raise ValueError(f"{control.action} requires a reason code")
     if reason_code and reason_code not in control.reason_codes:

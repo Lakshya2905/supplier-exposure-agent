@@ -254,6 +254,42 @@ class TestConfirmSurface(unittest.TestCase):
                          "a reviewer who navigates away must not silently "
                          "become anonymous on returning")
 
+    def test_a_recorded_decision_carries_a_real_timestamp(self):
+        """The app was stamping every decision at the Unix epoch.
+
+        `actions.apply` defaults `at` to 1970-01-01 so that src/ and the tests
+        stay deterministic, and nothing was overriding it. Nothing displayed the
+        field, so the defect was invisible. The clock belongs at the interface,
+        which is the only layer allowed to be nondeterministic.
+        """
+        app = run_app()
+        app.sidebar.radio[0].set_value("confirm").run()
+        app.sidebar.text_input[0].set_value("Ada Lovelace").run()
+        app.button[0].click().run()
+
+        log = app.session_state["log"]
+        self.assertEqual(len(log), 1)
+        recorded = log.events()[0]
+        self.assertNotEqual(recorded.at, "1970-01-01T00:00:00+00:00",
+                            "a decision stamped at the epoch is not a record")
+        self.assertTrue(recorded.at.startswith("20"),
+                        f"expected a real ISO timestamp, got {recorded.at!r}")
+
+    def test_the_clock_is_not_reachable_from_the_model_or_the_renderer(self):
+        """Determinism is a property of src/, enforced rather than intended.
+
+        `evals/` is frozen under a manifest and every rendered sentence is
+        golden-pinned, so a clock anywhere under src/ would make one of those
+        two either fake or unstable.
+        """
+        for module in ("src/governance/render.py", "src/interface/actions.py",
+                       "src/interface/model.py"):
+            source = (APP.parent / module).read_text()
+            with self.subTest(module=module):
+                self.assertNotIn("datetime.now", source)
+                self.assertNotIn("time.time", source)
+                self.assertNotIn("utcnow", source)
+
     def test_a_decision_after_navigating_away_and_back_is_recorded(self):
         app = run_app()
         app.sidebar.radio[0].set_value("confirm").run()

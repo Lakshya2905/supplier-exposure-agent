@@ -153,8 +153,12 @@ def _decision_clause(event):
     # a search for the person who made the decision.
     clause = (f"{STATUS_PROSE.get(event.status, event.status)} by "
               f"{event.decided_by}")
-    if event.at:
-        clause += f" on {event.at}"
+    # TIME BELONGS IN THE RECORD, NOT IN THE SENTENCE, and this is a
+    # determinism constraint rather than a wording preference. Every sentence
+    # this module produces is golden-pinned, so a real clock reaching this line
+    # would make the goldens either frozen at a fake time or meaningless. The
+    # timestamp is carried on `DecisionEvent.at` and read directly by whatever
+    # displays the log, which keeps `render` a pure function of structure.
     if event.reason_code:
         clause += f", reason: {event.reason_code}"
     if event.note:
