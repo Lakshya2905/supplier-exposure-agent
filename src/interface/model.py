@@ -217,9 +217,18 @@ class Row:
 
 @dataclass(frozen=True)
 class CoverageNote:
+    """One thing this page did not assess, and WHICH KIND of not-assessed it is.
+
+    `kind` exists because the kinds are not interchangeable and a reader who
+    cannot tell them apart will collapse them. A part whose supplier list is
+    unresolved is not the same as a part the question does not attach to, and
+    neither is the same as a threshold nobody has set. The painter needs the
+    distinction to label the absence; the sentence alone leaves it implicit.
+    """
     subject: str
     count: int
     sentence: str
+    kind: str = ""
 
 
 @dataclass(frozen=True)
@@ -247,7 +256,8 @@ def coverage(profiles, report, thresholds, catalogue):
             subject="unconfirmed supplier lists",
             count=len(report.unplaceable_parts),
             sentence=render_coverage_note(
-                "unplaceable", len(report.unplaceable_parts))))
+                "unplaceable", len(report.unplaceable_parts)),
+            kind="unplaceable"))
 
     per_dimension = {}
     for profile in profiles:
@@ -259,12 +269,14 @@ def coverage(profiles, report, thresholds, catalogue):
         notes.append(CoverageNote(
             subject=f"{dimension} not applicable", count=count,
             sentence=render_coverage_note("not_applicable", count,
-                                          dimension=dimension)))
+                                          dimension=dimension),
+            kind="not_applicable"))
 
     if not thresholds:
         notes.append(CoverageNote(
             subject="magnitude archetypes disabled", count=0,
-            sentence=render_coverage_note("no_thresholds", 0)))
+            sentence=render_coverage_note("no_thresholds", 0),
+            kind="no_thresholds"))
 
     return Coverage(heading="What this page does not cover",
                     notes=tuple(notes))

@@ -42,7 +42,21 @@ class TestDefaultOrder(unittest.TestCase):
         # A plausible default is read as a ranking within minutes and nobody
         # checks, so the label is not decoration.
         self.assertIn("part number", ranking.DEFAULT_ORDER_LABEL)
-        self.assertIn("choose a dimension", ranking.DEFAULT_ORDER_LABEL)
+        self.assertIn("no meaning", ranking.DEFAULT_ORDER_LABEL)
+
+    def test_the_order_label_promises_no_control(self):
+        """It used to invite "choose a dimension to rank by". Nothing did.
+
+        Worse than a dead promise: a reviewer who sorts by one dimension has
+        declared that dimension the ranking, which is the composite this system
+        refuses to compute arriving through a click. So the invitation is not
+        pending work, it is a thing that must never be built, and the label must
+        not imply otherwise.
+        """
+        label = ranking.DEFAULT_ORDER_LABEL.lower()
+        for promise in ("choose", "rank by", "sort", "click", "select"):
+            with self.subTest(promise=promise):
+                self.assertNotIn(promise, label)
 
     def test_the_default_order_is_not_insertion_order(self):
         # INSERTION AND DICT ORDER ARE ARBITRARY TODAY AND MEANINGFUL TOMORROW.

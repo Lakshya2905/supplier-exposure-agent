@@ -276,43 +276,125 @@ class TestBadgesAreNominal(unittest.TestCase):
         self.assertEqual(len(re.findall(r"\bbackground:", block)), 1)
         self.assertEqual(len(re.findall(r"(?<!-)\bcolor:", block)), 1)
 
-    def test_exactly_one_badge_variant_exists(self):
+    def test_only_form_distinguishes_the_badge_variants(self):
+        """Two variants, and neither is a step on a scale.
+
+        `open` marks that a row carries a control, `absent` marks that something
+        is not established. Both are distinctions in KIND, and both are drawn
+        with form (fill, border style) rather than intensity, so adding a third
+        cannot accidentally build a ramp. The rule that matters is not the count
+        of variants but that no variant is ordered against another.
+        """
         variants = re.findall(r"\.badge\.(\w+)\s*{", SOURCE)
-        self.assertEqual(variants, ["open"],
-                         "one variant only, and it distinguishes autonomy "
-                         "rather than ranking anything")
+        self.assertEqual(sorted(variants), ["absent", "open"])
+        for variant in variants:
+            block = SOURCE.split(f".badge.{variant} {{")[1].split("}")[0]
+            with self.subTest(variant=variant):
+                self.assertNotIn("opacity", block,
+                                 "opacity is intensity, and a dimmed chip "
+                                 "reads as a lesser one")
+                self.assertNotIn("font-size", block,
+                                 "size is magnitude")
+                self.assertNotIn("font-weight", block,
+                                 "weight is magnitude")
 
     def test_the_category_palette_is_nominal_by_arithmetic(self):
-        """Equal saturation, equal lightness, hue alone varying.
+        """The category palette has no hue at all, so it cannot carry an order.
 
-        This is the mathematical statement of "distinguishes but does not
-        rank": no chip is darker, stronger or warmer than another, so no
-        reading of the set produces an order. Colour is permitted here; an
-        ORDERED colour encoding is not, and the difference is testable rather
-        than a matter of taste.
+        The predecessor of this test asserted equal HSL saturation and lightness
+        strings and called that "no chip is darker, stronger or warmer than
+        another". It passed while the claim was false, because HSL lightness is
+        not perceptual lightness: in CIELAB the six completeness entries spanned
+        15.3 L* points and sorted into a brightness ramp in declaration order.
+
+        THE LESSON IS THE SHAPE OF THE BUG, NOT THE COLOUR SPACE. Restating the
+        same assertion in OKLCH would repeat the category error one space over.
+        A test must assert the PROPERTY. Here the property is now absolute and
+        needs no colour arithmetic to check: no category-varying colour is
+        emitted anywhere, so no reading of the set can produce an order.
         """
         import review_app
-        low, high = review_app.COOL_BAND
-        self.assertTrue(review_app.CATEGORY_HUE)
-        for label, hue in review_app.CATEGORY_HUE.items():
-            with self.subTest(category=label):
-                self.assertGreaterEqual(hue, low)
-                self.assertLessEqual(hue, high)
+        self.assertFalse(hasattr(review_app, "CATEGORY_HUE"),
+                         "a per-category hue map is the encoding this palette "
+                         "refuses; the label carries the category")
+        self.assertFalse(hasattr(review_app, "chip_colour"),
+                         "nothing may compute a colour from a category name")
+        for dead in ("COOL_BAND", "CHIP_SATURATION", "CHIP_LIGHTNESS"):
+            with self.subTest(symbol=dead):
+                self.assertFalse(hasattr(review_app, dead))
 
-    def test_every_chip_is_drawn_at_the_same_saturation_and_lightness(self):
-        import review_app
-        drawn = [review_app.chip_colour(label)
-                 for label in review_app.CATEGORY_HUE]
-        saturations = {re.search(r"hsl\(\d+ (\d+)%", css).group(1)
-                       for css in drawn}
-        lightnesses = {re.search(r"hsl\(\d+ \d+% (\d+)%\)", css).group(1)
-                       for css in drawn}
-        self.assertEqual(len(saturations), 1, saturations)
-        self.assertEqual(len(lightnesses), 1, lightnesses)
+    def test_no_chip_carries_an_inline_colour(self):
+        """Strip every colour and no information may be lost (CLAUDE.md).
 
-    def test_an_unknown_category_gets_no_hue_rather_than_a_guessed_one(self):
+        An inline style on a chip is how a category-keyed colour would return,
+        and it would bypass the `.badge` rule that the stylesheet tests police.
+        """
         import review_app
-        self.assertEqual(review_app.chip_colour("something new"), "")
+        from src import governance as gov
+        for text in ("14 parts", "4 items", gov.EXECUTES, gov.RECOMMENDS,
+                     "known", "upper_bound", "not_applicable", "region"):
+            for kwargs in ({}, {"open_style": True}, {"absent": True}):
+                with self.subTest(text=text, variant=kwargs):
+                    self.assertNotIn("style=", review_app.badge(text, **kwargs))
+                    self.assertNotIn("hsl(", review_app.badge(text, **kwargs))
+
+    def test_an_absence_is_never_dimmed_or_shrunk(self):
+        """Dimming an unknown says it matters less, which is the lie refused.
+
+        The `absent` variant may differ from a plain chip only in border style.
+        Any opacity, size or weight difference would make absence read as a
+        lesser kind of presence.
+        """
+        block = SOURCE.split(".badge.absent {")[1].split("}")[0]
+        for banned in ("opacity", "font-size", "font-weight"):
+            with self.subTest(property=banned):
+                self.assertNotIn(banned, block)
+        # border-color is form; a bare color: would restyle the label itself.
+        self.assertIsNone(re.search(r"(?<!-)\bcolor:", block),
+                          "the label keeps the same text colour as any chip")
+        self.assertIn("border-style: dashed", block,
+                      "form, not colour, so it survives greyscale and print")
+
+    def test_every_absence_kind_the_model_emits_has_a_label(self):
+        """A kind with no label renders as an unexplained absence.
+
+        This is the coupling that rots: the model gains a fourth coverage kind
+        and the painter silently drops it, so a reader sees an absence with no
+        statement of which kind it is.
+        """
+        import review_app
+        from src.interface import model as view
+        from src.pipeline import default_data_dir, run, surfaces
+        built = surfaces(run(data_dir=default_data_dir()))
+        kinds = {note.kind
+                 for note in built[view.EXPOSURE].coverage.notes}
+        self.assertTrue(kinds, "the fixture data must exercise some absence")
+        for kind in kinds:
+            with self.subTest(kind=kind):
+                self.assertIn(kind, review_app.ABSENCE_LABEL)
+                self.assertTrue(review_app.absence_chip(kind))
+
+    def test_an_unrecognised_absence_kind_gets_no_label_rather_than_a_guess(self):
+        import review_app
+        self.assertEqual(review_app.absence_chip("something new"), "")
+        self.assertEqual(review_app.absence_chip(""), "")
+
+    def test_the_chip_label_is_legible_rather_than_a_dense_monogram(self):
+        """0.68rem uppercase monospace was below the practical reading floor.
+
+        All caps removes word shape and forces letter by letter reading, and a
+        long category name would truncate. A truncated epistemic state is a
+        wrong claim.
+        """
+        block = SOURCE.split(".badge {")[1].split("}")[0]
+        size = float(re.search(r"font-size:\s*([\d.]+)rem", block).group(1))
+        self.assertGreaterEqual(size * 16, 12.0,
+                                "12px is the floor for any chip label")
+        self.assertNotIn("text-transform: uppercase", block)
+        self.assertNotIn("monospace", block,
+                         "a category name is prose, not an identifier")
+        self.assertNotIn("white-space: nowrap", block,
+                         "a category name wraps rather than truncating")
 
     def test_no_badge_style_encodes_a_severity(self):
         """DECLARATIONS ONLY, with comments stripped and word boundaries.
