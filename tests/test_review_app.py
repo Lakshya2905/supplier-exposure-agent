@@ -224,17 +224,48 @@ class TestConfirmSurface(unittest.TestCase):
 class TestBadgesAreNominal(unittest.TestCase):
     """A badge set with an order is a severity scale in disguise."""
 
-    def test_every_badge_shares_one_background_and_one_text_colour(self):
-        # The moment one chip is red and another green the set has an order,
-        # and an ordered encoding across incommensurable states is the
-        # composite this system refuses, arriving through the palette.
+    def test_the_badge_rule_declares_one_background_and_one_text_colour(self):
         block = SOURCE.split(".badge {")[1].split("}")[0]
-        self.assertIn("background: #E7E5DE", block)
-        self.assertIn("color: #4A4E52", block)
+        self.assertEqual(len(re.findall(r"\bbackground:", block)), 1)
+        self.assertEqual(len(re.findall(r"(?<!-)\bcolor:", block)), 1)
+
+    def test_exactly_one_badge_variant_exists(self):
         variants = re.findall(r"\.badge\.(\w+)\s*{", SOURCE)
         self.assertEqual(variants, ["open"],
                          "one variant only, and it distinguishes autonomy "
                          "rather than ranking anything")
+
+    def test_the_category_palette_is_nominal_by_arithmetic(self):
+        """Equal saturation, equal lightness, hue alone varying.
+
+        This is the mathematical statement of "distinguishes but does not
+        rank": no chip is darker, stronger or warmer than another, so no
+        reading of the set produces an order. Colour is permitted here; an
+        ORDERED colour encoding is not, and the difference is testable rather
+        than a matter of taste.
+        """
+        import review_app
+        low, high = review_app.COOL_BAND
+        self.assertTrue(review_app.CATEGORY_HUE)
+        for label, hue in review_app.CATEGORY_HUE.items():
+            with self.subTest(category=label):
+                self.assertGreaterEqual(hue, low)
+                self.assertLessEqual(hue, high)
+
+    def test_every_chip_is_drawn_at_the_same_saturation_and_lightness(self):
+        import review_app
+        drawn = [review_app.chip_colour(label)
+                 for label in review_app.CATEGORY_HUE]
+        saturations = {re.search(r"hsl\(\d+ (\d+)%", css).group(1)
+                       for css in drawn}
+        lightnesses = {re.search(r"hsl\(\d+ \d+% (\d+)%\)", css).group(1)
+                       for css in drawn}
+        self.assertEqual(len(saturations), 1, saturations)
+        self.assertEqual(len(lightnesses), 1, lightnesses)
+
+    def test_an_unknown_category_gets_no_hue_rather_than_a_guessed_one(self):
+        import review_app
+        self.assertEqual(review_app.chip_colour("something new"), "")
 
     def test_no_badge_style_encodes_a_severity(self):
         """DECLARATIONS ONLY, with comments stripped and word boundaries.
@@ -328,11 +359,15 @@ class TestStandingLine(unittest.TestCase):
 class TestSurfacesStaySeparate(unittest.TestCase):
 
     def test_only_one_surface_renders_at_a_time(self):
+        # Asserted on the page HEADING rather than on substring absence. The
+        # navigation now carries each surface's question as a subtitle, so the
+        # words appear on every page; what must not appear twice is a surface.
+        from src.interface import model as view
         app = run_app()
-        first = text_of(app)
-        self.assertIn("What is worst?", first)
-        self.assertNotIn("What should I go and find out?", first)
-        self.assertNotIn("Do I agree with your model?", first)
+        headings = {str(element.value) for element in app.title}
+        questions = headings & set(view.SURFACE_QUESTION.values())
+        self.assertEqual(questions, {"What is worst?"},
+                         "exactly one surface may render at a time")
 
     def test_the_sidebar_states_why_they_are_separate(self):
         rendered = text_of(run_app())
