@@ -95,6 +95,142 @@ rule, so it belongs in stage 4 as `annual_usage(rows, demand_plan)` returning a
 value **and** a completeness flag. `rows_by_part()` keys the per-finished-good
 rows; it does not sum them.
 
+## Stage 3: single-source identification
+
+**Supplier count is not an input. It is the output of a fuzzy match.** The two
+files spell the same supplier differently, so before any verdict can be reached
+the names have to be resolved into identities, and that resolution carries a
+confidence. Which means the verdict table's inputs are themselves uncertain, and
+that is what forces autonomy to be decided per finding rather than per stage.
+
+Normalisation runs in two tiers, kept apart deliberately:
+
+- **certain**, identical after deterministic canonicalisation (case,
+  punctuation, whitespace, abbreviation expansion). Score 1.0. Applied in every
+  reading and never shown to a reviewer, because "ACME CORP" versus "Acme Corp"
+  is a formatting difference, not a judgment. Collapsing this tier into the
+  uncertain one would send every part in the data to review.
+- **uncertain**, similar but not identical. Carries a score, and is the only
+  tier that can route a finding to the exception lane.
+
+### The dual reading, again
+
+Every finding is computed twice, once with uncertain merges applied and once
+with them withheld. Agree, it executes. Disagree, it recommends and enters the
+exception lane carrying both raw strings and the score that would settle it.
+
+This is why no default merge direction is set, and the reason is not
+squeamishness: **the safe direction inverts between the two joins.** A missed
+merge in the supplier list overcounts sources and understates exposure, which
+is expensive. A missed match in the lead-time join undercounts lead times and
+overstates exposure, which is merely noisy. Leaning one way protects one join
+and damages the other. Computing both does not have to choose.
+
+### The threshold was set by the floors, not the other way round
+
+The floors come from what the task requires. The threshold is the dial that
+moves to meet them.
+
+| | floor | why |
+|---|---|---|
+| recall | 0.99 | a missed merge understates exposure, and that is the error that stops a line |
+| precision | 0.95 | a false merge manufactures a **phantom single source** and sends somebody to qualify a supplier that already exists |
+
+Swept against the damage ledger:
+
+| threshold | precision | recall |
+|---|---|---|
+| 0.90 | 0.917 | 1.000 |
+| **0.95** | **1.000** | **1.000** |
+
+0.90 was the starting point and it **failed the precision floor**, so the
+threshold moved to 0.95. The floor did not move. `tests/test_grading.py`
+asserts both floors at the shipped threshold and separately asserts that 0.90
+still fails, so the reason for the change stays evidence rather than folklore.
+
+Two findings from the sweep:
+
+- **Recall is flat across every threshold.** Each variant the generator
+  produces reaches an identical canonical key and merges at 1.0 regardless.
+  So in this data the threshold is a precision dial and nothing else, and a
+  recall floor is a guard against future damage ops rather than a live
+  constraint.
+- **Every false merge at 0.90 was the same pair of genuinely distinct
+  suppliers** whose names differ by one letter, scoring 0.944. That pair is the
+  generator's deliberate mirror trap, and at 0.90 it worked: an over-eager
+  matcher merged them into a phantom single source.
+
+Precision and recall are reported **separately, never as an F-score**, for the
+same reason the five scoring dimensions stay separate. Alongside them is a
+third number, because precision alone does not say what a false merge costs:
+**verdict impact**, counting how many verdicts each false merge would actually
+have changed. The same merge is invisible on a four-supplier part and a phantom
+single source on a two-supplier part. Identical precision, entirely different
+consequence, so the consequence is counted rather than inferred.
+
+### Two disagreements, not one
+
+A finding is undecidable in two independent ways, and both have to reach the
+lane:
+
+- **merge conflict**, the two clusterings produce different verdicts
+- **readings conflict**, the clusterings agree, and what they agree on is
+  `readings_disagree`, because the part is flagged `make` while carrying
+  supplier rows
+
+Comparing the clusterings alone catches only the first. Under the second, both
+readings return `readings_disagree`, they match, and a finding whose verdict
+literally means *nobody can tell* gets stamped `executes`. Four parts in the
+generated data are exactly that case. A verdict of `readings_disagree` is
+therefore disqualifying on its own, regardless of whether the readings agreed.
+
+`readings_disagree` is also deliberately **absent from the severity order**. It
+is not a level of exposure, it is the absence of a settled one, so it cannot be
+ranked. The lane sorts on the concrete readings underneath it, which can be.
+
+### Measured end to end
+
+Against the generator's answer key at seed 42: **300 parts, 300 verdicts
+matching truth, 296 executing automatically, 4 in the exception lane**, all four
+genuine make-flag contradictions, ordered worst reading first.
+
+The merge-uncertain lane is **empty at the shipped threshold**, which is the
+normaliser being good enough rather than the machinery going unused: at 0.95
+nothing is genuinely ambiguous in this data. That path is covered by unit tests
+and by the committed golden, both of which pin it at 0.90 where the case is
+live.
+
+### The decision log renders, it does not store prose
+
+**Store structured, render prose, never store the prose.** A log that stored its
+own sentences could not be re-rendered when the wording improved, and the
+wording is a deliverable here: it is what appears in the stage 7 review
+interface and in any demo, so it is not a debug view.
+
+`render(event)` turns any event into a sentence on demand, answering which part,
+what verdict under which reading, the two raw strings, the score and threshold,
+why the readings disagreed, what a human decided and why, and what stands now.
+A clause it cannot answer is **omitted rather than invented**, and an unmapped
+verdict renders as its bare code rather than as a guess.
+
+Three golden renderings are committed under `tests/fixtures/`, so a wording
+change arrives as a reviewable diff. Every event kind and every reason code in
+the enum is asserted to render.
+
+> SEA-P-0248: two rows spell a supplier 'Marrow Corporation' and 'Yarrow
+> Corporation', matching at 0.94, which meets the 0.90 threshold. Treated as one
+> supplier the part is one qualified supplier (single_source); treated as two it
+> is more than one qualified supplier (multi_source), so the merge was routed
+> for review rather than decided automatically.
+
+### Self-agreement guard
+
+`tests/test_identify.py` writes every expected verdict out by hand as a literal
+string and **does not import the verdict table**. The generator uses that table
+to assign truth and stage 3 uses it to classify observed data, so importing it
+into the tests would let a wrong row be wrong in both places with the suite
+agreeing.
+
 ## Autonomy levels
 
 These are the product, not a detail.
@@ -138,7 +274,23 @@ Extraction into a genuinely shared package is deferred until after this agent
 ships. The right shared interface is not visible until two real consumers
 exist.
 
-No governance code exists yet. It is not part of stage 1.
+The placeholder landed with stage 3 and does exactly that. The four statuses,
+the four act kinds, the decision-log envelope and two domain-neutral reason
+codes are agent 1's, unchanged, down to the column named `sku_id` even though
+this agent calls them parts: renaming it is precisely what would make the two
+logs unjoinable. `kind` and `evidence` are additive agent-3 columns, so a
+cross-agent join reads the envelope and simply does not see them.
+
+Agent 1's other four reason codes are intake-specific, about docks and
+packaging tiers. There is no dock and no tier here, and copying them literally
+would degrade the vocabulary rather than share it. The enum marks which codes
+are inherited and which are agent 3's, and **that marking is the migration
+plan**: on extraction the inherited codes move to the shared package unchanged
+and the agent-3 codes are promoted or left behind deliberately, one at a time.
+
+The log is append-only, with no update and no delete. Any status other than
+`proposed` requires a named decider, because an anonymous decision is not a
+decision.
 
 ## Known gaps
 
@@ -154,10 +306,8 @@ green, and the test fails loudly the day someone fixes it without noticing.
 
 ## What is deliberately not here
 
-Stages 2 through 8: BOM explosion, single-source identification from observed
-data, the five scoring dimensions, concentration detection, ranked output,
-review interface, eval harness. Stage 1 emits data and proves it is the data it
-claims to be.
+Stages 4 through 8: the five scoring dimensions, concentration detection,
+ranked output, review interface, eval harness.
 
 Out of scope permanently: cost optimisation, supplier scorecarding, negotiation
 support, resourcing workflow. `annual_spend_usd` is carried as a display column

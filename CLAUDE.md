@@ -23,7 +23,16 @@ Agent 3 of a multi-agent supply chain system. Answers: which single points of fa
 - `annual_spend_usd` is display-only and unscored. Ranking or weighting by it is the cost optimisation agent, not this one.
 - A make part that also has suppliers is evaluated under both readings, stale-flag and genuine dual-mode. Agreement reports the verdict; disagreement goes to the exception lane, ordered by exposure under the worse reading. Do not pick a reading.
 - Missing and zero are different facts. A blank on-hand means "no record" and must never be read as zero; a recorded zero is real. The same asymmetry governs demand: partially known usage yields an upper bound flagged incomplete, not an unknown.
-- Eval floors are never produced by the generator under test. `evals/` and `tests/fixtures/` are committed and frozen; `data/` is gitignored and regenerated from a documented seed.
+- Eval floors are never produced by the generator under test.
+- Where a judgment carries a threshold, the floors come from what the task
+  requires and the threshold moves to meet them, never the reverse. If no
+  threshold meets both floors, that is a finding, not a reason to lower one.
+- Agreement between two readings is not sufficient for autonomy if what they
+  agree on is itself an abstention. A `readings_disagree` verdict never
+  executes, however the readings compared.
+- Store structured, render prose, never store the prose. The decision log holds
+  no rendered text; `render(event)` produces it on demand and golden files pin
+  the wording. `evals/` and `tests/fixtures/` are committed and frozen; `data/` is gitignored and regenerated from a documented seed.
 - The fixture BOM is hand-authored, never generated. A fixture the generator produced would be the generator grading its own homework.
 - Governance is option 2 from the brief: a thin placeholder interface. Option 1 is unavailable, verified. The placeholder copies agent 1's reason-code vocabulary and decision-log record shape verbatim, and is not deepened otherwise. Extraction into a shared package waits until after this agent ships.
 

@@ -1,0 +1,1 @@
+SEA-P-0248: two rows spell a supplier 'Marrow Corporation' and 'Yarrow Corporation', matching at 0.94, which meets the 0.90 threshold. Treated as one supplier the part is one qualified supplier (single_source); treated as two it is more than one qualified supplier (multi_source), so the merge was routed for review rather than decided automatically.

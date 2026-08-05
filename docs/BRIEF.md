@@ -132,6 +132,11 @@ It has now appeared three times, each time discovered rather than designed:
 3. **The cross-file lead-time join.** Whether a supplier has a quotable lead
    time depends on matching its name across two files that spell it differently.
 
+The rendering of any of these is produced on demand and never stored. **Store
+structured, render prose, never store the prose**: a log holding its own
+sentences cannot be re-rendered when the wording improves, and the wording is a
+deliverable, being what the stage 7 review interface shows.
+
 The pattern earns its place because the alternative is picking a default
 direction, and **the safe direction is not constant**. A missed merge in the
 supplier list overcounts sources and understates exposure, which is expensive. A
@@ -148,6 +153,45 @@ a property of the individual finding, not a blanket claim about the stage.
 
 Stages 4 and 5 will hit this again with the correlation rules, where "same
 region" and "same tier" are modelling choices rather than facts.
+
+### Recorded at stage 3: the two disagreements are independent
+
+Building the primitive for real surfaced something the pattern's description
+hides. Readings 1 and 2 above are **not the same disagreement**, and checking
+only one of them is a live defect rather than a theoretical gap.
+
+- **Merge conflict.** The two clusterings produce different verdicts.
+- **Readings conflict.** The two clusterings produce the *same* verdict, and
+  that verdict is `readings_disagree`, because the part is flagged `make` while
+  carrying supplier rows.
+
+Compare the clusterings alone and the second case passes as agreement: both
+readings return `readings_disagree`, they match, and a finding whose verdict
+literally means *nobody can tell* is stamped `executes` and never reaches the
+lane. Four parts in the generated data are exactly this. So a verdict of
+`readings_disagree` is disqualifying **on its own**, independent of whether the
+readings agreed.
+
+The general form, which stages 4 and 5 inherit: *agreement between two readings
+is not sufficient for autonomy if what they agree on is itself an abstention.*
+
+### Recorded at stage 3: `readings_disagree` cannot be ranked
+
+The exception lane orders by exposure under the worse reading, and
+`readings_disagree` is deliberately **absent from the severity order**. It is not
+a level of exposure, it is the absence of a settled one. The lane ranks the
+concrete readings underneath it instead, which is what a person needs to work
+them in the right order anyway.
+
+### Recorded at stage 3: floors first, threshold second
+
+Where a judgment carries a threshold, **the floors come from what the task
+requires and the threshold is the dial that moves to meet them, never the
+reverse.** At stage 3 the starting threshold of 0.90 failed the precision floor
+of 0.95, so the threshold moved to 0.95. If no threshold had met both floors,
+that would have been a finding about the normaliser rather than a reason to
+lower a floor. The rejected threshold stays asserted in the tests, so the reason
+for the change remains evidence rather than folklore.
 
 ## Autonomy levels, stated explicitly
 

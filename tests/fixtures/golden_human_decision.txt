@@ -1,0 +1,1 @@
+SEA-P-0248: two rows spell a supplier 'Marrow Corporation' and 'Yarrow Corporation'. The system had them matching at 0.94, which meets the 0.90 threshold. Rejected by r.okafor on 2026-08-04T10:02:00+00:00, reason: different suppliers, merge rejected (different legal entities). The verdict now stands at more than one qualified supplier (multi_source).
