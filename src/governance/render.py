@@ -301,6 +301,44 @@ RANKED_ABSENT = {
 }
 
 
+def _blocked_volume_absent(clause):
+    """The structural reach, when the volume behind it could not be counted.
+
+    "blocks at least 0 finished good units" was a true statement carrying no
+    information: zero is the trivial lower bound of any non-negative quantity, so
+    the bound prefix promised a figure and then delivered nothing. Worse, in every
+    occurrence it sat beside a correct example of the opposite treatment, "no
+    on-hand record, so cover is unknown", forty characters away. One absence in
+    words, one absence as the number zero, in the same sentence.
+
+    THE MODEL WAS NEVER WRONG. `blast_radius` carries two facets: the structural
+    reach, which is KNOWN, and the blocked volume, which inherits the demand
+    plan's gaps. Its own reason text says so. The renderer was rendering only the
+    volumetric facet, so a part that certainly stops a finished good read as
+    blocking nothing. Rendering this as a plain absence would have discarded the
+    known facet too, which is why the fix names the reach.
+
+    Keyed on `usage_completeness`, the branch that set the completeness, NEVER on
+    `value == 0`. Partial usage whose recorded goods total zero is a recorded
+    zero, and reading that as an absence is the same missing-versus-zero collapse
+    this function exists to prevent.
+    """
+    # The literal, matching this module's existing convention for completeness
+    # values (see RANKED_ABSENT). Importing src.demand here would add a layer
+    # dependency from the renderer to the model for one string; a test pins the
+    # correspondence instead, so drift is loud.
+    detail = clause.get("detail") or {}
+    if detail.get("usage_completeness") != "cannot_tell":
+        return ""
+    goods = detail.get("finished_goods_blocked")
+    if not goods:
+        return ""
+    plural = "" if goods == 1 else "s"
+    return (f"blocks {goods} finished good{plural}, "
+            f"{'' if goods == 1 else 'all '}absent from the demand plan, so no "
+            f"units could be counted")
+
+
 def _ranked_clause(clause):
     """One clause of the ranked sentence, with its unit and its bound direction.
 
@@ -326,6 +364,10 @@ def _ranked_clause(clause):
         return "unbounded cover, nothing consuming it"
     if dimension == "concentration" and clause.get("value") in (1, None):
         return ""
+    if dimension == "blast_radius":
+        absent = _blocked_volume_absent(clause)
+        if absent:
+            return absent
 
     prefix = BOUND_WORDS.get(completeness, "")
     return RANKED_CLAUSE[dimension].format(
