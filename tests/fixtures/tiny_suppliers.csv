@@ -1,0 +1,66 @@
+# HAND-AUTHORED FIXTURE. Never generated, never regenerated.
+#
+# An INDEPENDENT ORACLE for concentration. Every cluster in
+# tiny_expected_clusters.py was worked out by hand from the rows below and can
+# be re-checked by hand without trusting any code in this repository.
+#
+# Read with: pd.read_csv(path, comment="#", keep_default_na=False)
+#
+# WHAT EACH GROUP IS HERE TO PROVE
+#
+#   BOTH            Alpha Works, region EMEA, three exposed parts. One supplier
+#                   AND one region, so it is correlated under both definitions.
+#
+#   SUPPLIER_ONLY   Beta Industries, one company across two regions. The
+#                   supplier cluster has two members; each region cluster has
+#                   one. A commercial correlation with no geographic one.
+#                   CON-P04's region is the literal token NA, North America,
+#                   which pandas reads as NaN unless keep_default_na is off.
+#                   A region silently deleted here would silently shrink a
+#                   cluster.
+#
+#   REGION_ONLY     Gamma Mfg and Delta Works, two DIFFERENT companies, both in
+#                   LATAM, one exposed part each. Neither supplier cluster
+#                   reaches two; the region cluster does. A port closure hits
+#                   both even though no single company failure would.
+#
+#   NEITHER         Epsilon Ltd, region NORDIC, one part. Alone under both.
+#                   This is also the arity proof: a cluster of one is not a
+#                   correlation, and no threshold above two exists anywhere.
+#
+#   ONE READING     Zeta Corp, region BLANK, two exposed parts. Concentrated
+#   UNSETTLED       under the supplier reading; the region reading cannot be
+#                   read at all. The agreement class must NOT be computed, and
+#                   must not default the unknown side to "not concentrated".
+#
+#   CONTINGENT      Marrow Corporation and Yarrow Corporation, one part each,
+#                   scoring 0.9444. At threshold 0.90 they merge and a cluster
+#                   of two EXISTS; at 0.95 they do not and there is no cluster.
+#                   Its existence is contingent, which is a CONTESTED
+#                   disagreement and routes.
+#
+#   LOWER_BOUND     Theta Group has two confirmed parts, and "Theta Groop"
+#                   (0.9091) carries a third that joins only if the merge is
+#                   confirmed. The cluster exists either way, so its SIZE is a
+#                   lower bound rather than its existence being in doubt.
+#
+# Parts with no rows at all are deliberate: CON-P17 is made in-house and
+# CON-P18 has a verified but empty supplier list. Both are NOT_APPLICABLE, and
+# CON-P18 is the counterintuitive one, being among the most exposed parts here.
+part_number,supplier_name,supplier_region,qualification_date
+CON-P01,Alpha Works,EMEA,2024-01-15
+CON-P02,Alpha Works,EMEA,2024-02-20
+CON-P03,Alpha Works,EMEA,2024-03-11
+CON-P04,Beta Industries,NA,2024-04-02
+CON-P05,Beta Industries,APAC,2024-05-19
+CON-P06,Gamma Mfg,LATAM,2024-06-07
+CON-P07,Delta Works,LATAM,2024-07-23
+CON-P08,Epsilon Ltd,NORDIC,2024-08-30
+CON-P09,Zeta Corp,,2024-09-14
+CON-P10,Zeta Corp,,2024-10-05
+CON-P11,Marrow Corporation,EMEA,2024-11-12
+CON-P12,Yarrow Corporation,EMEA,2024-12-01
+CON-P13,Theta Group,APAC,2025-01-21
+CON-P14,Theta Group,APAC,2025-02-17
+CON-P15,Theta Groop,APAC,2025-03-08
+CON-P16,Iota Systems,EMEA,2025-04-04

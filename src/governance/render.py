@@ -20,7 +20,8 @@ An event that cannot answer one of these omits that clause rather than
 inventing it. A renderer that fabricates a plausible number is worse than one
 that says nothing.
 """
-from . import (EXECUTES, KIND_DIMENSION_ABSTAINED, KIND_DIMENSION_SCORED,
+from . import (EXECUTES, KIND_CLUSTER_CONTINGENT, KIND_CLUSTER_FLAGGED,
+               KIND_DIMENSION_ABSTAINED, KIND_DIMENSION_SCORED,
                KIND_HUMAN_DECISION, KIND_MERGE_UNCERTAIN,
                KIND_READINGS_DISAGREE, KIND_VERDICT_ASSIGNED,
                STATUS_APPROVED, STATUS_PROPOSED, STATUS_REJECTED,
@@ -33,6 +34,9 @@ DIMENSION_PROSE = {
     "portability": "portability",
     "concentration": "concentration",
 }
+
+# Concentration reports a count of parts, so the dimension renderer needs the
+# unit to read naturally: "3 parts", not "3 parts parts".
 
 # What each completeness state means in words. A bound says which DIRECTION it
 # is wrong in, because "incomplete" alone is the thing that lets a reader take
@@ -195,6 +199,46 @@ def _dimension_clause(event, evidence):
     return sentence + "."
 
 
+BASIS_PROSE = {
+    "supplier": "depend on this supplier",
+    "region": "are sourced from this region",
+}
+
+
+def _cluster_clause(event, evidence):
+    """A cluster, WITH ITS MEMBERS NAMED.
+
+    The membership is the finding and the count is only its summary. Nine parts
+    on one supplier where seven are long lead is a different decision from nine
+    catalogue parts, and a reviewer needs to see which parts at the moment they
+    decide whether to act, not a number they have to go and expand.
+    """
+    members = evidence.get("members") or []
+    basis = evidence.get("basis", "")
+    verb = BASIS_PROSE.get(basis, "share this dependency")
+    listing = ", ".join(members)
+
+    if event.kind == KIND_CLUSTER_CONTINGENT:
+        opening = (f"{event.sku_id}: {len(members)} exposed parts would {verb} "
+                   f"only if an unresolved supplier name merge is confirmed")
+    else:
+        opening = f"{event.sku_id}: {len(members)} exposed parts {verb}"
+    if listing:
+        opening += f" ({listing})"
+
+    parts = [opening + "."]
+    reasons = evidence.get("reasons") or []
+    if reasons:
+        parts.append(_sentence_case(reasons[0]) + ".")
+    # THE CEILING, said out loud every time. A reviewer who is never told that
+    # the grouping is a choice will read it as a measurement.
+    parts.append("Grouping parts by " + (basis or "this dependency") +
+                 " is a modelling judgment rather than a fact, so this is "
+                 "recommended for confirmation and is never applied "
+                 "automatically.")
+    return " ".join(parts)
+
+
 def render(event):
     """One event, one readable paragraph. Never stored, always recomputed."""
     evidence = event.evidence or {}
@@ -248,6 +292,9 @@ def render(event):
 
     elif event.kind in (KIND_DIMENSION_SCORED, KIND_DIMENSION_ABSTAINED):
         parts.append(_dimension_clause(event, evidence))
+
+    elif event.kind in (KIND_CLUSTER_FLAGGED, KIND_CLUSTER_CONTINGENT):
+        parts.append(_cluster_clause(event, evidence))
 
     else:  # pragma: no cover - EVENT_KINDS is closed and validated on append
         parts.append(f"{_subject_clause(event)}: {event.kind}.")

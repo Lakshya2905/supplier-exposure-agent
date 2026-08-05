@@ -38,6 +38,11 @@ Agent 3 of a multi-agent supply chain system. Answers: which single points of fa
 - Absence is not zero, and a bound is not an abstention. Where incompleteness is
   reported to more than one consumer, report the fact of it and let each
   consumer name the bound direction, because the safe direction is not constant.
+- Two kinds of disagreement, distinguished by one test: could any fact settle
+  it. Settleable disagreement is uncertainty and routes to a lane. Unsettleable
+  disagreement is structure and is reported as a finding. Routing a
+  complementary disagreement buries a real result among things that look like
+  errors.
 - Store structured, render prose, never store the prose. The decision log holds
   no rendered text; `render(event)` produces it on demand and golden files pin
   the wording. `evals/` and `tests/fixtures/` are committed and frozen; `data/` is gitignored and regenerated from a documented seed.

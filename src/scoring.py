@@ -82,9 +82,10 @@ FINISHED_GOOD_UNITS = "finished_good_units"
 FINISHED_GOODS = "finished_goods"
 ASSEMBLIES = "assemblies"
 CATEGORICAL = "categorical"
+PARTS = "parts"                      # stage 5: how many parts share a dependency
 
 UNITS = (DAYS, UNITS_PER_YEAR, FINISHED_GOOD_UNITS, FINISHED_GOODS, ASSEMBLIES,
-         CATEGORICAL)
+         CATEGORICAL, PARTS)
 
 # Words that mean "this number has been stripped of its unit and rescaled".
 # Any of them appearing as a unit is a composite in preparation.
@@ -197,6 +198,16 @@ class ExposureProfile:
         """The four dimensions stage 4 fills. Never summed, only iterated."""
         return (self.lead_time_to_recover, self.blast_radius,
                 self.buffer_cover, self.portability)
+
+    def all_scores(self):
+        """The four, plus concentration once stage 5 has filled its slot.
+
+        ADDED, never substituted. `scored()` keeps its stage 4 meaning of "the
+        dimensions that are properties of the part alone", because stage 5 may
+        add a method and may not change what an existing one means.
+        """
+        filled = self.scored()
+        return filled + ((self.concentration,) if self.concentration else ())
 
     def abstentions(self):
         return tuple(s for s in self.scored() if not s.is_settled)

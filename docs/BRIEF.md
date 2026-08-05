@@ -154,6 +154,41 @@ a property of the individual finding, not a blanket claim about the stage.
 Stages 4 and 5 will hit this again with the correlation rules, where "same
 region" and "same tier" are modelling choices rather than facts.
 
+### Recorded at stage 5: contested disagreement and complementary disagreement
+
+The primitive as first written treats every disagreement the same way: compute
+both, and route when they differ. That is right for the first four appearances
+and wrong for the fifth, and the difference is not a detail. **There are two
+kinds of disagreement, and they call for opposite responses.**
+
+**Contested.** The two readings are rival answers to ONE question. At most one
+is right. Disagreement means the system cannot tell, so it routes and carries
+both readings plus the evidence that would settle it. The supplier merge is
+contested: either those two rows are one supplier or they are two.
+
+**Complementary.** The two readings answer DIFFERENT questions. Both can be
+true at once. Disagreement is not uncertainty, it is structure, and it is the
+most useful thing the analysis produces, so it is REPORTED rather than routed.
+Supplier concentration and region concentration are complementary: a part can
+genuinely be correlated by geography and not by company, and saying so is a
+true statement about the world.
+
+**The test for which one you are holding: could any fact settle it?**
+
+    settleable disagreement    -> uncertainty -> route it
+    unsettleable disagreement  -> structure   -> report it
+
+The stage 3 merge is settled by telephoning the supplier. Supplier-versus-region
+cannot be settled by any fact anybody could go and find, because it is not a
+question about the world at all; it is a choice about what "correlated" means.
+A disagreement with no possible resolving fact is not a gap in the data.
+
+Getting this backwards in either direction is costly. Routing a complementary
+disagreement buries a real finding in a queue of things that look like errors,
+and a reviewer who resolves it has to invent an answer to an unanswerable
+question. Reporting a contested disagreement asserts as structure something
+that is merely unknown.
+
 ### Recorded at stage 3: the two disagreements are independent
 
 Building the primitive for real surfaced something the pattern's description

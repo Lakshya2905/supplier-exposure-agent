@@ -69,13 +69,17 @@ REASON_MAKE_CAPABILITY_REAL = "in-house capability confirmed"
 REASON_ON_HAND_COUNTED = "on-hand counted, record added"
 REASON_DEMAND_RECORDED = "demand added for a finished good that had none"
 REASON_TOOLING_CONFIRMED = "tooling ownership confirmed"
+REASON_CORRELATION_CONFIRMED = "correlation confirmed"
+REASON_CORRELATION_REJECTED = "not correlated in practice"
+REASON_GROUPING_UNSUITED = "grouping definition does not fit this case"
 
 INHERITED_REASON_CODES = (REASON_SOURCE_DATA_WRONG, REASON_OTHER)
 AGENT_3_REASON_CODES = (REASON_MERGE_CONFIRMED, REASON_MERGE_REJECTED,
                         REASON_LIST_CONFIRMED, REASON_LIST_INCOMPLETE,
                         REASON_MAKE_FLAG_STALE, REASON_MAKE_CAPABILITY_REAL,
                         REASON_ON_HAND_COUNTED, REASON_DEMAND_RECORDED,
-                        REASON_TOOLING_CONFIRMED)
+                        REASON_TOOLING_CONFIRMED, REASON_CORRELATION_CONFIRMED,
+                        REASON_CORRELATION_REJECTED, REASON_GROUPING_UNSUITED)
 REASON_CODES = INHERITED_REASON_CODES + AGENT_3_REASON_CODES
 
 # ------------------------------------------------------------ event kinds ---
@@ -86,9 +90,14 @@ KIND_HUMAN_DECISION = "human_decision"
 # stage 4. One event per dimension per part, because autonomy is per dimension.
 KIND_DIMENSION_SCORED = "dimension_scored"
 KIND_DIMENSION_ABSTAINED = "dimension_abstained"
+# stage 5. One event per CLUSTER, never one per member: member_count carries
+# the size, which is what agent 1's envelope field was always for.
+KIND_CLUSTER_FLAGGED = "cluster_flagged"
+KIND_CLUSTER_CONTINGENT = "cluster_contingent"
 EVENT_KINDS = (KIND_MERGE_UNCERTAIN, KIND_READINGS_DISAGREE,
                KIND_VERDICT_ASSIGNED, KIND_HUMAN_DECISION,
-               KIND_DIMENSION_SCORED, KIND_DIMENSION_ABSTAINED)
+               KIND_DIMENSION_SCORED, KIND_DIMENSION_ABSTAINED,
+               KIND_CLUSTER_FLAGGED, KIND_CLUSTER_CONTINGENT)
 
 # Autonomy, per finding rather than per stage.
 EXECUTES = "executes"

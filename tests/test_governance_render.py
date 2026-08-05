@@ -93,6 +93,34 @@ def dimension_abstained_event():
                               "cover"]})
 
 
+def cluster_flagged_event():
+    return gov.DecisionEvent(
+        event_id=7, at="2026-08-04T09:15:00+00:00",
+        status=gov.STATUS_PROPOSED, sku_id="Alpha Works",
+        field="concentration_supplier", value="3", source_file="suppliers.csv",
+        member_count=3, kind=gov.KIND_CLUSTER_FLAGGED,
+        evidence={"basis": "supplier",
+                  "members": ["CON-P01", "CON-P02", "CON-P03"],
+                  "member_count": 3, "completeness": "known",
+                  "contingent": False, "autonomy": gov.RECOMMENDS,
+                  "reasons": ["3 exposed parts depend on this supplier"]})
+
+
+def cluster_contingent_event():
+    return gov.DecisionEvent(
+        event_id=8, at="2026-08-04T09:15:00+00:00",
+        status=gov.STATUS_PROPOSED, sku_id="Marrow Corporation",
+        field="concentration_supplier", value="2", source_file="suppliers.csv",
+        member_count=2, kind=gov.KIND_CLUSTER_CONTINGENT,
+        evidence={"basis": "supplier", "members": ["CON-P13", "CON-P14"],
+                  "member_count": 2, "completeness": "cannot_tell",
+                  "contingent": True, "autonomy": gov.RECOMMENDS,
+                  "reasons": ["these 2 parts share a supplier only if an "
+                              "unresolved name merge is confirmed; under the "
+                              "confirmed spellings alone they are separate "
+                              "suppliers"]})
+
+
 class TestGoldens(unittest.TestCase):
     """Committed sentences. A wording change is a reviewable diff, not a
     surprise in the review interface."""
@@ -117,6 +145,28 @@ class TestGoldens(unittest.TestCase):
         self.assertEqual(render(dimension_abstained_event()),
                          read_golden("golden_dimension_abstained.txt"))
 
+    def test_cluster_flagged_golden(self):
+        self.assertEqual(render(cluster_flagged_event()),
+                         read_golden("golden_cluster_flagged.txt"))
+
+    def test_cluster_contingent_golden(self):
+        self.assertEqual(render(cluster_contingent_event()),
+                         read_golden("golden_cluster_contingent.txt"))
+
+    def test_a_cluster_names_its_members_not_just_a_count(self):
+        # The membership IS the finding; the count is only its summary.
+        sentence = render(cluster_flagged_event())
+        for member in ("CON-P01", "CON-P02", "CON-P03"):
+            self.assertIn(member, sentence)
+
+    def test_a_cluster_always_says_the_grouping_is_a_judgment(self):
+        # A reviewer never told the grouping is a choice reads it as a
+        # measurement, and the ceiling stops meaning anything.
+        for event in (cluster_flagged_event(), cluster_contingent_event()):
+            with self.subTest(kind=event.kind):
+                self.assertIn("modelling judgment", render(event))
+                self.assertIn("never applied automatically", render(event))
+
     def test_a_scored_dimension_always_renders_its_unit(self):
         # A bare number in a review interface is the first step toward somebody
         # adding it to the one beside it, and these are not addable.
@@ -131,7 +181,9 @@ class TestEveryEnumMemberRenders(unittest.TestCase):
                   gov.KIND_READINGS_DISAGREE: readings_disagree_event(),
                   gov.KIND_VERDICT_ASSIGNED: verdict_assigned_event(),
                   gov.KIND_DIMENSION_SCORED: dimension_scored_event(),
-                  gov.KIND_DIMENSION_ABSTAINED: dimension_abstained_event()}
+                  gov.KIND_DIMENSION_ABSTAINED: dimension_abstained_event(),
+                  gov.KIND_CLUSTER_FLAGGED: cluster_flagged_event(),
+                  gov.KIND_CLUSTER_CONTINGENT: cluster_contingent_event()}
         self.assertEqual(set(events), set(gov.EVENT_KINDS),
                          "a new event kind must arrive with a rendering, or it "
                          "reaches the review interface unreadable")

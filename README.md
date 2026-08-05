@@ -426,6 +426,207 @@ days would be roughly 250 and would give about 1.46 times the cover. It stays a
 plain constant because stage 4 bands nothing, so the choice cannot change any
 answer here. It becomes a dual reading the moment stage 6 bands cover.
 
+## Stage 5: concentration
+
+The fifth dimension, and a **shape change**. The first four are properties of
+one part and can be computed from that part alone. Concentration is a property
+of a *set*, and no part carries the answer by itself. So the primary record is
+the **cluster**, and the per-part slot references it. Nine parts on one supplier
+is one finding, not nine, and a reviewer confirms it once.
+
+**Members are carried by identity, not only counted.** Nine parts on one
+supplier where seven are long lead is a different decision from nine catalogue
+parts, and a reviewer needs the membership at the moment they decide whether to
+act, not a number they have to expand. The count is the summary; the membership
+is the finding. No severity is computed from either.
+
+### The decision ceiling
+
+Grouping is the first real modelling judgment in the system, so concentration is
+`recommends` **permanently**. The argument for letting it drift is a good one
+and needs answering rather than ignoring:
+
+> once a definition is chosen the arithmetic is deterministic and reproducible,
+> so a deterministic function of settled inputs should execute
+
+**The determinism is downstream of the judgment.** The autonomy question is not
+"is this reproducible" but "could a reasonable person have chosen differently
+and got a different answer". Same supplier, same region and same tier are three
+definitions of correlated and they give three different answers.
+
+So there are **two independent gates**, and this dimension fails the second one
+forever:
+
+| gate | asks | concentration |
+|---|---|---|
+| completeness | do we have the data? | varies, as at stage 4 |
+| decision ceiling | may a system claim this alone? | no, permanently |
+
+This is a deliberate divergence from stage 4, where autonomy is derived from
+completeness in one place. Completeness answers whether the data is there; the
+ceiling answers whether this is the kind of claim a system may make by itself,
+and complete data does not turn a modelling choice into a fact.
+
+Enforced structurally rather than by comment: `ConcentrationScore.autonomy` is
+pinned, `autonomy_for()` is never called on it, and there is no code path from
+any completeness state to `executes`. The test that matters asserts the ceiling
+holds on **fully settled data with no uncertainty anywhere**, since that is
+precisely the input someone would use to argue it should execute.
+
+### Complementary disagreement, not contested
+
+The dual reading is used here **as designed rather than as a defect check**, and
+building it surfaced a distinction that has now been written into the brief as
+part of the primitive itself.
+
+- **Contested.** Two rival answers to one question. At most one is right.
+  Disagreement means uncertainty, so it **routes**. The supplier merge is this.
+- **Complementary.** Two answers to different questions. Both can be true at
+  once. Disagreement is structure, not doubt, so it is **reported**.
+
+**The test: could any fact settle it?** The stage 3 merge is settled by
+telephoning the supplier. Supplier-versus-region cannot be settled by any fact
+anybody could go and find, because it is not a question about the world; it is a
+choice about what "correlated" means. Settleable disagreement is uncertainty;
+unsettleable disagreement is structure.
+
+So every exposed part carries an **agreement class**, and the class is the
+finding:
+
+| class | meaning |
+|---|---|
+| `both` | one supplier and one region. The strongest form. |
+| `supplier_only` | one company across several regions. A commercial correlation. |
+| `region_only` | different companies, one geography. A port closure or export control reaches all of them even though no single company failure would. |
+| `neither` | not correlated under either definition |
+
+`region_only` is **not a false positive of supplier grouping**. It is a
+different risk that supplier grouping is structurally blind to, and filing it as
+a defect would discard the reason for computing both.
+
+Where one reading is settled and the other is not, the class is **not computed**
+rather than defaulting the unknown side to "not concentrated", which would
+silently downgrade the finding.
+
+### "Concentrated" without a band
+
+Stage 4 refused to band a lead time, so stage 5 must not quietly introduce
+"concentrated means five or more".
+
+**The predicate is arity, not magnitude.** A cluster is concentrated when more
+than one exposed part shares the dependency. Two is not a tuned threshold; it is
+the number at which a correlation exists at all, because one part is not
+correlated with anything. Any figure above two would be a judgment about
+severity, and severity is carried the way stage 4 carries it: a raw unbanded
+count with a real unit, plus the membership list. If a reviewer wants "five or
+more matters", that band belongs to the reviewer.
+
+A source scan asserts no banding constant exists, matching on **word
+boundaries** rather than substrings, since `LOW` occurs inside `LOWER_BOUND` and
+a scan that fails on correct code teaches the next person to delete the test.
+
+### Membership uncertainty: aggregation cannot manufacture certainty
+
+Four parts each resolved individually at `executes` do not make a group finding
+settled if the thing that *grouped* them is unresolved. Two uncertainties, and
+they behave differently:
+
+**Local uncertainty inherits.** An unresolved merge is a question about this
+cluster's identity, and it splits in two:
+
+- the cluster is concentrated either way and may simply be **bigger** →
+  `LOWER_BOUND`. Membership can only grow and more members can only worsen
+  concentration, the same direction as blast radius and for the same reason: the
+  uncertain quantity sits in the numerator.
+- the **correlation itself** exists only under the merged reading → contested,
+  and it routes.
+
+Note the second test is on the *concentration*, not on the cluster key. Two
+singleton suppliers whose names might be one supplier exist as keys under both
+readings; what is new under merging is their correlation. Testing key novelty
+would have missed exactly the case the generator's mirror trap was built to
+produce.
+
+**Global uncertainty does not inherit.** A part with an unconfirmed supplier
+list may belong to clusters it is not currently in, so strictly every cluster's
+membership is a lower bound. That is true and useless: **a completeness state
+that every cluster shares is not a state, it is a footer**, and marking them all
+would destroy the signal identifying the clusters with a real local problem. It
+is reported once at the analysis level, and never silently, because silence is
+what would let a reviewer read a cluster of three as complete.
+
+The dividing line: **does this uncertainty discriminate between clusters?**
+
+### `NOT_APPLICABLE`, including one counterintuitive case
+
+It applies to parts with **no supplier at all**, where neither grouping has
+anything to attach to and no future data would change that: made-in-house parts
+with no external suppliers, and `no_qualified_supplier`.
+
+The second is counterintuitive, because those are among the most exposed parts
+in the dataset. A reviewer seeing that will assume a bug, so the sentence says
+why explicitly:
+
+> the supplier list was verified and contains nobody, so there is no supplier
+> and no region for this part to share with anything; correlation needs someone
+> to correlate with. This is not a downgrade of the finding: the exposure is
+> carried in full by lead time to recover, which reports no recovery path for
+> exactly these parts.
+
+A **multi-source part is not `NOT_APPLICABLE`**. The question applies and the
+answer is simply no. Using `NOT_APPLICABLE` for a negative answer would collapse
+"does not apply" into "no", which is the collapse the six states exist to
+prevent.
+
+### The reserved slot filled without reshaping the container
+
+`ExposureProfile` gains no field and loses none. It is frozen, so filling is
+`dataclasses.replace`, and `scored()` keeps its stage 4 meaning of "the
+dimensions that are properties of the part alone". `all_scores()` is **added**,
+never substituted.
+
+A regression test compares the four stage 4 dimensions **by value** before and
+after filling, field by field, not merely by count. The frozen dataclass makes
+that true today, which is exactly why it is asserted now rather than after
+somebody makes the profile mutable for convenience.
+
+**One cluster, one act.** Cluster events carry `member_count`, which is agent
+1's envelope field for precisely this: a single act covering many subjects.
+Copied verbatim at stage 3 and unused until now.
+
+The review queue is **separate from the abstention lane**. They are different
+reviewer tasks: the lane means *fetch me a number*, the queue means *confirm my
+model*. Every cluster is in the queue by definition of the ceiling, so merging
+them would flood the lane and make both useless.
+
+### Measured end to end
+
+At seed 42: 28 clusters, 22 concentrated (18 by supplier, 4 by region), 22
+cluster events covering 128 memberships. Agreement classes: 61 `both`, 6
+`region_only`, 140 `neither`. Twenty parts are unplaceable and appear in the
+global caveat. Every finding is `recommends`; none executes.
+
+**Two agreement classes do not occur in the generated data, and both are
+recorded as findings rather than engineered away**, following the precedent set
+by the empty merge lane at stage 3:
+
+- **`supplier_only` is structurally unreachable here.** The generator gives each
+  supplier exactly one region, so a concentrated supplier cluster always implies
+  a concentrated region cluster. A multinational supplier with plants in two
+  regions is realistic and the generator cannot express one. Covered by the hand
+  fixture, where one company deliberately spans two regions.
+- **The undetermined class does not occur** because generated regions are never
+  blank. Also covered by fixture.
+
+Similarly, no cluster in generated data is `LOWER_BOUND` or contingent, because
+at the shipped 0.95 threshold nothing merges uncertainly. That is the same root
+cause as the empty merge lane, not a second finding. The fixture pins both at
+0.90 where the cases are live, and a test asserts they vanish at 0.95, which
+proves the uncertainty comes from the merge rather than from the clustering.
+
+A harder supplier-and-region distribution belongs in the eval set at stage 8 as
+a separate frozen scenario, not in the primary generator.
+
 ## Autonomy levels
 
 These are the product, not a detail.
@@ -492,6 +693,15 @@ decision.
 Marked `@pytest.mark.xfail(strict=True)`, so the gap is visible, CI stays
 green, and the test fails loudly the day someone fixes it without noticing.
 
+- **Tier correlation is unrepresentable.** The brief names same-supplier,
+  same-region and same-tier as three definitions of correlated. There is no
+  tier field anywhere in the schema, so the third reading cannot be computed.
+  Choosing two of three is a scoping decision and should not look like the data
+  happened to support exactly the right two.
+- **In-house concentration is not modelled.** A part made on one internal line
+  is a single point of failure that neither grouping can see, because the data
+  has no representation of internal capacity. Made-in-house parts are therefore
+  `NOT_APPLICABLE` for concentration while still carrying real correlated risk.
 - **Lead time to recover does not include qualification time.** The brief
   defines the dimension as how long to qualify an alternative *or* wait out the
   disruption, and the data carries quoted and p95 purchase lead times, so it
@@ -509,8 +719,7 @@ green, and the test fails loudly the day someone fixes it without noticing.
 
 ## What is deliberately not here
 
-Stages 5 through 8: concentration detection, ranked output, review interface,
-eval harness.
+Stages 6 through 8: ranked output, review interface, eval harness.
 
 Out of scope permanently: cost optimisation, supplier scorecarding, negotiation
 support, resourcing workflow. `annual_spend_usd` is carried as a display column

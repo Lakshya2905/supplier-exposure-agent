@@ -1,0 +1,1 @@
+Alpha Works: 3 exposed parts depend on this supplier (CON-P01, CON-P02, CON-P03). 3 exposed parts depend on this supplier. Grouping parts by supplier is a modelling judgment rather than a fact, so this is recommended for confirmation and is never applied automatically.
