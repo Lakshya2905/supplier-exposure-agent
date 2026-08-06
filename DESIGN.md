@@ -340,13 +340,13 @@ Every claim resolves to one or more evidence records, and each record carries:
 - **Never render a bare count of sources.** "3 sources" invites reading count as strength, and three weak records do not outrank one authoritative one. Show source identity and type. Never render a tally as repeated marks.
 - **Evidence is exportable as plain text**, carrying file, retrieval time, row ids, and every transformation applied, so a citation can be pasted into a review memo intact.
 
-## The Decision Panel [TARGET]
+## The Decision Panel [SHIPPED]
 
-> [TARGET] **Not implemented.** Decisions are recorded and nothing displays them.
-> Everything the panel depends on now ships: `render_all` renders one sentence per
-> event with committed goldens, a cluster decision states its arity (`7ff6f14`), a
-> decision carries a real timestamp (`b898c81`), an unchanged repeat is refused and
-> a changed one cites what it replaces (`e6d1a72`). What is missing is the surface.
+> [SHIPPED] Implemented in `4dbd406`, built last on purpose. Everything it would
+> have exposed was fixed first: the epoch timestamp (`b898c81`), the arity a
+> cluster decision dropped (`7ff6f14`), the duplicate append (`e6d1a72`), and the
+> `note` shadowing that would have crashed the first attempt (`a950c00`).
+> Verified in a browser at both states.
 
 The Confirm surface records a reviewer's judgments into an append-only log and
 shows none of them. `st.success("Recorded: ...")` appears 158px below the control
@@ -374,7 +374,7 @@ on screen at any moment.
   shifts `app.button[0]` and breaks the three existing tests that index buttons
   positionally.
 
-### Known trap: `note` is shadowed at the panel's insertion point
+### Known trap, now fixed: `note` was shadowed at the panel's insertion point
 
 **`review_app.py:515` binds `note = st.text_input("Note", ...)` inside
 `render_confirm`.** That makes `note` a function-local name for the whole of
@@ -394,9 +394,11 @@ and if the surface has no rows, `UnboundLocalError` instead.
 points at the panel, three lines of new code, and says the call is wrong. The
 actual cause is a name binding 40 lines above it that has been correct and
 harmless since it was written. Nothing about the error names the collision, and
-the first instinct will be to change the panel. Rename the widget local to
-`note_text` (and its `note=note` argument at `:528`) in the same commit as the
-panel, before writing the panel body.
+the first instinct will be to change the panel. Fixed in `a950c00`: the widget local is
+`note_text`, and a source-level guard asserts that no painter binds a local named
+after a module helper, so this cannot return through a different function. Kept
+here because the reasoning generalises: a name collision reports itself at the
+call site, not at the binding.
 
 ## The Anti-Ranking Contract [PARTIAL]
 
