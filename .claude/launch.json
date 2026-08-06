@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "review-app",
+      "runtimeExecutable": ".venv/bin/streamlit",
+      "runtimeArgs": ["run", "review_app.py", "--server.port", "8511",
+                      "--server.headless", "true"],
+      "port": 8511
+    }
+  ]
+}

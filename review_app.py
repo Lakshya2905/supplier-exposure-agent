@@ -26,6 +26,8 @@ from src import ranking
 from src.interface import actions
 from src.interface import model as view
 from src.pipeline import default_data_dir, run, surfaces
+from src.synthetic.model import (ANNUAL_UNITS, QUOTED_LEAD_TIME_DAYS,
+                                 SUPPLIER_NAME)
 
 st.set_page_config(page_title="Supplier exposure review", layout="wide")
 
@@ -125,6 +127,14 @@ CONSOLE_CSS = """
                    monospace;
       font-size: var(--ui-sm); background: transparent !important;
       color: #C9D2D9 !important; padding: 0 !important;
+  }
+  /* THE MERGE SIGIL. A data qualification, so it takes note weight and NOT the
+     accent: the accent means "you can act on this", and a reader cannot act on
+     a merge. One mark whatever the number of merges, because repeated marks are
+     a tally, and a tally is a magnitude drawn as punctuation. */
+  .sigil {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: #9BA3AA;
   }
   .ids {
       display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-lg);
@@ -449,6 +459,48 @@ def load():
     return result, surfaces(result)
 
 
+MERGE_SIGIL = "‡"
+
+
+def merge_marker(evidence):
+    """The sigil, and the merge stated BEFORE anybody opens anything.
+
+    DESIGN.md: "A fuzzy merge is always visible before it is asked about." It
+    was buried inside the expander, which means the one inference a reviewer is
+    most likely to disagree with was the one they had to go looking for.
+
+    ONE SIGIL, WHATEVER THE COUNT. Repeating it per merge would be a tally drawn
+    as marks, which is a magnitude encoding wearing punctuation.
+    """
+    if not evidence or not evidence.transformations:
+        return ""
+    return f" <span class='sigil'>{MERGE_SIGIL}</span>"
+
+
+def render_merges(evidence):
+    """The merge lines, outside the expander, at note weight.
+
+    A merge is a fact about the data, so it is a note rather than a caption.
+    """
+    for transformation in evidence.transformations:
+        note(f"{MERGE_SIGIL} {transformation.rule}: "
+             f"{identifier(transformation.original)} &rarr; "
+             f"{identifier(transformation.resolved)}.")
+
+
+def citation_column(citations, field):
+    """The locator for one field, or the empty string.
+
+    Rendered as `file:row` because that is what a reviewer opens, and it is
+    what the plain-text export carries, which is what makes the chain walkable
+    from a raw line back to the claims that used it.
+    """
+    for citation in citations:
+        if citation.field == field:
+            return citation.locator
+    return ""
+
+
 def render_evidence(row):
     """Read-only workings, one click away. There is no control in here.
 
@@ -459,6 +511,20 @@ def render_evidence(row):
     with st.expander("How this was worked out"):
         st.caption("Read only. Nothing on this panel changes any value.")
 
+        # IDENTITY AND TYPE, NEVER A TALLY. DESIGN.md forbids a bare count of
+        # sources: "3 sources" invites reading count as strength, and three
+        # weak records do not outrank one authoritative one. So each line names
+        # the file, the system it came out of, when it was pulled, and exactly
+        # which rows were read.
+        st.markdown("###### Sources read, and when they were pulled")
+        st.markdown(tight_table([
+            ("", f"{identifier(entry['source_file'])} &mdash; "
+                 f"{entry['system_of_record']}, retrieved "
+                 f"{entry['retrieved_at']}, "
+                 f"row{'s' if len(entry['rows']) > 1 else ''} "
+                 f"{', '.join(str(r) for r in entry['rows'])}")
+            for entry in evidence.sources_used()]), unsafe_allow_html=True)
+
         st.markdown("###### Supplier rows read for this part")
         if evidence.supplier_rows:
             st.dataframe(
@@ -466,7 +532,8 @@ def render_evidence(row):
                   "region": r.region,
                   "lead time on file": "yes" if r.has_lead_time else "no",
                   "quoted days": r.quoted_lead_time_days,
-                  "p95 days": r.p95_lead_time_days}
+                  "p95 days": r.p95_lead_time_days,
+                  "source": citation_column(r.citations, SUPPLIER_NAME)}
                  for r in evidence.supplier_rows],
                 hide_index=True, width="stretch",
                 column_config={
@@ -481,21 +548,65 @@ def render_evidence(row):
               "qty per finished good": r.qty_per_finished_good,
               "annual units": ("absent from the demand plan"
                                if r.annual_units is None else r.annual_units),
-              "contribution": r.contribution or "not counted"}
+              "contribution": r.contribution or "not counted",
+              "source": citation_column(r.citations, ANNUAL_UNITS)}
              for r in evidence.demand_rows],
             hide_index=True, width="stretch")
+        st.caption("A contribution appears in no file. It is this pipeline's "
+                   "arithmetic on the two figures beside it, so it cites no "
+                   "row: a locator pointing at a line that does not hold the "
+                   "number is worse than none.")
 
         st.markdown("###### Lead time record used")
         used = evidence.lead_time_used
-        note(
-            f"{identifier(used.supplier_name)}, "
-            f"{used.quoted_lead_time_days} days quoted, "
-            f"{used.p95_lead_time_days} at p95."
-            if used else
-            "None. No supplier on this part has a lead time record.")
+        if used:
+            note(f"{identifier(used.supplier_name)}, "
+                 f"{used.quoted_lead_time_days} days quoted, "
+                 f"{used.p95_lead_time_days} at p95, from "
+                 f"{identifier(citation_column(evidence.lead_time_citations, QUOTED_LEAD_TIME_DAYS))}.")
+        else:
+            note("None. No supplier on this part has a lead time record.")
+
+        if evidence.transformations:
+            st.markdown("###### Transformations applied")
+            # BOTH STRINGS, ALWAYS. The point of showing a transformation is
+            # that a reviewer can disagree with it, and nobody can disagree
+            # with a result whose input has been discarded.
+            st.markdown(tight_table([
+                ("", f"{identifier(t.original)} &rarr; "
+                     f"{identifier(t.resolved)}<br>{t.rule}")
+                for t in evidence.transformations]), unsafe_allow_html=True)
+
+        if evidence.contradictions:
+            # SHOWN, NEVER RESOLVED. The tool does not pick, because picking
+            # would settle a question it has no basis to settle, silently.
+            st.markdown("###### Sources that disagree")
+            for contradiction in evidence.contradictions:
+                note(f"{identifier(contradiction.subject)}: "
+                     f"{contradiction.field} is given as " +
+                     ", ".join(f"{c.value} at {identifier(c.locator)}"
+                               for c in contradiction.citations) +
+                     ". Both are shown. This tool does not choose between them.")
+
+        if evidence.absences:
+            # ABSENCE IS NOT AN EMPTY PANEL. Same chip vocabulary, same weight
+            # and footprint as an asserted value, because dimming an unknown
+            # says it matters less.
+            st.markdown("###### What the sources do not contain")
+            st.markdown(tight_table([
+                ("", absence_chip(kind) + sentence)
+                for kind, sentence in evidence.absences]),
+                unsafe_allow_html=True)
 
         for line in evidence.notes:
             note(line)
+
+        st.markdown("###### This record as plain text")
+        st.caption("Carries the file, the retrieval time, every row id and "
+                   "every transformation, so a citation pastes into a review "
+                   "memo intact and a raw line can be traced back to the "
+                   "claims that used it.")
+        st.code(evidence.as_text(), language=None)
 
         st.caption(
             "To change any value above, correct it in the system of record and "
@@ -515,6 +626,12 @@ ABSENCE_LABEL = {
     "unplaceable": "unresolved",
     "not_applicable": "not applicable",
     "no_thresholds": "not configured",
+    # `no record` was RESERVED, not implemented, and the reason it could not be
+    # implemented was that the model could not tell "the source has no row for
+    # this" apart from "nobody has looked". The extract manifest is what settled
+    # it: a file with a system of record and a retrieval time was pulled, so an
+    # absence in it is a recorded absence rather than an unexamined one.
+    "no_record": "no record",
 }
 
 
@@ -597,13 +714,49 @@ def render_exposure(surface, find_out):
                         identifier_block(row.key for row in group.rows),
                         unsafe_allow_html=True)
 
-        for group in layer:
-            for row in group.rows:
-                finding(row.sentence)
-                render_evidence(row)
-        st.divider()
-
+    st.divider()
+    render_findings(surface)
     render_blocking_matrix(surface)
+
+
+def render_findings(surface):
+    """Every exposed part once, whatever number of groups it belongs to.
+
+    QA ISSUE-005: 36 findings and 36 evidence panels rendered for 21 parts,
+    because the findings were emitted inside the layer loop and two archetypes
+    hold identical membership. `SEA-P-0258` was explained three times, verbatim.
+
+    THE LATTICE KEEPS THE MEMBERSHIP; THE FINDINGS MOVE OUT. The group panels
+    above still show which parts sit in which archetype, and that is what
+    encodes the dominance partial order, so nothing about the order is lost. A
+    part legitimately belongs to several groups. What was duplicated was the
+    explanation, and the explanation was never group-specific in the first
+    place: `_part_row` builds the sentence from ALL of a part's archetype
+    labels, so the two copies were identical by construction.
+
+    THE ALTERNATIVE WAS WORSE. Rendering each part under the first group it
+    appears in would have deduplicated just as well and made placement depend on
+    iteration order, which CLAUDE.md rules out: a plausible default is read as a
+    ranking, and "this part is filed under that archetype" is exactly the
+    reading a reviewer would take.
+    """
+    rows = {}
+    for row in surface.all_rows():
+        if row.entity != view.PART:
+            continue
+        rows.setdefault(row.key, row)
+    if not rows:
+        return
+
+    st.subheader("Findings")
+    st.caption(f"One per exposed part, whatever number of groups it sits in. "
+               f"Parts are {ranking.DEFAULT_ORDER_LABEL}, which carries no "
+               f"meaning: reading order is not priority.")
+    for key in ranking.in_default_order(rows):
+        row = rows[key]
+        finding(row.sentence + merge_marker(row.evidence))
+        render_merges(row.evidence)
+        render_evidence(row)
 
 
 def render_blocking_matrix(surface):

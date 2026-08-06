@@ -90,6 +90,16 @@ def text_of(app):
     return "\n".join(str(part) for part in parts)
 
 
+def code_of(app):
+    """The st.code blocks, which text_of does not collect.
+
+    The evidence export lives in one, so a test that only read the prose would
+    report the citations missing while they were on the page, or worse, report
+    them present because a nearby caption mentioned them.
+    """
+    return [str(element.value) for element in app.code]
+
+
 class TestWidgetDenyList(unittest.TestCase):
 
     def test_no_banned_widget_appears_in_the_app(self):
@@ -372,6 +382,125 @@ class TestExposureSurface(unittest.TestCase):
         rendered = text_of(self.app)
         self.assertGreater(len(rendered), 2000)
         self.assertIn("days", rendered)
+
+
+class TestEveryPartIsExplainedOnce(unittest.TestCase):
+    """QA ISSUE-005: 36 findings and 36 evidence panels for 21 exposed parts.
+
+    Two archetypes hold identical membership, and the findings were emitted
+    inside the layer loop, so fourteen parts were explained twice in full and
+    `SEA-P-0258` three times. The lattice above still carries the membership,
+    which is what encodes the dominance partial order; only the explanation
+    moved out from under it.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.app = run_app()
+        from src.pipeline import default_data_dir, run, surfaces
+        from src.interface import model as view
+        cls.surface = surfaces(run(data_dir=default_data_dir()))[view.EXPOSURE]
+        cls.view = view
+
+    def part_rows(self):
+        return [row for row in self.surface.all_rows()
+                if row.entity == self.view.PART]
+
+    def test_a_part_really_does_belong_to_more_than_one_group(self):
+        # Without this the de-duplication test passes vacuously, and would keep
+        # passing if the layout stopped producing the overlap it was written for.
+        keys = [row.key for row in self.part_rows()]
+        self.assertGreater(len(keys), len(set(keys)),
+                           "no part sits in two groups, so nothing is being "
+                           "de-duplicated and this suite is not checking it")
+
+    def test_the_copies_of_a_part_carry_the_same_sentence(self):
+        """WHY KEEPING ONE IS LOSSLESS. `_part_row` builds the sentence from
+        ALL of a part's archetype labels, so the copies are identical by
+        construction rather than by luck. If that ever stopped holding,
+        rendering one copy would silently drop a finding."""
+        by_key = {}
+        for row in self.part_rows():
+            by_key.setdefault(row.key, set()).add(row.sentence)
+        for key, sentences in by_key.items():
+            with self.subTest(part=key):
+                self.assertEqual(len(sentences), 1)
+
+    def test_one_finding_and_one_evidence_panel_per_exposed_part(self):
+        # Counted on a heading INSIDE the panel rather than on the expander
+        # label, because AppTest does not expose expander labels as text and a
+        # count of zero would have passed against a count of zero.
+        distinct = {row.key for row in self.part_rows()}
+        rendered = text_of(self.app)
+        self.assertEqual(rendered.count("Sources read, and when they were "
+                                        "pulled"), len(distinct))
+        self.assertEqual(len(code_of(self.app)), len(distinct))
+
+    def test_the_findings_order_is_explicit_and_declared_meaningless(self):
+        # CLAUDE.md: any default ordering must be arbitrary AND stable, sorted
+        # by an explicit key and labelled, because a plausible default is read
+        # as a ranking.
+        rendered = text_of(self.app)
+        self.assertIn("ordered by part number", rendered)
+        self.assertIn("reading order is not priority", rendered.lower())
+
+    def test_no_finding_is_emitted_inside_the_layer_loop(self):
+        """The defect was structural, not a wrong count.
+
+        Comment spans are stripped first: this file's own explanation of the
+        bug names the loop it describes, and the corrections log records that
+        hazard twice already, a system that refuses a construct by name
+        containing that name in its refusals.
+        """
+        body = re.sub(r"#[^\n]*", "", SOURCE)
+        loop = body.split("for layer in surface.layers:", 1)[1]
+        loop = loop.split("\ndef ", 1)[0]
+        self.assertNotIn("render_evidence(", loop)
+        self.assertNotIn("finding(", loop)
+
+
+class TestEvidenceCitesItsSources(unittest.TestCase):
+    """The six fields, at the surface rather than in the model.
+
+    A citation a reviewer cannot follow is the failure this panel exists
+    against, so what is checked is that the locator and the retrieval time
+    reach the page, not that the record was built correctly.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.app = run_app()
+        # The export is an st.code block and the tables are canvas, so the
+        # prose collection alone would miss every locator on the page.
+        cls.rendered = text_of(cls.app) + "\n" + "\n".join(code_of(cls.app))
+
+    def test_the_panel_names_each_source_and_when_it_was_pulled(self):
+        self.assertIn("Sources read, and when they were pulled", self.rendered)
+        self.assertIn("approved vendor list", self.rendered)
+        self.assertIn("supplier quote history", self.rendered)
+
+    def test_a_locator_reaches_the_page(self):
+        self.assertRegex(self.rendered, r"suppliers\.csv:\d+")
+
+    def test_the_source_count_is_never_rendered_on_its_own(self):
+        """DESIGN.md forbids a bare count of sources: "3 sources" invites
+        reading count as strength, and three weak records do not outrank one
+        authoritative one."""
+        self.assertNotRegex(self.rendered, r"\b\d+ sources\b")
+
+    def test_a_merge_is_visible_before_anything_is_opened(self):
+        # It was buried inside the expander, which put the one inference a
+        # reviewer is most likely to disagree with behind a click.
+        self.assertIn("‡", self.rendered)
+        self.assertIn("spell one supplier differently", self.rendered)
+
+    def test_the_record_is_exportable_as_plain_text(self):
+        self.assertIn("This record as plain text", self.rendered)
+        self.assertIn("evidence for SEA-P-", self.rendered)
+
+    def test_a_recorded_absence_says_which_source_and_when(self):
+        self.assertIn("no record", self.rendered)
+        self.assertIn("has no row for", self.rendered)
 
 
 class TestFindOutSurface(unittest.TestCase):

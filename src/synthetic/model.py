@@ -1,10 +1,20 @@
-"""Column names and the in-memory model.
+"""File names, column names, and the in-memory model.
 
 Stage 2 onward imports these constants rather than typing string literals, so a
 column rename is one edit and a typo is an ImportError instead of a silently
 empty join.
 """
 from dataclasses import dataclass, field
+
+# ---- file names ----
+# Here rather than in writers.py because the evidence layer cites them and must
+# not import the generator to learn what a file is called.
+BOM_FILE = "bom.csv"
+PART_MASTER_FILE = "part_master.csv"
+SUPPLIERS_FILE = "suppliers.csv"
+LEAD_TIMES_FILE = "lead_times.csv"
+DEMAND_FILE = "demand_plan.csv"
+SOURCES_FILE = "sources.csv"
 
 # ---- bom.csv ----
 PARENT_PART = "parent_part"

@@ -424,9 +424,12 @@ correctness reads it. Those tests check the directory's **shape and never its
 contents**, since a test that opened a demo CSV to verify it would be the first
 breach of the rule it exists to protect.
 
-The interface reads the five CSVs a real consumer would have and never the answer
+The interface reads the six CSVs a real consumer would have and never the answer
 key, so its verdicts come from the analysis rather than from what the generator
-intended. `tests/fixtures/` is committed and frozen.
+intended. The sixth is `sources.csv`, the extract manifest: it says which system
+each file came out of and when it was pulled, which is what lets an evidence
+record cite a system of record and an as-of instead of the interface inventing
+one at render time. `tests/fixtures/` is committed and frozen.
 
 The dashboard has no authentication and is not built to have any.
 
