@@ -196,7 +196,45 @@ class TestMagnitudeArchetypesShipDisabled(unittest.TestCase):
         self.assertIsNone(A.load_thresholds(CONFIG.parent / "nope.yaml"))
 
     def test_structural_archetypes_are_available_with_no_config(self):
-        self.assertEqual(len(A.catalogue(None)), 5)
+        """IDENTITY, NOT LENGTH, and the difference is the point.
+
+        This asserted `len(...) == 5`. A count catches a removal and misses a
+        substitution: swap one archetype for another and the count is still 5, so
+        the guard passes while the catalogue means something different. That is a
+        proxy standing in for the property, the same shape as the gap xfails that
+        asserted a field NAME existed and the palette check that asserted equal
+        HSL saturation. This is the worst contract in the repo to guard with a
+        proxy: a reviewer confirms the catalogue ONCE, deliberately, and every
+        part afterwards is read through it.
+
+        Names are hand-written. Deriving them from `STRUCTURAL_CATALOGUE` would
+        assert that the catalogue equals itself.
+        """
+        self.assertEqual([a.name for a in A.catalogue(None)],
+                         ["resourcing_trap",
+                          "nobody_to_call",
+                          "no_quotable_single_source",
+                          "counted_empty_single_source",
+                          "correlated_resourcing_trap"])
+
+    def test_the_catalogues_order_is_part_of_the_contract(self):
+        # Dominance is subset inclusion over conditions, and the catalogue is the
+        # sequence a part is matched against, so reordering changes which
+        # archetype a part reports first. Asserted as a list above, not a set.
+        self.assertEqual([a.name for a in A.STRUCTURAL_CATALOGUE],
+                         [a.name for a in A.catalogue(None)])
+
+    def test_only_the_correlated_trap_withholds_autonomy(self):
+        # The autonomy split is the product, so it is pinned per archetype rather
+        # than counted. A substitution that preserved the names but flipped an
+        # autonomy would otherwise be invisible here.
+        self.assertEqual(
+            {a.name: a.autonomy for a in A.catalogue(None)},
+            {"resourcing_trap": gov.EXECUTES,
+             "nobody_to_call": gov.EXECUTES,
+             "no_quotable_single_source": gov.EXECUTES,
+             "counted_empty_single_source": gov.EXECUTES,
+             "correlated_resourcing_trap": gov.RECOMMENDS})
 
     def test_configured_thresholds_build_the_magnitude_archetypes(self):
         names = [a.name for a in A.catalogue(CONFIGURED)]

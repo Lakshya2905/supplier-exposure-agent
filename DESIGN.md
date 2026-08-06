@@ -340,13 +340,13 @@ Every claim resolves to one or more evidence records, and each record carries:
 - **Never render a bare count of sources.** "3 sources" invites reading count as strength, and three weak records do not outrank one authoritative one. Show source identity and type. Never render a tally as repeated marks.
 - **Evidence is exportable as plain text**, carrying file, retrieval time, row ids, and every transformation applied, so a citation can be pasted into a review memo intact.
 
-## The Decision Panel [TARGET]
+## The Decision Panel [SHIPPED]
 
-> [TARGET] **Not implemented.** Decisions are recorded and nothing displays them.
-> Everything the panel depends on now ships: `render_all` renders one sentence per
-> event with committed goldens, a cluster decision states its arity (`7ff6f14`), a
-> decision carries a real timestamp (`b898c81`), an unchanged repeat is refused and
-> a changed one cites what it replaces (`e6d1a72`). What is missing is the surface.
+> [SHIPPED] Implemented in `4dbd406`, built last on purpose. Everything it would
+> have exposed was fixed first: the epoch timestamp (`b898c81`), the arity a
+> cluster decision dropped (`7ff6f14`), the duplicate append (`e6d1a72`), and the
+> `note` shadowing that would have crashed the first attempt (`a950c00`).
+> Verified in a browser at both states.
 
 The Confirm surface records a reviewer's judgments into an append-only log and
 shows none of them. `st.success("Recorded: ...")` appears 158px below the control
@@ -374,7 +374,7 @@ on screen at any moment.
   shifts `app.button[0]` and breaks the three existing tests that index buttons
   positionally.
 
-### Known trap: `note` is shadowed at the panel's insertion point
+### Known trap, now fixed: `note` was shadowed at the panel's insertion point
 
 **`review_app.py:515` binds `note = st.text_input("Note", ...)` inside
 `render_confirm`.** That makes `note` a function-local name for the whole of
@@ -394,9 +394,11 @@ and if the surface has no rows, `UnboundLocalError` instead.
 points at the panel, three lines of new code, and says the call is wrong. The
 actual cause is a name binding 40 lines above it that has been correct and
 harmless since it was written. Nothing about the error names the collision, and
-the first instinct will be to change the panel. Rename the widget local to
-`note_text` (and its `note=note` argument at `:528`) in the same commit as the
-panel, before writing the panel body.
+the first instinct will be to change the panel. Fixed in `a950c00`: the widget local is
+`note_text`, and a source-level guard asserts that no painter binds a local named
+after a module helper, so this cannot return through a different function. Kept
+here because the reasoning generalises: a name collision reports itself at the
+call site, not at the binding.
 
 ## The Anti-Ranking Contract [PARTIAL]
 
@@ -492,6 +494,30 @@ initial, and file.
 ## Test Contract [TARGET]
 
 > [TARGET] **Not implemented.** The banned-widget source scan ships. None of the property assertions below exist; the tests that do exist check notation, which is how the Color defect survived.
+
+**Where a contract can be a construction-time raise instead of a test, make it
+one.** A guard that runs when the value is built beats a guard that runs when CI
+does, for three reasons a test cannot match:
+
+- **A stub cannot satisfy it.** There is nothing to define to make it pass; the
+  wrong value simply fails to exist.
+- **It cannot be deleted to make the build green.** Removing a raise breaks the
+  code that depends on it, which is loud. Removing a test is quiet and is what a
+  red build teaches somebody to do.
+- **It covers paths no test enumerates.** It fires on every construction, including
+  the ones nobody thought to write a case for.
+
+`COMPLETENESS_STATES` is the example in this repo. `scoring.py:69` and `:159` raise
+on a state outside the tuple, so a `DimensionScore` carrying an unknown
+completeness cannot be built at all. The contract audit measured the difference:
+removing a member of that tuple failed 134 tests without a single test naming the
+tuple, because the guard runs everywhere a score is constructed. The two contracts
+that had nothing (`ENVELOPE_FIELDS`, the reason-code vocabulary) are both plain
+data with no constructor to guard, which is exactly why they needed hand-written
+pins instead.
+
+The rest of this section is for properties with no construction site to defend:
+perceptual measurements, source scans, and rendered output.
 
 The original defect was a test asserting a representation (equal HSL strings) and
 being wrong about the property (perceptual equality). Restating the same test in

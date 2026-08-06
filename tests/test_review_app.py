@@ -254,6 +254,109 @@ class TestConfirmSurface(unittest.TestCase):
                          "a reviewer who navigates away must not silently "
                          "become anonymous on returning")
 
+    def test_the_panel_renders_before_the_first_decision(self):
+        """A panel that appears only after a decision cannot teach it exists.
+
+        The empty state is a RECORDED zero, the reviewer's own count of their own
+        decisions, so a figure is honest here in a way it would not be for a
+        measurement.
+        """
+        app = run_app()
+        app.sidebar.radio[0].set_value("confirm").run()
+        self.assertIn("Decisions you recorded in this session",
+                      [str(s.value) for s in app.subheader])
+        self.assertIn("No decision has been recorded", text_of(app))
+
+    def test_the_panel_says_the_record_is_session_scoped_and_unwritten(self):
+        # An emptied log and a fresh session render identically unless the
+        # wording separates them. Stated at full weight, not dimmed to a caption.
+        app = run_app()
+        app.sidebar.radio[0].set_value("confirm").run()
+        self.assertIn("this browser session only", text_of(app))
+        self.assertIn("written to disk", text_of(app))
+
+    def test_a_recorded_decision_appears_in_the_panel(self):
+        app = run_app()
+        app.sidebar.radio[0].set_value("confirm").run()
+        app.sidebar.text_input[0].set_value("Ada Lovelace").run()
+        app.button[0].click().run()
+
+        rendered = text_of(app)
+        self.assertNotIn("No decision has been recorded", rendered)
+        self.assertIn("Accepted by Ada Lovelace", rendered)
+        self.assertIn("covering 28 members", rendered,
+                      "the panel must carry the arity of the act")
+
+    def test_the_panel_states_the_denominator_and_declares_its_order(self):
+        # The denominator leads, as it does on the exposure surface: what is
+        # outstanding is the unknown. The order is declared because a linear list
+        # with no stated order reads as a ranking.
+        app = run_app()
+        app.sidebar.radio[0].set_value("confirm").run()
+        app.sidebar.text_input[0].set_value("Ada Lovelace").run()
+        app.button[0].click().run()
+
+        rendered = text_of(app)
+        self.assertIn("1 decision recorded", rendered)
+        self.assertIn("still outstanding", rendered)
+        self.assertIn("in the order they were recorded", rendered)
+
+    def test_the_panel_offers_no_control(self):
+        """Append-only means no undo and no delete.
+
+        It also protects the tests above: a button here would shift the
+        positional indices that reach the cluster controls.
+        """
+        app = run_app()
+        app.sidebar.radio[0].set_value("confirm").run()
+        before = len(app.button)
+        app.sidebar.text_input[0].set_value("Ada Lovelace").run()
+        app.button[0].click().run()
+        self.assertEqual(len(app.button), before,
+                         "the panel added a control, or shifted the indices "
+                         "three other tests depend on")
+
+    def test_the_panel_assembles_no_prose_of_its_own(self):
+        """Its wording is golden-pinned in the renderer, beside the coverage panel.
+
+        `README.md` claims the interface displays the renderer's output and
+        assembles nothing of its own. Writing these strings inline is the shortest
+        path and it would make that claim false.
+        """
+        import ast
+        tree = ast.parse(SOURCE)
+        panel = next(n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)
+                     and n.name == "render_decision_panel")
+        # Every string constant in the function, minus its docstring. A literal
+        # long enough to be a sentence is prose the renderer should own.
+        literals = [n.value for n in ast.walk(panel)
+                    if isinstance(n, ast.Constant) and isinstance(n.value, str)]
+        prose = [s for s in literals[1:] if len(s) > 12]
+        self.assertEqual(prose, [],
+                         f"panel assembles its own prose: {prose}")
+
+    def test_no_painter_shadows_a_module_level_helper(self):
+        """A widget local named after a helper breaks every later call to it.
+
+        `note = st.text_input("Note", ...)` inside render_confirm bound a
+        function-local `note` for the whole function, so anything added below it
+        that called the module's note() helper raised "TypeError: 'str' object is
+        not callable" and pointed at itself rather than at the collision. The
+        decision panel is appended to exactly that function.
+        """
+        import ast
+        tree = ast.parse(SOURCE)
+        helpers = {n.name for n in tree.body if isinstance(n, ast.FunctionDef)}
+        for fn in (n for n in tree.body if isinstance(n, ast.FunctionDef)):
+            bound = {t.id for node in ast.walk(fn)
+                     if isinstance(node, ast.Assign)
+                     for t in node.targets if isinstance(t, ast.Name)}
+            with self.subTest(function=fn.name):
+                self.assertFalse(
+                    bound & (helpers - {fn.name}),
+                    f"{fn.name} binds a local named after a module helper: "
+                    f"{sorted(bound & (helpers - {fn.name}))}")
+
     def test_a_recorded_decision_carries_a_real_timestamp(self):
         """The app was stamping every decision at the Unix epoch.
 

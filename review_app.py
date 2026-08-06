@@ -21,6 +21,7 @@ from datetime import datetime, timezone
 import streamlit as st
 
 from src import governance as gov
+from src.governance import render as govrender
 from src import ranking
 from src.interface import actions
 from src.interface import model as view
@@ -512,25 +513,66 @@ def render_confirm(surface, result):
         reason = control_columns[-1].selectbox(
             "Reason", row.controls[0].reason_codes, index=None,
             placeholder="Choose an option", key=f"reason-{row.key}")
-        note = st.text_input("Note", key=f"note-{row.key}")
+        # `note_text`, NOT `note`. A bare `note` here binds a function-local name
+        # for the whole of render_confirm and shadows the module-level note()
+        # helper, so anything added below this line that calls note() raises
+        # "TypeError: 'str' object is not callable" and points at itself rather
+        # than at the collision forty lines above.
+        note_text = st.text_input("Note", key=f"note-{row.key}")
         for column, control in zip(control_columns, row.controls):
             if column.button(control.action.title(), key=f"{control.action}-{row.key}"):
                 try:
                     # THE CLOCK LIVES HERE, at the edge, and nowhere deeper.
-                    # `actions.apply` defaults `at` to the Unix epoch so that
-                    # src/ and every test stay deterministic. Nothing was
-                    # passing it, so every decision the deployed app recorded
-                    # was stamped 1970-01-01. Reading the time at the interface
-                    # keeps the record real without putting a clock inside a
-                    # module whose output is golden-pinned.
+                    # `actions.apply` requires `at` and has no default, so src/
+                    # and every test stay deterministic and an undated decision
+                    # is refused rather than silently stamped. Reading the time
+                    # at the interface keeps the record real without putting a
+                    # clock inside a module whose output is golden-pinned.
                     actions.apply(st.session_state.setdefault(
                         "log", gov.DecisionLog()), control, reviewer,
-                        reason_code=reason or "", note=note,
+                        reason_code=reason or "", note=note_text,
                         at=datetime.now(timezone.utc).isoformat())
                     st.success(f"Recorded: {control.action} {row.key}")
                 except ValueError as refusal:
                     st.warning(str(refusal))
         st.divider()
+
+    render_decision_panel(st.session_state.get("log"), len(surface.rows))
+
+
+def render_decision_panel(log, total_rows):
+    """What this reviewer has decided, in the order they decided it.
+
+    THE PANEL ASSEMBLES NO PROSE. Every sentence comes from the renderer: the
+    event sentences from `render_all`, and the panel's own wording from the
+    module's "wording with no event" section, where it is golden-pinned beside
+    the coverage panel's. Writing these strings here is the shortest path and it
+    would make the claim that this interface assembles nothing of its own false.
+
+    NO CONTROL LIVES HERE. The log is append-only, so there is no undo and no
+    delete, and a button in this panel would also shift the positional indices
+    that three tests use to reach the cluster controls above.
+    """
+    events = list(log) if log is not None else []
+
+    # No divider here: every cluster row above already closes with one, so adding
+    # a second draws two rules a few pixels apart.
+    st.subheader(govrender.DECISION_PANEL_HEADING)
+    # The denominator first, which is how the exposure surface already works:
+    # what is outstanding is the unknown, and it leads.
+    st.caption(govrender.decision_panel_count(
+        len(events), max(total_rows - len(events), 0)))
+    note(govrender.DECISION_PANEL_SCOPE)
+
+    if not events:
+        # Rendered BEFORE the first decision, so a reviewer meets the panel
+        # before they need it rather than discovering it after.
+        note(govrender.DECISION_PANEL_EMPTY)
+        return
+
+    st.caption(govrender.DECISION_PANEL_ORDER)
+    for sentence in govrender.render_all(events):
+        finding(sentence)
 
 
 # Short names for navigation, with the question beneath. The questions stay as
