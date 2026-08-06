@@ -232,6 +232,55 @@ class TestTheSpacingScaleIsDeclaredOnce(unittest.TestCase):
         self.assertIn(":has(> [data-testid=", selectors)
 
 
+class TestPrintIsItsOwnSubstrate(unittest.TestCase):
+    """Every contrast figure in DESIGN.md is measured on the dark surface.
+
+    None of them hold on white paper, so print is not the screen stylesheet with
+    a filter over it. It inverts to black on white and states so.
+    """
+
+    def setUp(self):
+        css = SOURCE.split('CONSOLE_CSS = """')[1].split('"""')[0]
+        self.screen, _, self.printed = css.partition("@media print")
+
+    def test_a_print_stylesheet_exists(self):
+        self.assertTrue(self.printed.strip(),
+                        "a read-only tool whose output is a decision has to "
+                        "produce something a reviewer can file")
+
+    def test_print_inverts_rather_than_filtering_the_dark_theme(self):
+        self.assertIn("background: #FFFFFF !important", self.printed)
+        self.assertIn("color: #000000 !important", self.printed)
+
+    def test_controls_do_not_print(self):
+        # A button on paper is an instruction nobody can follow.
+        for control in (".stButton", '[data-testid="stTextInput"]',
+                        '[data-testid="stSelectbox"]',
+                        'section[data-testid="stSidebar"]'):
+            with self.subTest(control=control):
+                self.assertIn(control, self.printed.split("display: none")[0])
+
+    def test_evidence_prints_open(self):
+        # A folded disclosure on paper is a claim with its working removed.
+        details = self.printed.split('[data-testid="stExpanderDetails"]')[1]
+        self.assertIn("display: block !important", details.split("}")[0])
+
+    def test_absence_keeps_its_dashed_rule_on_paper(self):
+        """The reason absence was given a form cue rather than a colour one.
+
+        It is the only part of the chip vocabulary that survives a substrate
+        change unaltered, which is what a form cue buys.
+        """
+        self.assertIn("border-style: dashed !important", self.printed)
+
+    def test_print_introduces_no_new_chip_variant(self):
+        printed_variants = set(re.findall(r"\.badge\.(\w+)\s*{", self.printed))
+        screen_variants = set(re.findall(r"\.badge\.(\w+)\s*{", self.screen))
+        self.assertTrue(printed_variants <= screen_variants,
+                        f"print invents a variant: "
+                        f"{printed_variants - screen_variants}")
+
+
 class TestFocusIsVisible(unittest.TestCase):
     """WCAG 2.4.7 and 2.4.11. There was no focus treatment at all before this."""
 
@@ -594,7 +643,11 @@ class TestBadgesAreNominal(unittest.TestCase):
         cannot accidentally build a ramp. The rule that matters is not the count
         of variants but that no variant is ordered against another.
         """
-        variants = re.findall(r"\.badge\.(\w+)\s*{", SOURCE)
+        # Scoped to the screen rules. The print block restates `.badge.absent`
+        # to keep the dashed rule on paper, which is a substrate override rather
+        # than a fourth variant, and it is asserted separately below.
+        screen = SOURCE.split("@media print")[0]
+        variants = re.findall(r"\.badge\.(\w+)\s*{", screen)
         self.assertEqual(sorted(variants), ["absent", "open"])
         for variant in variants:
             block = SOURCE.split(f".badge.{variant} {{")[1].split("}")[0]

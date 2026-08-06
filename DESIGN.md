@@ -478,9 +478,19 @@ sections is `xl`; panel padding is `md`.
 - Tab order follows reading order.
 - The reviewer name field must not lose its value on navigation. It sits in the sidebar but is created inside the confirm surface, so Streamlit discards its state on any surface change; hold it in a plain `session_state` slot that no widget owns.
 
-## Print [TARGET]
+## Print [PARTIAL]
 
-> [TARGET] **Not implemented.** There is no `@media print` block in the app. Until one exists and is re-measured, every contrast and equality figure in this document applies to the dark substrate only.
+> [PARTIAL] Implemented in `154aaba`. Print inverts to black on white and is
+> its own substrate, not the dark theme with a filter over it. One part of the
+> page is out of reach: `st.dataframe` renders through glide-data-grid onto a
+> **canvas**, so its pixels are painted from JavaScript and no CSS rule can
+> recolour them. It prints in the screen palette as a self-contained dark
+> block. Verified by rendering to PDF: 13 fills survive every override, at
+> `#E3E6E8`, `#C9D2D9` and `#838C94`, all inside the grid.
+>
+> Left visible rather than hidden, because it draws its own background and is
+> legible on paper, and hiding it would silently drop the blocking matrix from
+> the record.
 
 There is no print stylesheet today. For a read only tool whose output is a
 decision, the artifact of a review should be a document a reviewer can staple,

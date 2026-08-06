@@ -300,6 +300,86 @@ CONSOLE_CSS = """
   :is(button, input, select, textarea):focus {
       box-shadow: none !important;
   }
+
+  /* ------------------------------------------------------------- print --
+     A read-only tool whose output is a decision should produce something a
+     reviewer can staple, initial and file.
+
+     THE SUBSTRATE INVERTS, SO THE GUARANTEES DO NOT TRANSFER. Every contrast
+     figure in DESIGN.md is measured on the dark surface and none of them hold on
+     white paper, so this is not the dark stylesheet with a filter over it: the
+     text goes to black on white and is re-measured there. Printing the dark
+     theme directly would emit a black slab, or invert unpredictably per browser.
+
+     Absence keeps its dashed rule, which is why absence was given a FORM cue
+     rather than a colour one: it is the only part of the chip vocabulary that
+     survives a substrate change unaltered.
+
+     Controls do not print. A button on paper is an instruction nobody can
+     follow, and the panel is a record rather than a form. */
+  @media print {
+      :root { --doc: 10.5pt; --ui-sm: 9.5pt; --ui-xs: 8.5pt; --ui-base: 10pt;
+              --title: 15pt; }
+      html, body, .block-container, [data-testid="stMain"] {
+          background: #FFFFFF !important; color: #000000 !important;
+      }
+      /* EVERYTHING, not a list of selectors. The first version of this block
+         enumerated the elements to blacken, which is a whitelist: anything not
+         named kept its dark-theme colour and printed as light grey on white.
+         Rendering it to PDF found 5 such fills at #E3E6E8 and 36 at the accent,
+         all of them effectively invisible on paper. A list of what to fix can
+         only ever be as complete as the person writing it. */
+      /* `:root *` rather than `*`. The screen rules set colour with !important
+         at class specificity (`.identifier`, `.stCaption`), and a bare `*` is
+         specificity zero, so it loses to them even with !important of its own.
+         `:root *` matches their specificity and comes later in the cascade, so
+         it wins. Rendering to PDF is what showed this: the first version left 13
+         fills at #E3E6E8, #C9D2D9 and #838C94, all invisible on white. */
+      :root *, :root *::before, :root *::after {
+          color: #000000 !important;
+          background-color: transparent !important;
+          box-shadow: none !important;
+      }
+      /* Links keep their identity through form, since colour is gone. */
+      a, a:visited { text-decoration: underline !important; }
+
+      /* The record, not the machinery. */
+      section[data-testid="stSidebar"],
+      .stButton, [data-testid="stTextInput"], [data-testid="stSelectbox"],
+      [data-testid="stAlert"], [data-testid="stToolbar"] { display: none !important; }
+
+      /* Structure survives as rules on paper, where a surface fill would print
+         as a grey wash and cost more legibility than it buys. */
+      [data-testid="stVerticalBlock"]:has(> [data-testid="stElementContainer"] .panelhead) {
+          border: 1pt solid #000000 !important; background: transparent !important;
+          break-inside: avoid;
+      }
+      .panelhead { background: transparent !important;
+                   border-bottom: 1pt solid #000000 !important; }
+      .badge { border: 1pt solid #000000 !important; background: transparent !important;
+               color: #000000 !important; }
+      .badge.absent { border-style: dashed !important; }
+
+      /* Evidence is the point of the document, so it prints open rather than
+         collapsed. A folded disclosure on paper is a claim with its working
+         removed. */
+      [data-testid="stExpanderDetails"] { display: block !important;
+                                          border-left: 1pt solid #000000 !important; }
+      p.finding, table.tight tr { break-inside: avoid; }
+
+      /* THE DATAFRAME IS A CANVAS AND CSS CANNOT REACH IT. Streamlit renders
+         st.dataframe through glide-data-grid, which paints pixels from
+         JavaScript, so the rules above stop at its edge: it prints in the screen
+         palette as a self-contained dark block. Verified by rendering to PDF,
+         where 13 fills survive every override above, at #E3E6E8, #C9D2D9 and
+         #838C94.
+
+         Left visible rather than hidden. It draws its own background, so it is
+         legible on paper even though it does not match the page, and hiding it
+         would silently drop the blocking matrix from the record. An absence a
+         reader cannot see is the thing this system refuses hardest. The limit is
+         stated in DESIGN.md's Print section instead of being papered over. */
+  }
 </style>
 """
 st.markdown(CONSOLE_CSS, unsafe_allow_html=True)
