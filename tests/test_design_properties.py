@@ -60,11 +60,33 @@ def delta_e(one, other):
     return math.sqrt(sum((a - b) ** 2 for a, b in zip(lab(one), lab(other))))
 
 
+# The text ramp, read out of :root. Colours moved behind custom properties when
+# the ramp became the single source of text colour, so every helper below now
+# resolves a token before measuring anything. RESOLVING RATHER THAN MATCHING is
+# the same discipline that produced this file: the measurement has to be of the
+# colour the browser paints, and `var(--text-note)` is not a colour.
+TOKENS = dict(re.findall(r"(--[a-z-]+):\s*(#[0-9A-Fa-f]{6})", CSS))
+
+
+def resolve(value):
+    """`var(--text-note)` to the hex it is declared as. A hex passes through."""
+    if value is None:
+        return None
+    value = value.strip()
+    match = re.fullmatch(r"var\((--[a-z-]+)\)", value)
+    if match:
+        token = match.group(1)
+        if token not in TOKENS:
+            raise AssertionError(f"{token} is used but never declared in :root")
+        return TOKENS[token]
+    return value
+
+
 def declared(selector, prop):
     """A property's value as the stylesheet declares it, not as we remember it."""
     block = SCREEN.split(selector, 1)[1].split("}")[0]
     match = re.search(rf"{prop}:\s*([^;!]+)", block)
-    return match.group(1).strip() if match else None
+    return resolve(match.group(1)) if match else None
 
 
 # The surfaces anything can be read against, hand-written from the stylesheet.

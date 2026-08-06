@@ -259,8 +259,20 @@ class TestPrintIsItsOwnSubstrate(unittest.TestCase):
                         "produce something a reviewer can file")
 
     def test_print_inverts_rather_than_filtering_the_dark_theme(self):
+        """Asserted on the colour, not on the notation.
+
+        This assertion used to read the literal `color: #000000`, and when text
+        colour moved behind the ramp tokens it failed while the stylesheet was
+        still correct. That is the shape of failure the corrections log records
+        at entry 6: a test that checks how a value is spelled passes and fails
+        for reasons that have nothing to do with what it claims to protect.
+        """
         self.assertIn("background: #FFFFFF !important", self.printed)
-        self.assertIn("color: #000000 !important", self.printed)
+        token = re.search(r"(?<![-\w])color:\s*var\((--[a-z-]+)\)\s*!important",
+                          self.printed).group(1)
+        declared = re.search(rf"{token}:\s*(#[0-9A-Fa-f]{{6}})",
+                             self.screen).group(1)
+        self.assertEqual(declared.upper(), "#000000")
 
     def test_controls_do_not_print(self):
         # A button on paper is an instruction nobody can follow.

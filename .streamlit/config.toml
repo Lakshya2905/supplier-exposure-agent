@@ -1,9 +1,17 @@
 # Dark. Colour distinguishes categories and never ranks them.
 #
-# The accent is used on interactive elements. Category colour lives in the
-# stylesheet's chip palette, where every entry shares one saturation and one
-# lightness and differs only in hue: no chip is darker, stronger or warmer than
-# another, so no reading of the set produces an order.
+# The accent is used on interactive elements, and only on those.
+#
+# THE CHIP PALETTE THIS COMMENT USED TO DESCRIBE NO LONGER EXISTS. It claimed
+# one saturation and one lightness per hue, and that claim was false: measured
+# in CIELAB the entries spanned 15.3 L* points and sorted into a brightness ramp
+# in declaration order. Hue is retired from the category palette entirely, and
+# there is one neutral chip whose form carries the taxonomy. See DESIGN.md.
+#
+# `textColor` is the fallback for anything the stylesheet does not claim. It is
+# text-primary, and Streamlit paints headings with it at a specificity element
+# rules lose to, which is why h1 through h6 in review_app.py set their colour
+# with !important.
 
 [theme]
 base = "dark"
