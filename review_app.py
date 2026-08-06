@@ -55,48 +55,68 @@ CONSOLE_CSS = """
       --ui-base: 0.875rem;  /* 14px  section headings */
       --doc: 0.9375rem;     /* 15px  finding sentences, the reading size */
       --title: 1.3125rem;   /* 21px  one per surface */
+
+      /* THE SPACING SCALE, on a 4px base. Thirty-eight distinct rem values
+         shipped before this and five of them landed on any grid, which means
+         the rhythm was decided thirty-eight times. Same rule as the type scale:
+         declared here, and a test asserts no rule invents a value. Optical
+         adjustments that are not spacing (negative pull on a panel head, a
+         baseline nudge, a min-width) keep their literals and are named below. */
+      --space-xs: 0.25rem;  /*  4px */
+      --space-sm: 0.5rem;   /*  8px */
+      --space-md: 0.75rem;  /* 12px */
+      --space-lg: 1rem;     /* 16px */
+      --space-xl: 1.5rem;   /* 24px */
+      --space-2xl: 2rem;    /* 32px */
+      --space-3xl: 3rem;    /* 48px */
   }
   /* Middle density. The earlier revision read as an essay and the one after it
      read as congested; this sits between them. Where a region felt crowded the
      fix was usually less on screen at once rather than more air, so the panels
      carry the map and the sentences below carry the reading. */
-  .block-container { max-width: 100%; padding: 1.6rem 2.4rem 4rem 2.4rem; }
+  .block-container {
+      max-width: 100%;
+      padding: var(--space-xl) var(--space-2xl) var(--space-3xl) var(--space-2xl);
+  }
   html, body, [class*="css"] { -webkit-font-smoothing: antialiased; }
 
   h1 {
       font-size: var(--title) !important; font-weight: 600 !important;
-      letter-spacing: -0.01em; margin: 0.5rem 0 0.7rem 0 !important;
+      letter-spacing: -0.01em;
+      margin: var(--space-sm) 0 var(--space-md) 0 !important;
       padding: 0 !important; color: #F0F2F4; line-height: 1.35;
   }
   h2 {
       font-size: var(--ui-base) !important; font-weight: 600 !important;
       text-transform: uppercase; letter-spacing: 0.08em; color: #8FA0AD;
-      margin: 1.9rem 0 0.6rem 0 !important; padding: 0 !important;
+      margin: var(--space-xl) 0 var(--space-sm) 0 !important; padding: 0 !important;
       line-height: 1.45;
   }
   h3, h4, h5, h6 {
       font-size: var(--ui-base) !important; font-weight: 600 !important;
       color: #C7CDD3;
-      margin: 1.1rem 0 0.4rem 0 !important; padding: 0 !important;
+      margin: var(--space-lg) 0 var(--space-xs) 0 !important; padding: 0 !important;
       line-height: 1.45;
   }
   hr, [data-testid="stDivider"] hr {
-      border: none; border-top: 1px solid #2C3237; margin: 1.5rem 0 1.1rem 0;
+      border: none; border-top: 1px solid #2C3237;
+      margin: var(--space-xl) 0 var(--space-lg) 0;
   }
-  [data-testid="stVerticalBlock"] { gap: 0.7rem; }
+  [data-testid="stVerticalBlock"] { gap: var(--space-md); }
   p, li { line-height: 1.5; color: #D5DADE; }
 
   p.finding {
       font-size: var(--doc); line-height: 1.58; max-width: 104ch;
-      margin: 0.9rem 0 0.15rem 0; color: #E3E6E8;
+      margin: var(--space-md) 0 var(--space-xs) 0; color: #E3E6E8;
   }
   p.note {
       font-size: var(--ui-sm); line-height: 1.5; max-width: 104ch;
-      color: #9BA3AA; margin: 0 0 0.45rem 0;
+      color: #9BA3AA; margin: 0 0 var(--space-sm) 0;
   }
   .stCaption, [data-testid="stCaptionContainer"] p {
       font-size: var(--ui-xs) !important; color: #838C94 !important;
-      line-height: 1.5; max-width: 104ch; margin-bottom: 0.45rem !important;
+      line-height: 1.5; max-width: 104ch;
+      margin-bottom: var(--space-sm) !important;
   }
   a, a:visited { color: #7FB2D9; }
 
@@ -106,12 +126,16 @@ CONSOLE_CSS = """
       font-size: var(--ui-sm); background: transparent !important;
       color: #C9D2D9 !important; padding: 0 !important;
   }
-  .ids { display: flex; flex-wrap: wrap; gap: 0.1rem 1.1rem; margin: 0.3rem 0 0 0; }
+  .ids {
+      display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-lg);
+      margin: var(--space-xs) 0 0 0;
+  }
   .ids span { display: inline-block; min-width: 6.6rem; line-height: 1.75; }
 
   table.tight { border-collapse: collapse; width: 100%; }
   table.tight td {
-      border-top: 1px solid #262B30; padding: 0.36rem 0.8rem 0.36rem 0;
+      border-top: 1px solid #262B30;
+      padding: var(--space-xs) var(--space-md) var(--space-xs) 0;
       font-size: var(--ui-sm); line-height: 1.5; color: #B6BEC5; vertical-align: top;
   }
   table.tight tr:first-child td { border-top: none; }
@@ -127,7 +151,7 @@ CONSOLE_CSS = """
       border: none !important; border-radius: 0 !important;
       box-shadow: none !important; background: transparent !important;
   }
-  [data-testid="stExpander"] { margin: 0 0 0.8rem 0; }
+  [data-testid="stExpander"] { margin: 0 0 var(--space-md) 0; }
   [data-testid="stExpander"] summary {
       font-size: var(--ui-sm) !important; color: #7FB2D9 !important;
       padding: 0 !important; width: max-content;
@@ -135,7 +159,8 @@ CONSOLE_CSS = """
   [data-testid="stExpander"] summary p { font-size: var(--ui-sm) !important; }
   [data-testid="stExpanderDetails"] {
       border-left: 1px solid #2C3237 !important;
-      padding: 0.5rem 0 0.2rem 1rem !important; margin-top: 0.5rem;
+      padding: var(--space-sm) 0 var(--space-xs) var(--space-lg) !important;
+      margin-top: var(--space-sm);
   }
 
   [data-testid="stDataFrame"], [data-testid="stTable"] {
@@ -151,7 +176,7 @@ CONSOLE_CSS = """
   .stButton > button {
       border-radius: 3px; border: 1px solid #3E5C74; background: #1E2933;
       color: #9CC6E3; font-size: var(--ui-sm); font-weight: 500;
-      padding: 0.24rem 0.9rem; box-shadow: none;
+      padding: var(--space-xs) var(--space-md); box-shadow: none;
   }
   .stButton > button:hover {
       background: #2A3B49; color: #D6E8F5; border-color: #7FB2D9;
@@ -161,10 +186,12 @@ CONSOLE_CSS = """
       background: #101315; border-right: 1px solid #262B30;
       width: 16rem !important;
   }
-  section[data-testid="stSidebar"] .block-container { padding: 1.8rem 1.1rem; }
+  section[data-testid="stSidebar"] .block-container {
+      padding: var(--space-xl) var(--space-lg);
+  }
   section[data-testid="stSidebar"] [role="radiogroup"] { gap: 0 !important; }
   section[data-testid="stSidebar"] [role="radiogroup"] > label {
-      padding: 0.5rem 0 0.5rem 0.7rem; margin: 0;
+      padding: var(--space-sm) 0 var(--space-sm) var(--space-md); margin: 0;
       border-left: 2px solid transparent;
   }
   section[data-testid="stSidebar"] [role="radiogroup"] > label:has(input:checked) {
@@ -202,9 +229,10 @@ CONSOLE_CSS = """
      than a cosmetic problem, so the chip wraps instead. */
   .badge {
       display: inline-block; font-size: var(--ui-xs); font-weight: 500;
-      letter-spacing: 0.02em; padding: 0.1rem 0.45rem; border-radius: 3px;
+      letter-spacing: 0.02em; padding: var(--space-xs) var(--space-sm);
+      border-radius: 3px;
       background: #242A30; color: #D5DADE; border: 1px solid #333B42;
-      margin-right: 0.35rem; vertical-align: 0.06rem;
+      margin-right: var(--space-xs); vertical-align: 0.06rem;
   }
   .badge.open {
       background: transparent; color: #7FB2D9; border-color: #3E5C74;
@@ -213,15 +241,30 @@ CONSOLE_CSS = """
      dashed rule is the only difference, and it is a form cue, so it survives
      greyscale and print where a colour cue would not. */
   .badge.absent { border-style: dashed; border-color: #6B7278; }
-  [data-testid="stVerticalBlockBorderWrapper"] {
-      border: 1px solid #272D33 !important; border-radius: 4px;
-      background: #191D21;
+  /* THE PANEL, SELECTED BY THE MARKER WE EMIT OURSELVES.
+     These rules previously targeted [data-testid="stVerticalBlockBorderWrapper"],
+     which does not exist in Streamlit 1.61: the bordered container is a
+     stVerticalBlock, distinguished only by a hashed emotion class that is not a
+     contract. So the rules were dead, and the panel took Streamlit's defaults,
+     including an 8px radius that this design system says it does not use.
+
+     `:has()` on our own `.panelhead` is the one stable hook available, and this
+     file already depends on `:has()` for the sidebar's selected state. */
+  [data-testid="stVerticalBlock"]:has(> [data-testid="stElementContainer"] .panelhead) {
+      border: 1px solid #272D33 !important;
+      border-radius: 4px !important;
+      background: #191D21 !important;
+      padding: var(--space-md) !important;
   }
-  [data-testid="stVerticalBlockBorderWrapper"] > div { padding: 0.7rem 0.9rem; }
+  /* The head bleeds to the panel edge, so its negative pull must cancel the
+     wrapper's padding EXACTLY. Both now read the same variable, so changing the
+     panel padding cannot leave the head inset by a few pixels. */
   .panelhead {
-      display: flex; align-items: baseline; gap: 0.55rem; flex-wrap: wrap;
-      border-bottom: 1px solid #272D33; margin: -0.7rem -0.9rem 0.7rem -0.9rem;
-      padding: 0.55rem 0.9rem; background: #1E242A;
+      display: flex; align-items: baseline; gap: var(--space-sm); flex-wrap: wrap;
+      border-bottom: 1px solid #272D33;
+      margin: calc(var(--space-md) * -1) calc(var(--space-md) * -1)
+              var(--space-md) calc(var(--space-md) * -1);
+      padding: var(--space-sm) var(--space-md); background: #1E242A;
       border-radius: 4px 4px 0 0;
   }
   .panelhead .title { font-size: var(--ui-base); font-weight: 600; color: #E3E6E8; }

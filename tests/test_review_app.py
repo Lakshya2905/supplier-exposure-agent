@@ -142,6 +142,96 @@ class TestTheTypeScaleIsDeclaredOnce(unittest.TestCase):
         self.assertGreaterEqual(min(scale_px().values()), 12.0)
 
 
+class TestTheSpacingScaleIsDeclaredOnce(unittest.TestCase):
+    """Thirty-eight distinct rem values shipped, five of them on any grid.
+
+    That means the vertical rhythm was decided thirty-eight times. Hand-written
+    here so this is a pin rather than a tautology.
+    """
+
+    #: Properties whose value is a rhythm decision and must come from the scale.
+    SPACING_PROPERTIES = ("padding", "margin", "gap", "margin-top",
+                          "margin-bottom", "margin-right", "margin-left")
+
+    #: Literals that are NOT rhythm, each named so the exemption is deliberate
+    #: rather than whatever happened to survive: two column widths sized to their
+    #: content, the sidebar panel width, and one optical baseline nudge.
+    EXEMPT = ("min-width: 6.6rem", "width: 4rem", "width: 16rem",
+              "vertical-align: 0.06rem")
+
+    def setUp(self):
+        css = SOURCE.split('CONSOLE_CSS = """')[1].split('"""')[0]
+        self.below_root = css[css.index("}", css.index(":root {")) + 1:]
+
+    def test_the_scale_is_a_4px_base(self):
+        root = SOURCE.split(":root {")[1].split("}")[0]
+        steps = {name: float(value) * 16 for name, value in
+                 re.findall(r"--space-([a-z0-9]+):\s*([\d.]+)rem", root)}
+        self.assertEqual(steps, {"xs": 4.0, "sm": 8.0, "md": 12.0, "lg": 16.0,
+                                 "xl": 24.0, "2xl": 32.0, "3xl": 48.0})
+
+    def test_no_spacing_declaration_invents_a_value(self):
+        for line in self.below_root.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("/*") or "var(" in stripped:
+                continue
+            for prop in self.SPACING_PROPERTIES:
+                if re.search(rf"\b{prop}\s*:[^;]*[\d.]+rem", stripped):
+                    self.fail(f"spacing literal outside the scale: {stripped}")
+
+    def test_every_surviving_rem_literal_is_a_named_exemption(self):
+        """A literal that is not spacing still has to be accounted for.
+
+        Otherwise the guard above passes while the file quietly regrows a second
+        vocabulary in properties it does not police.
+        """
+        for line in self.below_root.splitlines():
+            stripped = line.strip()
+            if not re.search(r"[\d.]+rem", stripped) or stripped.startswith("/*"):
+                continue
+            accounted = "var(" in stripped or any(e in stripped
+                                                  for e in self.EXEMPT)
+            self.assertTrue(accounted, f"unaccounted rem literal: {stripped}")
+
+    def test_the_panel_head_pull_cancels_the_panel_padding(self):
+        """The head bleeds to the panel edge, so the two must agree exactly.
+
+        They were 0.7/0.9 against a 0.7/0.9 padding. Moving the padding to the
+        scale without moving the pull would have left the head inset by a few
+        pixels, which is the kind of drift a scale is supposed to prevent rather
+        than cause.
+        """
+        head = self.below_root.split(".panelhead {")[1].split("}")[0]
+        panel = self.below_root.split(":has(> [data-testid=")[1].split("}")[0]
+        padding = re.search(r"padding:\s*var\(--([a-z0-9-]+)\)", panel).group(1)
+        self.assertIn(f"calc(var(--{padding}) * -1)", head)
+
+    def test_the_panel_rule_targets_a_selector_that_exists(self):
+        """The predecessor targeted a testid Streamlit 1.61 does not render.
+
+        `[data-testid="stVerticalBlockBorderWrapper"]` matched nothing, so the
+        panel's border, radius and background were Streamlit's defaults the whole
+        time, including an 8px radius this design system says it does not use.
+        Dead CSS is quieter than wrong CSS: the page looks deliberate and no
+        assertion disagrees.
+
+        The live hook is `:has()` on the marker this file emits itself, which is
+        the same mechanism the sidebar already relies on for selected state.
+        """
+        # SCAN THE SELECTORS, NOT THE COMMENTS. The rewrite above explains which
+        # testid was dead and why, so the dead name appears in this file as part
+        # of its own refusal. A naive `assertNotIn(..., SOURCE)` finds the
+        # explanation and reports it as the breach, which is corrections-log
+        # entries 4 and 5 exactly. Strip comments first.
+        # Strip /* ... */ SPANS, not lines that begin with a marker. This file
+        # indents comment continuation lines, so a line-prefix filter leaves the
+        # body of every multi-line comment in the text being scanned, which is
+        # how the first version of this assertion failed on its own explanation.
+        selectors = re.sub(r"/\*.*?\*/", "", self.below_root, flags=re.S)
+        self.assertNotIn("stVerticalBlockBorderWrapper", selectors)
+        self.assertIn(":has(> [data-testid=", selectors)
+
+
 class TestExposureSurface(unittest.TestCase):
 
     @classmethod
