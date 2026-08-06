@@ -21,6 +21,7 @@ from datetime import datetime, timezone
 import streamlit as st
 
 from src import governance as gov
+from src.governance import render as govrender
 from src import ranking
 from src.interface import actions
 from src.interface import model as view
@@ -535,6 +536,43 @@ def render_confirm(surface, result):
                 except ValueError as refusal:
                     st.warning(str(refusal))
         st.divider()
+
+    render_decision_panel(st.session_state.get("log"), len(surface.rows))
+
+
+def render_decision_panel(log, total_rows):
+    """What this reviewer has decided, in the order they decided it.
+
+    THE PANEL ASSEMBLES NO PROSE. Every sentence comes from the renderer: the
+    event sentences from `render_all`, and the panel's own wording from the
+    module's "wording with no event" section, where it is golden-pinned beside
+    the coverage panel's. Writing these strings here is the shortest path and it
+    would make the claim that this interface assembles nothing of its own false.
+
+    NO CONTROL LIVES HERE. The log is append-only, so there is no undo and no
+    delete, and a button in this panel would also shift the positional indices
+    that three tests use to reach the cluster controls above.
+    """
+    events = list(log) if log is not None else []
+
+    # No divider here: every cluster row above already closes with one, so adding
+    # a second draws two rules a few pixels apart.
+    st.subheader(govrender.DECISION_PANEL_HEADING)
+    # The denominator first, which is how the exposure surface already works:
+    # what is outstanding is the unknown, and it leads.
+    st.caption(govrender.decision_panel_count(
+        len(events), max(total_rows - len(events), 0)))
+    note(govrender.DECISION_PANEL_SCOPE)
+
+    if not events:
+        # Rendered BEFORE the first decision, so a reviewer meets the panel
+        # before they need it rather than discovering it after.
+        note(govrender.DECISION_PANEL_EMPTY)
+        return
+
+    st.caption(govrender.DECISION_PANEL_ORDER)
+    for sentence in govrender.render_all(events):
+        finding(sentence)
 
 
 # Short names for navigation, with the question beneath. The questions stay as

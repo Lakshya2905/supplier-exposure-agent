@@ -485,6 +485,40 @@ def render_all(log):
 # anyway, because this module is where user-facing sentences are written and
 # golden-pinned, and splitting it would let two vocabularies drift apart.
 
+DECISION_PANEL_HEADING = "Decisions you recorded in this session"
+
+# ORDER IS DECLARED, never left to be inferred. A linear list with no stated
+# order reads as a ranking, which is the same objection that governs every other
+# ordered set in this system.
+DECISION_PANEL_ORDER = "in the order they were recorded"
+
+# THE SCOPE IS STATED AT FULL WEIGHT, not dimmed into a caption. The log lives in
+# the browser session and is written nowhere, so a refresh or an idle timeout
+# empties it. An emptied log and a fresh session render identically unless the
+# wording separates them, which is the "no record" versus "none found" collapse
+# this project treats as the pair most often confused.
+DECISION_PANEL_SCOPE = ("This record covers this browser session only. Nothing "
+                        "here is written to disk, and closing the tab ends it.")
+
+# The empty state is a RECORDED zero, not an absence: it is the reviewer's own
+# count of their own decisions, so a figure is honest here in a way it would not
+# be for a measurement.
+DECISION_PANEL_EMPTY = "No decision has been recorded in this session yet."
+
+
+def decision_panel_count(recorded, outstanding):
+    """The denominator before the numerator, which is this system's habit.
+
+    A reviewer facing 23 judgments should know it is 23 before they start, and
+    what remains at any point. Stated as counts of acts, never as a fraction or a
+    proportion, because a bar or a percentage is a normalised scale and this
+    surface refuses those.
+    """
+    decisions = "decision" if recorded == 1 else "decisions"
+    return (f"{recorded} {decisions} recorded, {outstanding} still outstanding "
+            f"of {recorded + outstanding}")
+
+
 FIELD_PROSE = {
     "on_hand_units": "an on-hand count",
     "tooling_owner": "a tooling owner",
