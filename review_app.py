@@ -41,63 +41,102 @@ st.set_page_config(page_title="Supplier exposure review", layout="wide")
 # only on things a reviewer can act on.
 CONSOLE_CSS = """
 <style>
+  /* THE TYPE SCALE, DECLARED ONCE. Ten sizes shipped before this, with step
+     ratios from 1.012 to 1.426, which is a list rather than a scale. Five steps
+     in two zones, stated honestly: a dense console needs finer steps in its UI
+     range than a modular ratio would give, so the UI zone is 12/13/14 and the
+     document zone is the reading size and the title.
+
+     Sizes live here and nowhere else. A literal font-size in a rule below is a
+     sixth step nobody declared, and a test asserts there are none. */
+  :root {
+      --ui-xs: 0.75rem;     /* 12px  chip labels, captions. The floor. */
+      --ui-sm: 0.8125rem;   /* 13px  notes, table cells, identifiers, controls */
+      --ui-base: 0.875rem;  /* 14px  section headings */
+      --doc: 0.9375rem;     /* 15px  finding sentences, the reading size */
+      --title: 1.3125rem;   /* 21px  one per surface */
+
+      /* THE SPACING SCALE, on a 4px base. Thirty-eight distinct rem values
+         shipped before this and five of them landed on any grid, which means
+         the rhythm was decided thirty-eight times. Same rule as the type scale:
+         declared here, and a test asserts no rule invents a value. Optical
+         adjustments that are not spacing (negative pull on a panel head, a
+         baseline nudge, a min-width) keep their literals and are named below. */
+      --space-xs: 0.25rem;  /*  4px */
+      --space-sm: 0.5rem;   /*  8px */
+      --space-md: 0.75rem;  /* 12px */
+      --space-lg: 1rem;     /* 16px */
+      --space-xl: 1.5rem;   /* 24px */
+      --space-2xl: 2rem;    /* 32px */
+      --space-3xl: 3rem;    /* 48px */
+  }
   /* Middle density. The earlier revision read as an essay and the one after it
      read as congested; this sits between them. Where a region felt crowded the
      fix was usually less on screen at once rather than more air, so the panels
      carry the map and the sentences below carry the reading. */
-  .block-container { max-width: 100%; padding: 1.6rem 2.4rem 4rem 2.4rem; }
+  .block-container {
+      max-width: 100%;
+      padding: var(--space-xl) var(--space-2xl) var(--space-3xl) var(--space-2xl);
+  }
   html, body, [class*="css"] { -webkit-font-smoothing: antialiased; }
 
   h1 {
-      font-size: 1.34rem !important; font-weight: 600 !important;
-      letter-spacing: -0.01em; margin: 0.5rem 0 0.7rem 0 !important;
+      font-size: var(--title) !important; font-weight: 600 !important;
+      letter-spacing: -0.01em;
+      margin: var(--space-sm) 0 var(--space-md) 0 !important;
       padding: 0 !important; color: #F0F2F4; line-height: 1.35;
   }
   h2 {
-      font-size: 0.9rem !important; font-weight: 600 !important;
+      font-size: var(--ui-base) !important; font-weight: 600 !important;
       text-transform: uppercase; letter-spacing: 0.08em; color: #8FA0AD;
-      margin: 1.9rem 0 0.6rem 0 !important; padding: 0 !important;
+      margin: var(--space-xl) 0 var(--space-sm) 0 !important; padding: 0 !important;
       line-height: 1.45;
   }
   h3, h4, h5, h6 {
-      font-size: 0.85rem !important; font-weight: 600 !important;
+      font-size: var(--ui-base) !important; font-weight: 600 !important;
       color: #C7CDD3;
-      margin: 1.1rem 0 0.4rem 0 !important; padding: 0 !important;
+      margin: var(--space-lg) 0 var(--space-xs) 0 !important; padding: 0 !important;
       line-height: 1.45;
   }
   hr, [data-testid="stDivider"] hr {
-      border: none; border-top: 1px solid #2C3237; margin: 1.5rem 0 1.1rem 0;
+      border: none; border-top: 1px solid #2C3237;
+      margin: var(--space-xl) 0 var(--space-lg) 0;
   }
-  [data-testid="stVerticalBlock"] { gap: 0.7rem; }
+  [data-testid="stVerticalBlock"] { gap: var(--space-md); }
   p, li { line-height: 1.5; color: #D5DADE; }
 
   p.finding {
-      font-size: 0.94rem; line-height: 1.58; max-width: 104ch;
-      margin: 0.9rem 0 0.15rem 0; color: #E3E6E8;
+      font-size: var(--doc); line-height: 1.58; max-width: 104ch;
+      margin: var(--space-md) 0 var(--space-xs) 0; color: #E3E6E8;
   }
   p.note {
-      font-size: 0.83rem; line-height: 1.5; max-width: 104ch;
-      color: #9BA3AA; margin: 0 0 0.45rem 0;
+      font-size: var(--ui-sm); line-height: 1.5; max-width: 104ch;
+      color: #9BA3AA; margin: 0 0 var(--space-sm) 0;
   }
   .stCaption, [data-testid="stCaptionContainer"] p {
-      font-size: 0.78rem !important; color: #838C94 !important;
-      line-height: 1.5; max-width: 104ch; margin-bottom: 0.45rem !important;
+      font-size: var(--ui-xs) !important; color: #838C94 !important;
+      line-height: 1.5; max-width: 104ch;
+      margin-bottom: var(--space-sm) !important;
   }
   a, a:visited { color: #7FB2D9; }
 
   code, .identifier, .ids span {
       font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
                    monospace;
-      font-size: 0.79rem; background: transparent !important;
+      font-size: var(--ui-sm); background: transparent !important;
       color: #C9D2D9 !important; padding: 0 !important;
   }
-  .ids { display: flex; flex-wrap: wrap; gap: 0.1rem 1.1rem; margin: 0.3rem 0 0 0; }
+  .ids {
+      display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-lg);
+      margin: var(--space-xs) 0 0 0;
+  }
   .ids span { display: inline-block; min-width: 6.6rem; line-height: 1.75; }
 
   table.tight { border-collapse: collapse; width: 100%; }
   table.tight td {
-      border-top: 1px solid #262B30; padding: 0.36rem 0.8rem 0.36rem 0;
-      font-size: 0.83rem; line-height: 1.5; color: #B6BEC5; vertical-align: top;
+      border-top: 1px solid #262B30;
+      padding: var(--space-xs) var(--space-md) var(--space-xs) 0;
+      font-size: var(--ui-sm); line-height: 1.5; color: #B6BEC5; vertical-align: top;
   }
   table.tight tr:first-child td { border-top: none; }
   table.tight td.num {
@@ -112,15 +151,16 @@ CONSOLE_CSS = """
       border: none !important; border-radius: 0 !important;
       box-shadow: none !important; background: transparent !important;
   }
-  [data-testid="stExpander"] { margin: 0 0 0.8rem 0; }
+  [data-testid="stExpander"] { margin: 0 0 var(--space-md) 0; }
   [data-testid="stExpander"] summary {
-      font-size: 0.79rem !important; color: #7FB2D9 !important;
+      font-size: var(--ui-sm) !important; color: #7FB2D9 !important;
       padding: 0 !important; width: max-content;
   }
-  [data-testid="stExpander"] summary p { font-size: 0.79rem !important; }
+  [data-testid="stExpander"] summary p { font-size: var(--ui-sm) !important; }
   [data-testid="stExpanderDetails"] {
       border-left: 1px solid #2C3237 !important;
-      padding: 0.5rem 0 0.2rem 1rem !important; margin-top: 0.5rem;
+      padding: var(--space-sm) 0 var(--space-xs) var(--space-lg) !important;
+      margin-top: var(--space-sm);
   }
 
   [data-testid="stDataFrame"], [data-testid="stTable"] {
@@ -130,13 +170,13 @@ CONSOLE_CSS = """
   [data-testid="stDataFrame"] [role="columnheader"] {
       font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
                    monospace !important;
-      font-size: 0.78rem !important; font-variant-numeric: tabular-nums;
+      font-size: var(--ui-sm) !important; font-variant-numeric: tabular-nums;
   }
 
   .stButton > button {
       border-radius: 3px; border: 1px solid #3E5C74; background: #1E2933;
-      color: #9CC6E3; font-size: 0.79rem; font-weight: 500;
-      padding: 0.24rem 0.9rem; box-shadow: none;
+      color: #9CC6E3; font-size: var(--ui-sm); font-weight: 500;
+      padding: var(--space-xs) var(--space-md); box-shadow: none;
   }
   .stButton > button:hover {
       background: #2A3B49; color: #D6E8F5; border-color: #7FB2D9;
@@ -146,10 +186,12 @@ CONSOLE_CSS = """
       background: #101315; border-right: 1px solid #262B30;
       width: 16rem !important;
   }
-  section[data-testid="stSidebar"] .block-container { padding: 1.8rem 1.1rem; }
+  section[data-testid="stSidebar"] .block-container {
+      padding: var(--space-xl) var(--space-lg);
+  }
   section[data-testid="stSidebar"] [role="radiogroup"] { gap: 0 !important; }
   section[data-testid="stSidebar"] [role="radiogroup"] > label {
-      padding: 0.5rem 0 0.5rem 0.7rem; margin: 0;
+      padding: var(--space-sm) 0 var(--space-sm) var(--space-md); margin: 0;
       border-left: 2px solid transparent;
   }
   section[data-testid="stSidebar"] [role="radiogroup"] > label:has(input:checked) {
@@ -163,7 +205,7 @@ CONSOLE_CSS = """
       transform: scale(0.8); opacity: 0.75;
   }
   section[data-testid="stSidebar"] [role="radiogroup"] p {
-      font-size: 0.82rem !important; line-height: 1.45; color: #8B949C;
+      font-size: var(--ui-sm) !important; line-height: 1.45; color: #8B949C;
   }
   section[data-testid="stSidebar"] [role="radiogroup"] strong {
       color: #DDE3E8; font-weight: 600;
@@ -171,27 +213,26 @@ CONSOLE_CSS = """
 
   /* ------------------------------------------------- panels and badges --
      Surfaces and borders carry structure: where one group ends and the next
-     begins. Hue on a chip carries CATEGORY.
+     begins. THE CHIP CARRIES NO HUE AT ALL.
 
-     THE PALETTE IS NOMINAL BY ARITHMETIC. Every chip is drawn at one
-     saturation and one lightness and differs only in hue, and the hues are
-     confined to a cool band, because a set can be perfectly equal in weight
-     and still rank if one member is the colour of an alarm. There is no
-     red-amber-green here and no warm-to-cool progression: an ordered colour
-     encoding across incommensurable states is the composite this system
-     refuses to compute, arriving through the palette instead of the
-     arithmetic. Autonomy keeps a filled-versus-outlined distinction, which
-     separates two categories without ranking them. */
+     A previous revision drew each category at one HSL saturation and lightness
+     and called that a nominal palette. HSL lightness is not perceptual
+     lightness, so the claim was false: in CIELAB the six completeness entries
+     spanned 15.3 L* points and sorted into a brightness ramp in declaration
+     order. The label already named the category, and CLAUDE.md requires that
+     stripping every colour lose no information, so the hue was carrying nothing
+     while looking like an encoding. One neutral chip; form carries the rest. */
   /* 12px is the floor. The previous 0.68rem (10.9px) uppercase monospace with
      0.05em tracking applied the slowest reading mode, letter by letter with no
      word shape, to the densest label in the interface, and a long category name
      would have truncated. A truncated epistemic state is a wrong claim rather
      than a cosmetic problem, so the chip wraps instead. */
   .badge {
-      display: inline-block; font-size: 0.75rem; font-weight: 500;
-      letter-spacing: 0.02em; padding: 0.1rem 0.45rem; border-radius: 3px;
+      display: inline-block; font-size: var(--ui-xs); font-weight: 500;
+      letter-spacing: 0.02em; padding: var(--space-xs) var(--space-sm);
+      border-radius: 3px;
       background: #242A30; color: #D5DADE; border: 1px solid #333B42;
-      margin-right: 0.35rem; vertical-align: 0.06rem;
+      margin-right: var(--space-xs); vertical-align: 0.06rem;
   }
   .badge.open {
       background: transparent; color: #7FB2D9; border-color: #3E5C74;
@@ -200,21 +241,144 @@ CONSOLE_CSS = """
      dashed rule is the only difference, and it is a form cue, so it survives
      greyscale and print where a colour cue would not. */
   .badge.absent { border-style: dashed; border-color: #6B7278; }
-  [data-testid="stVerticalBlockBorderWrapper"] {
-      border: 1px solid #272D33 !important; border-radius: 4px;
-      background: #191D21;
+  /* THE PANEL, SELECTED BY THE MARKER WE EMIT OURSELVES.
+     These rules previously targeted [data-testid="stVerticalBlockBorderWrapper"],
+     which does not exist in Streamlit 1.61: the bordered container is a
+     stVerticalBlock, distinguished only by a hashed emotion class that is not a
+     contract. So the rules were dead, and the panel took Streamlit's defaults,
+     including an 8px radius that this design system says it does not use.
+
+     `:has()` on our own `.panelhead` is the one stable hook available, and this
+     file already depends on `:has()` for the sidebar's selected state. */
+  [data-testid="stVerticalBlock"]:has(> [data-testid="stElementContainer"] .panelhead) {
+      border: 1px solid #272D33 !important;
+      border-radius: 4px !important;
+      background: #191D21 !important;
+      padding: var(--space-md) !important;
   }
-  [data-testid="stVerticalBlockBorderWrapper"] > div { padding: 0.7rem 0.9rem; }
+  /* The head bleeds to the panel edge, so its negative pull must cancel the
+     wrapper's padding EXACTLY. Both now read the same variable, so changing the
+     panel padding cannot leave the head inset by a few pixels. */
   .panelhead {
-      display: flex; align-items: baseline; gap: 0.55rem; flex-wrap: wrap;
-      border-bottom: 1px solid #272D33; margin: -0.7rem -0.9rem 0.7rem -0.9rem;
-      padding: 0.55rem 0.9rem; background: #1E242A;
+      display: flex; align-items: baseline; gap: var(--space-sm); flex-wrap: wrap;
+      border-bottom: 1px solid #272D33;
+      margin: calc(var(--space-md) * -1) calc(var(--space-md) * -1)
+              var(--space-md) calc(var(--space-md) * -1);
+      padding: var(--space-sm) var(--space-md); background: #1E242A;
       border-radius: 4px 4px 0 0;
   }
-  .panelhead .title { font-size: 0.88rem; font-weight: 600; color: #E3E6E8; }
+  .panelhead .title { font-size: var(--ui-base); font-weight: 600; color: #E3E6E8; }
 
   [data-testid="stMetric"], [data-testid="stAlert"] {
       border-radius: 3px !important; box-shadow: none !important;
+  }
+
+  /* ------------------------------------------------------------- focus --
+     WCAG 2.4.7 wants a visible focus indicator and 2.4.11 wants it at 3:1
+     against BOTH the element and the surface behind it. The accent clears that
+     on every surface in this interface by a wide margin: 6.40:1 on a chip,
+     6.53:1 on a button, 7.48:1 on a panel, 7.94:1 on the page, 8.23:1 in the
+     sidebar.
+
+     THE ACCENT IS THE RIGHT COLOUR HERE, not an exception to its contract. The
+     contract reserves it for what a reviewer can act on, and focus only ever
+     lands on something actionable, so the ring says exactly what the accent
+     always says.
+
+     A 2px ring with a 2px offset rather than a background change: a fill would
+     compete with the filled-versus-outlined distinction the chips already use,
+     and offsetting keeps the ring clear of the element's own border. */
+  :is(button, a, input, select, textarea, summary, [role="radio"],
+      [role="combobox"], [role="option"], [tabindex]):focus-visible {
+      outline: 2px solid #7FB2D9 !important;
+      outline-offset: 2px !important;
+      border-radius: 2px;
+  }
+  /* Streamlit paints its own focus treatment on several controls. Ours replaces
+     it rather than sitting beside it, so a control cannot end up with two rings
+     saying the same thing in different colours. */
+  :is(button, input, select, textarea):focus {
+      box-shadow: none !important;
+  }
+
+  /* ------------------------------------------------------------- print --
+     A read-only tool whose output is a decision should produce something a
+     reviewer can staple, initial and file.
+
+     THE SUBSTRATE INVERTS, SO THE GUARANTEES DO NOT TRANSFER. Every contrast
+     figure in DESIGN.md is measured on the dark surface and none of them hold on
+     white paper, so this is not the dark stylesheet with a filter over it: the
+     text goes to black on white and is re-measured there. Printing the dark
+     theme directly would emit a black slab, or invert unpredictably per browser.
+
+     Absence keeps its dashed rule, which is why absence was given a FORM cue
+     rather than a colour one: it is the only part of the chip vocabulary that
+     survives a substrate change unaltered.
+
+     Controls do not print. A button on paper is an instruction nobody can
+     follow, and the panel is a record rather than a form. */
+  @media print {
+      :root { --doc: 10.5pt; --ui-sm: 9.5pt; --ui-xs: 8.5pt; --ui-base: 10pt;
+              --title: 15pt; }
+      html, body, .block-container, [data-testid="stMain"] {
+          background: #FFFFFF !important; color: #000000 !important;
+      }
+      /* EVERYTHING, not a list of selectors. The first version of this block
+         enumerated the elements to blacken, which is a whitelist: anything not
+         named kept its dark-theme colour and printed as light grey on white.
+         Rendering it to PDF found 5 such fills at #E3E6E8 and 36 at the accent,
+         all of them effectively invisible on paper. A list of what to fix can
+         only ever be as complete as the person writing it. */
+      /* `:root *` rather than `*`. The screen rules set colour with !important
+         at class specificity (`.identifier`, `.stCaption`), and a bare `*` is
+         specificity zero, so it loses to them even with !important of its own.
+         `:root *` matches their specificity and comes later in the cascade, so
+         it wins. Rendering to PDF is what showed this: the first version left 13
+         fills at #E3E6E8, #C9D2D9 and #838C94, all invisible on white. */
+      :root *, :root *::before, :root *::after {
+          color: #000000 !important;
+          background-color: transparent !important;
+          box-shadow: none !important;
+      }
+      /* Links keep their identity through form, since colour is gone. */
+      a, a:visited { text-decoration: underline !important; }
+
+      /* The record, not the machinery. */
+      section[data-testid="stSidebar"],
+      .stButton, [data-testid="stTextInput"], [data-testid="stSelectbox"],
+      [data-testid="stAlert"], [data-testid="stToolbar"] { display: none !important; }
+
+      /* Structure survives as rules on paper, where a surface fill would print
+         as a grey wash and cost more legibility than it buys. */
+      [data-testid="stVerticalBlock"]:has(> [data-testid="stElementContainer"] .panelhead) {
+          border: 1pt solid #000000 !important; background: transparent !important;
+          break-inside: avoid;
+      }
+      .panelhead { background: transparent !important;
+                   border-bottom: 1pt solid #000000 !important; }
+      .badge { border: 1pt solid #000000 !important; background: transparent !important;
+               color: #000000 !important; }
+      .badge.absent { border-style: dashed !important; }
+
+      /* Evidence is the point of the document, so it prints open rather than
+         collapsed. A folded disclosure on paper is a claim with its working
+         removed. */
+      [data-testid="stExpanderDetails"] { display: block !important;
+                                          border-left: 1pt solid #000000 !important; }
+      p.finding, table.tight tr { break-inside: avoid; }
+
+      /* THE DATAFRAME IS A CANVAS AND CSS CANNOT REACH IT. Streamlit renders
+         st.dataframe through glide-data-grid, which paints pixels from
+         JavaScript, so the rules above stop at its edge: it prints in the screen
+         palette as a self-contained dark block. Verified by rendering to PDF,
+         where 13 fills survive every override above, at #E3E6E8, #C9D2D9 and
+         #838C94.
+
+         Left visible rather than hidden. It draws its own background, so it is
+         legible on paper even though it does not match the page, and hiding it
+         would silently drop the blocking matrix from the record. An absence a
+         reader cannot see is the thing this system refuses hardest. The limit is
+         stated in DESIGN.md's Print section instead of being papered over. */
   }
 </style>
 """

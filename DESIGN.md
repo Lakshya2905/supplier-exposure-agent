@@ -478,9 +478,19 @@ sections is `xl`; panel padding is `md`.
 - Tab order follows reading order.
 - The reviewer name field must not lose its value on navigation. It sits in the sidebar but is created inside the confirm surface, so Streamlit discards its state on any surface change; hold it in a plain `session_state` slot that no widget owns.
 
-## Print [TARGET]
+## Print [PARTIAL]
 
-> [TARGET] **Not implemented.** There is no `@media print` block in the app. Until one exists and is re-measured, every contrast and equality figure in this document applies to the dark substrate only.
+> [PARTIAL] Implemented in `154aaba`. Print inverts to black on white and is
+> its own substrate, not the dark theme with a filter over it. One part of the
+> page is out of reach: `st.dataframe` renders through glide-data-grid onto a
+> **canvas**, so its pixels are painted from JavaScript and no CSS rule can
+> recolour them. It prints in the screen palette as a self-contained dark
+> block. Verified by rendering to PDF: 13 fills survive every override, at
+> `#E3E6E8`, `#C9D2D9` and `#838C94`, all inside the grid.
+>
+> Left visible rather than hidden, because it draws its own background and is
+> legible on paper, and hiding it would silently drop the blocking matrix from
+> the record.
 
 There is no print stylesheet today. For a read only tool whose output is a
 decision, the artifact of a review should be a document a reviewer can staple,
@@ -491,9 +501,12 @@ initial, and file.
 - Evidence flattens into numbered references rather than collapsing.
 - Absence states must remain visible in greyscale, which the dashed border already guarantees.
 
-## Test Contract [TARGET]
+## Test Contract [SHIPPED]
 
-> [TARGET] **Not implemented.** The banned-widget source scan ships. None of the property assertions below exist; the tests that do exist check notation, which is how the Color defect survived.
+> [SHIPPED] `tests/test_design_properties.py`. Nothing there compares a hex
+> pair: every assertion computes a ratio or a CIELAB distance from the colours
+> the stylesheet declares and fails on the number. Verified by regression:
+> dropping the chip label to the border token fails the legibility assertion.
 
 **Where a contract can be a construction-time raise instead of a test, make it
 one.** A guard that runs when the value is built beats a guard that runs when CI

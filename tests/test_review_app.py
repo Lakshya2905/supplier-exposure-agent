@@ -53,6 +53,30 @@ BANNED_WIDGETS = (
 )
 
 
+SCALE_STEPS = ("ui-xs", "ui-sm", "ui-base", "doc", "title")
+
+
+def scale_px():
+    """The declared type scale, resolved from :root, in pixels.
+
+    Read rather than hard-coded: this helper exists so the assertions below can
+    check the PROPERTY (a rendered size in px) while the stylesheet expresses it
+    as a named step. The step values themselves are pinned separately.
+    """
+    root = SOURCE.split(":root {")[1].split("}")[0]
+    return {name: float(re.search(rf"--{name}:\s*([\d.]+)rem", root).group(1)) * 16
+            for name in SCALE_STEPS}
+
+
+def resolved_font_px(block):
+    """The font-size of a CSS block in px, following one var() indirection."""
+    match = re.search(r"font-size:\s*var\(--([a-z-]+)\)", block)
+    if match:
+        return scale_px()[match.group(1)]
+    literal = re.search(r"font-size:\s*([\d.]+)rem", block)
+    return float(literal.group(1)) * 16 if literal else None
+
+
 def run_app(timeout=90):
     app = AppTest.from_file(str(APP), default_timeout=timeout)
     return app.run()
@@ -87,6 +111,201 @@ class TestWidgetDenyList(unittest.TestCase):
         for forbidden in ("to_csv(", "open(", ".write_text("):
             with self.subTest(token=forbidden):
                 self.assertNotIn(forbidden, SOURCE)
+
+
+class TestTheTypeScaleIsDeclaredOnce(unittest.TestCase):
+    """Ten sizes with step ratios from 1.012 to 1.426 is a list, not a scale.
+
+    The values are hand-written here rather than read from :root, so this is a
+    pin and not a tautology. `scale_px()` reads them for the assertions that need
+    a resolved size, which is a different job.
+    """
+
+    def test_the_scale_is_exactly_five_steps(self):
+        self.assertEqual(scale_px(),
+                         {"ui-xs": 12.0, "ui-sm": 13.0, "ui-base": 14.0,
+                          "doc": 15.0, "title": 21.0})
+
+    def test_no_rule_declares_a_size_outside_the_scale(self):
+        """A literal font-size below :root is a sixth step nobody declared.
+
+        This is the assertion that keeps the scale a scale. Without it the file
+        drifts back to ten sizes one convenient exception at a time, which is how
+        it got there the first time.
+        """
+        css = SOURCE.split('CONSOLE_CSS = """')[1].split('"""')[0]
+        below_root = css.split(":root {")[1].split("}", 1)[1]
+        self.assertEqual(re.findall(r"font-size:\s*([\d.]+rem)", below_root), [])
+
+    def test_nothing_renders_below_twelve_pixels(self):
+        # The floor, asserted on the resolved values rather than on the notation.
+        self.assertGreaterEqual(min(scale_px().values()), 12.0)
+
+
+class TestTheSpacingScaleIsDeclaredOnce(unittest.TestCase):
+    """Thirty-eight distinct rem values shipped, five of them on any grid.
+
+    That means the vertical rhythm was decided thirty-eight times. Hand-written
+    here so this is a pin rather than a tautology.
+    """
+
+    #: Properties whose value is a rhythm decision and must come from the scale.
+    SPACING_PROPERTIES = ("padding", "margin", "gap", "margin-top",
+                          "margin-bottom", "margin-right", "margin-left")
+
+    #: Literals that are NOT rhythm, each named so the exemption is deliberate
+    #: rather than whatever happened to survive: two column widths sized to their
+    #: content, the sidebar panel width, and one optical baseline nudge.
+    EXEMPT = ("min-width: 6.6rem", "width: 4rem", "width: 16rem",
+              "vertical-align: 0.06rem")
+
+    def setUp(self):
+        css = SOURCE.split('CONSOLE_CSS = """')[1].split('"""')[0]
+        self.below_root = css[css.index("}", css.index(":root {")) + 1:]
+
+    def test_the_scale_is_a_4px_base(self):
+        root = SOURCE.split(":root {")[1].split("}")[0]
+        steps = {name: float(value) * 16 for name, value in
+                 re.findall(r"--space-([a-z0-9]+):\s*([\d.]+)rem", root)}
+        self.assertEqual(steps, {"xs": 4.0, "sm": 8.0, "md": 12.0, "lg": 16.0,
+                                 "xl": 24.0, "2xl": 32.0, "3xl": 48.0})
+
+    def test_no_spacing_declaration_invents_a_value(self):
+        for line in self.below_root.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("/*") or "var(" in stripped:
+                continue
+            for prop in self.SPACING_PROPERTIES:
+                if re.search(rf"\b{prop}\s*:[^;]*[\d.]+rem", stripped):
+                    self.fail(f"spacing literal outside the scale: {stripped}")
+
+    def test_every_surviving_rem_literal_is_a_named_exemption(self):
+        """A literal that is not spacing still has to be accounted for.
+
+        Otherwise the guard above passes while the file quietly regrows a second
+        vocabulary in properties it does not police.
+        """
+        for line in self.below_root.splitlines():
+            stripped = line.strip()
+            if not re.search(r"[\d.]+rem", stripped) or stripped.startswith("/*"):
+                continue
+            accounted = "var(" in stripped or any(e in stripped
+                                                  for e in self.EXEMPT)
+            self.assertTrue(accounted, f"unaccounted rem literal: {stripped}")
+
+    def test_the_panel_head_pull_cancels_the_panel_padding(self):
+        """The head bleeds to the panel edge, so the two must agree exactly.
+
+        They were 0.7/0.9 against a 0.7/0.9 padding. Moving the padding to the
+        scale without moving the pull would have left the head inset by a few
+        pixels, which is the kind of drift a scale is supposed to prevent rather
+        than cause.
+        """
+        head = self.below_root.split(".panelhead {")[1].split("}")[0]
+        panel = self.below_root.split(":has(> [data-testid=")[1].split("}")[0]
+        padding = re.search(r"padding:\s*var\(--([a-z0-9-]+)\)", panel).group(1)
+        self.assertIn(f"calc(var(--{padding}) * -1)", head)
+
+    def test_the_panel_rule_targets_a_selector_that_exists(self):
+        """The predecessor targeted a testid Streamlit 1.61 does not render.
+
+        `[data-testid="stVerticalBlockBorderWrapper"]` matched nothing, so the
+        panel's border, radius and background were Streamlit's defaults the whole
+        time, including an 8px radius this design system says it does not use.
+        Dead CSS is quieter than wrong CSS: the page looks deliberate and no
+        assertion disagrees.
+
+        The live hook is `:has()` on the marker this file emits itself, which is
+        the same mechanism the sidebar already relies on for selected state.
+        """
+        # SCAN THE SELECTORS, NOT THE COMMENTS. The rewrite above explains which
+        # testid was dead and why, so the dead name appears in this file as part
+        # of its own refusal. A naive `assertNotIn(..., SOURCE)` finds the
+        # explanation and reports it as the breach, which is corrections-log
+        # entries 4 and 5 exactly. Strip comments first.
+        # Strip /* ... */ SPANS, not lines that begin with a marker. This file
+        # indents comment continuation lines, so a line-prefix filter leaves the
+        # body of every multi-line comment in the text being scanned, which is
+        # how the first version of this assertion failed on its own explanation.
+        selectors = re.sub(r"/\*.*?\*/", "", self.below_root, flags=re.S)
+        self.assertNotIn("stVerticalBlockBorderWrapper", selectors)
+        self.assertIn(":has(> [data-testid=", selectors)
+
+
+class TestPrintIsItsOwnSubstrate(unittest.TestCase):
+    """Every contrast figure in DESIGN.md is measured on the dark surface.
+
+    None of them hold on white paper, so print is not the screen stylesheet with
+    a filter over it. It inverts to black on white and states so.
+    """
+
+    def setUp(self):
+        css = SOURCE.split('CONSOLE_CSS = """')[1].split('"""')[0]
+        self.screen, _, self.printed = css.partition("@media print")
+
+    def test_a_print_stylesheet_exists(self):
+        self.assertTrue(self.printed.strip(),
+                        "a read-only tool whose output is a decision has to "
+                        "produce something a reviewer can file")
+
+    def test_print_inverts_rather_than_filtering_the_dark_theme(self):
+        self.assertIn("background: #FFFFFF !important", self.printed)
+        self.assertIn("color: #000000 !important", self.printed)
+
+    def test_controls_do_not_print(self):
+        # A button on paper is an instruction nobody can follow.
+        for control in (".stButton", '[data-testid="stTextInput"]',
+                        '[data-testid="stSelectbox"]',
+                        'section[data-testid="stSidebar"]'):
+            with self.subTest(control=control):
+                self.assertIn(control, self.printed.split("display: none")[0])
+
+    def test_evidence_prints_open(self):
+        # A folded disclosure on paper is a claim with its working removed.
+        details = self.printed.split('[data-testid="stExpanderDetails"]')[1]
+        self.assertIn("display: block !important", details.split("}")[0])
+
+    def test_absence_keeps_its_dashed_rule_on_paper(self):
+        """The reason absence was given a form cue rather than a colour one.
+
+        It is the only part of the chip vocabulary that survives a substrate
+        change unaltered, which is what a form cue buys.
+        """
+        self.assertIn("border-style: dashed !important", self.printed)
+
+    def test_print_introduces_no_new_chip_variant(self):
+        printed_variants = set(re.findall(r"\.badge\.(\w+)\s*{", self.printed))
+        screen_variants = set(re.findall(r"\.badge\.(\w+)\s*{", self.screen))
+        self.assertTrue(printed_variants <= screen_variants,
+                        f"print invents a variant: "
+                        f"{printed_variants - screen_variants}")
+
+
+class TestFocusIsVisible(unittest.TestCase):
+    """WCAG 2.4.7 and 2.4.11. There was no focus treatment at all before this."""
+
+    def setUp(self):
+        css = SOURCE.split('CONSOLE_CSS = """')[1].split('"""')[0]
+        self.rule = css.split(":focus-visible {")[1].split("}")[0]
+
+    def test_the_ring_is_the_accent(self):
+        # Not an exception to the accent contract but an instance of it: the
+        # accent marks what a reviewer can act on, and focus only ever lands on
+        # something actionable.
+        self.assertIn("#7FB2D9", self.rule)
+
+    def test_the_ring_is_thick_enough_to_see_and_offset_from_the_element(self):
+        self.assertIn("outline: 2px solid", self.rule)
+        self.assertIn("outline-offset: 2px", self.rule)
+
+    def test_focus_is_not_signalled_by_colour_alone(self):
+        # An outline is a shape appearing where there was none, so it survives
+        # greyscale. A rule that only recoloured the element would not.
+        self.assertIn("outline", self.rule)
+
+    def test_streamlits_own_focus_treatment_is_replaced_not_stacked(self):
+        css = SOURCE.split('CONSOLE_CSS = """')[1].split('"""')[0]
+        self.assertIn("box-shadow: none !important", css.split(":focus {")[1])
 
 
 class TestExposureSurface(unittest.TestCase):
@@ -424,7 +643,11 @@ class TestBadgesAreNominal(unittest.TestCase):
         cannot accidentally build a ramp. The rule that matters is not the count
         of variants but that no variant is ordered against another.
         """
-        variants = re.findall(r"\.badge\.(\w+)\s*{", SOURCE)
+        # Scoped to the screen rules. The print block restates `.badge.absent`
+        # to keep the dashed rule on paper, which is a substrate override rather
+        # than a fourth variant, and it is asserted separately below.
+        screen = SOURCE.split("@media print")[0]
+        variants = re.findall(r"\.badge\.(\w+)\s*{", screen)
         self.assertEqual(sorted(variants), ["absent", "open"])
         for variant in variants:
             block = SOURCE.split(f".badge.{variant} {{")[1].split("}")[0]
@@ -526,8 +749,7 @@ class TestBadgesAreNominal(unittest.TestCase):
         wrong claim.
         """
         block = SOURCE.split(".badge {")[1].split("}")[0]
-        size = float(re.search(r"font-size:\s*([\d.]+)rem", block).group(1))
-        self.assertGreaterEqual(size * 16, 12.0,
+        self.assertGreaterEqual(resolved_font_px(block), 12.0,
                                 "12px is the floor for any chip label")
         self.assertNotIn("text-transform: uppercase", block)
         self.assertNotIn("monospace", block,
