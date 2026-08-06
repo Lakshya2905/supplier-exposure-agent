@@ -41,6 +41,21 @@ st.set_page_config(page_title="Supplier exposure review", layout="wide")
 # only on things a reviewer can act on.
 CONSOLE_CSS = """
 <style>
+  /* THE TYPE SCALE, DECLARED ONCE. Ten sizes shipped before this, with step
+     ratios from 1.012 to 1.426, which is a list rather than a scale. Five steps
+     in two zones, stated honestly: a dense console needs finer steps in its UI
+     range than a modular ratio would give, so the UI zone is 12/13/14 and the
+     document zone is the reading size and the title.
+
+     Sizes live here and nowhere else. A literal font-size in a rule below is a
+     sixth step nobody declared, and a test asserts there are none. */
+  :root {
+      --ui-xs: 0.75rem;     /* 12px  chip labels, captions. The floor. */
+      --ui-sm: 0.8125rem;   /* 13px  notes, table cells, identifiers, controls */
+      --ui-base: 0.875rem;  /* 14px  section headings */
+      --doc: 0.9375rem;     /* 15px  finding sentences, the reading size */
+      --title: 1.3125rem;   /* 21px  one per surface */
+  }
   /* Middle density. The earlier revision read as an essay and the one after it
      read as congested; this sits between them. Where a region felt crowded the
      fix was usually less on screen at once rather than more air, so the panels
@@ -49,18 +64,18 @@ CONSOLE_CSS = """
   html, body, [class*="css"] { -webkit-font-smoothing: antialiased; }
 
   h1 {
-      font-size: 1.34rem !important; font-weight: 600 !important;
+      font-size: var(--title) !important; font-weight: 600 !important;
       letter-spacing: -0.01em; margin: 0.5rem 0 0.7rem 0 !important;
       padding: 0 !important; color: #F0F2F4; line-height: 1.35;
   }
   h2 {
-      font-size: 0.9rem !important; font-weight: 600 !important;
+      font-size: var(--ui-base) !important; font-weight: 600 !important;
       text-transform: uppercase; letter-spacing: 0.08em; color: #8FA0AD;
       margin: 1.9rem 0 0.6rem 0 !important; padding: 0 !important;
       line-height: 1.45;
   }
   h3, h4, h5, h6 {
-      font-size: 0.85rem !important; font-weight: 600 !important;
+      font-size: var(--ui-base) !important; font-weight: 600 !important;
       color: #C7CDD3;
       margin: 1.1rem 0 0.4rem 0 !important; padding: 0 !important;
       line-height: 1.45;
@@ -72,15 +87,15 @@ CONSOLE_CSS = """
   p, li { line-height: 1.5; color: #D5DADE; }
 
   p.finding {
-      font-size: 0.94rem; line-height: 1.58; max-width: 104ch;
+      font-size: var(--doc); line-height: 1.58; max-width: 104ch;
       margin: 0.9rem 0 0.15rem 0; color: #E3E6E8;
   }
   p.note {
-      font-size: 0.83rem; line-height: 1.5; max-width: 104ch;
+      font-size: var(--ui-sm); line-height: 1.5; max-width: 104ch;
       color: #9BA3AA; margin: 0 0 0.45rem 0;
   }
   .stCaption, [data-testid="stCaptionContainer"] p {
-      font-size: 0.78rem !important; color: #838C94 !important;
+      font-size: var(--ui-xs) !important; color: #838C94 !important;
       line-height: 1.5; max-width: 104ch; margin-bottom: 0.45rem !important;
   }
   a, a:visited { color: #7FB2D9; }
@@ -88,7 +103,7 @@ CONSOLE_CSS = """
   code, .identifier, .ids span {
       font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
                    monospace;
-      font-size: 0.79rem; background: transparent !important;
+      font-size: var(--ui-sm); background: transparent !important;
       color: #C9D2D9 !important; padding: 0 !important;
   }
   .ids { display: flex; flex-wrap: wrap; gap: 0.1rem 1.1rem; margin: 0.3rem 0 0 0; }
@@ -97,7 +112,7 @@ CONSOLE_CSS = """
   table.tight { border-collapse: collapse; width: 100%; }
   table.tight td {
       border-top: 1px solid #262B30; padding: 0.36rem 0.8rem 0.36rem 0;
-      font-size: 0.83rem; line-height: 1.5; color: #B6BEC5; vertical-align: top;
+      font-size: var(--ui-sm); line-height: 1.5; color: #B6BEC5; vertical-align: top;
   }
   table.tight tr:first-child td { border-top: none; }
   table.tight td.num {
@@ -114,10 +129,10 @@ CONSOLE_CSS = """
   }
   [data-testid="stExpander"] { margin: 0 0 0.8rem 0; }
   [data-testid="stExpander"] summary {
-      font-size: 0.79rem !important; color: #7FB2D9 !important;
+      font-size: var(--ui-sm) !important; color: #7FB2D9 !important;
       padding: 0 !important; width: max-content;
   }
-  [data-testid="stExpander"] summary p { font-size: 0.79rem !important; }
+  [data-testid="stExpander"] summary p { font-size: var(--ui-sm) !important; }
   [data-testid="stExpanderDetails"] {
       border-left: 1px solid #2C3237 !important;
       padding: 0.5rem 0 0.2rem 1rem !important; margin-top: 0.5rem;
@@ -130,12 +145,12 @@ CONSOLE_CSS = """
   [data-testid="stDataFrame"] [role="columnheader"] {
       font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
                    monospace !important;
-      font-size: 0.78rem !important; font-variant-numeric: tabular-nums;
+      font-size: var(--ui-sm) !important; font-variant-numeric: tabular-nums;
   }
 
   .stButton > button {
       border-radius: 3px; border: 1px solid #3E5C74; background: #1E2933;
-      color: #9CC6E3; font-size: 0.79rem; font-weight: 500;
+      color: #9CC6E3; font-size: var(--ui-sm); font-weight: 500;
       padding: 0.24rem 0.9rem; box-shadow: none;
   }
   .stButton > button:hover {
@@ -163,7 +178,7 @@ CONSOLE_CSS = """
       transform: scale(0.8); opacity: 0.75;
   }
   section[data-testid="stSidebar"] [role="radiogroup"] p {
-      font-size: 0.82rem !important; line-height: 1.45; color: #8B949C;
+      font-size: var(--ui-sm) !important; line-height: 1.45; color: #8B949C;
   }
   section[data-testid="stSidebar"] [role="radiogroup"] strong {
       color: #DDE3E8; font-weight: 600;
@@ -186,7 +201,7 @@ CONSOLE_CSS = """
      would have truncated. A truncated epistemic state is a wrong claim rather
      than a cosmetic problem, so the chip wraps instead. */
   .badge {
-      display: inline-block; font-size: 0.75rem; font-weight: 500;
+      display: inline-block; font-size: var(--ui-xs); font-weight: 500;
       letter-spacing: 0.02em; padding: 0.1rem 0.45rem; border-radius: 3px;
       background: #242A30; color: #D5DADE; border: 1px solid #333B42;
       margin-right: 0.35rem; vertical-align: 0.06rem;
@@ -209,7 +224,7 @@ CONSOLE_CSS = """
       padding: 0.55rem 0.9rem; background: #1E242A;
       border-radius: 4px 4px 0 0;
   }
-  .panelhead .title { font-size: 0.88rem; font-weight: 600; color: #E3E6E8; }
+  .panelhead .title { font-size: var(--ui-base); font-weight: 600; color: #E3E6E8; }
 
   [data-testid="stMetric"], [data-testid="stAlert"] {
       border-radius: 3px !important; box-shadow: none !important;

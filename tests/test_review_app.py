@@ -53,6 +53,30 @@ BANNED_WIDGETS = (
 )
 
 
+SCALE_STEPS = ("ui-xs", "ui-sm", "ui-base", "doc", "title")
+
+
+def scale_px():
+    """The declared type scale, resolved from :root, in pixels.
+
+    Read rather than hard-coded: this helper exists so the assertions below can
+    check the PROPERTY (a rendered size in px) while the stylesheet expresses it
+    as a named step. The step values themselves are pinned separately.
+    """
+    root = SOURCE.split(":root {")[1].split("}")[0]
+    return {name: float(re.search(rf"--{name}:\s*([\d.]+)rem", root).group(1)) * 16
+            for name in SCALE_STEPS}
+
+
+def resolved_font_px(block):
+    """The font-size of a CSS block in px, following one var() indirection."""
+    match = re.search(r"font-size:\s*var\(--([a-z-]+)\)", block)
+    if match:
+        return scale_px()[match.group(1)]
+    literal = re.search(r"font-size:\s*([\d.]+)rem", block)
+    return float(literal.group(1)) * 16 if literal else None
+
+
 def run_app(timeout=90):
     app = AppTest.from_file(str(APP), default_timeout=timeout)
     return app.run()
@@ -87,6 +111,35 @@ class TestWidgetDenyList(unittest.TestCase):
         for forbidden in ("to_csv(", "open(", ".write_text("):
             with self.subTest(token=forbidden):
                 self.assertNotIn(forbidden, SOURCE)
+
+
+class TestTheTypeScaleIsDeclaredOnce(unittest.TestCase):
+    """Ten sizes with step ratios from 1.012 to 1.426 is a list, not a scale.
+
+    The values are hand-written here rather than read from :root, so this is a
+    pin and not a tautology. `scale_px()` reads them for the assertions that need
+    a resolved size, which is a different job.
+    """
+
+    def test_the_scale_is_exactly_five_steps(self):
+        self.assertEqual(scale_px(),
+                         {"ui-xs": 12.0, "ui-sm": 13.0, "ui-base": 14.0,
+                          "doc": 15.0, "title": 21.0})
+
+    def test_no_rule_declares_a_size_outside_the_scale(self):
+        """A literal font-size below :root is a sixth step nobody declared.
+
+        This is the assertion that keeps the scale a scale. Without it the file
+        drifts back to ten sizes one convenient exception at a time, which is how
+        it got there the first time.
+        """
+        css = SOURCE.split('CONSOLE_CSS = """')[1].split('"""')[0]
+        below_root = css.split(":root {")[1].split("}", 1)[1]
+        self.assertEqual(re.findall(r"font-size:\s*([\d.]+rem)", below_root), [])
+
+    def test_nothing_renders_below_twelve_pixels(self):
+        # The floor, asserted on the resolved values rather than on the notation.
+        self.assertGreaterEqual(min(scale_px().values()), 12.0)
 
 
 class TestExposureSurface(unittest.TestCase):
@@ -526,8 +579,7 @@ class TestBadgesAreNominal(unittest.TestCase):
         wrong claim.
         """
         block = SOURCE.split(".badge {")[1].split("}")[0]
-        size = float(re.search(r"font-size:\s*([\d.]+)rem", block).group(1))
-        self.assertGreaterEqual(size * 16, 12.0,
+        self.assertGreaterEqual(resolved_font_px(block), 12.0,
                                 "12px is the floor for any chip label")
         self.assertNotIn("text-transform: uppercase", block)
         self.assertNotIn("monospace", block,
