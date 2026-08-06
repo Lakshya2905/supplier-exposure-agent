@@ -254,6 +254,28 @@ class TestConfirmSurface(unittest.TestCase):
                          "a reviewer who navigates away must not silently "
                          "become anonymous on returning")
 
+    def test_no_painter_shadows_a_module_level_helper(self):
+        """A widget local named after a helper breaks every later call to it.
+
+        `note = st.text_input("Note", ...)` inside render_confirm bound a
+        function-local `note` for the whole function, so anything added below it
+        that called the module's note() helper raised "TypeError: 'str' object is
+        not callable" and pointed at itself rather than at the collision. The
+        decision panel is appended to exactly that function.
+        """
+        import ast
+        tree = ast.parse(SOURCE)
+        helpers = {n.name for n in tree.body if isinstance(n, ast.FunctionDef)}
+        for fn in (n for n in tree.body if isinstance(n, ast.FunctionDef)):
+            bound = {t.id for node in ast.walk(fn)
+                     if isinstance(node, ast.Assign)
+                     for t in node.targets if isinstance(t, ast.Name)}
+            with self.subTest(function=fn.name):
+                self.assertFalse(
+                    bound & (helpers - {fn.name}),
+                    f"{fn.name} binds a local named after a module helper: "
+                    f"{sorted(bound & (helpers - {fn.name}))}")
+
     def test_a_recorded_decision_carries_a_real_timestamp(self):
         """The app was stamping every decision at the Unix epoch.
 

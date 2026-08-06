@@ -512,20 +512,24 @@ def render_confirm(surface, result):
         reason = control_columns[-1].selectbox(
             "Reason", row.controls[0].reason_codes, index=None,
             placeholder="Choose an option", key=f"reason-{row.key}")
-        note = st.text_input("Note", key=f"note-{row.key}")
+        # `note_text`, NOT `note`. A bare `note` here binds a function-local name
+        # for the whole of render_confirm and shadows the module-level note()
+        # helper, so anything added below this line that calls note() raises
+        # "TypeError: 'str' object is not callable" and points at itself rather
+        # than at the collision forty lines above.
+        note_text = st.text_input("Note", key=f"note-{row.key}")
         for column, control in zip(control_columns, row.controls):
             if column.button(control.action.title(), key=f"{control.action}-{row.key}"):
                 try:
                     # THE CLOCK LIVES HERE, at the edge, and nowhere deeper.
-                    # `actions.apply` defaults `at` to the Unix epoch so that
-                    # src/ and every test stay deterministic. Nothing was
-                    # passing it, so every decision the deployed app recorded
-                    # was stamped 1970-01-01. Reading the time at the interface
-                    # keeps the record real without putting a clock inside a
-                    # module whose output is golden-pinned.
+                    # `actions.apply` requires `at` and has no default, so src/
+                    # and every test stay deterministic and an undated decision
+                    # is refused rather than silently stamped. Reading the time
+                    # at the interface keeps the record real without putting a
+                    # clock inside a module whose output is golden-pinned.
                     actions.apply(st.session_state.setdefault(
                         "log", gov.DecisionLog()), control, reviewer,
-                        reason_code=reason or "", note=note,
+                        reason_code=reason or "", note=note_text,
                         at=datetime.now(timezone.utc).isoformat())
                     st.success(f"Recorded: {control.action} {row.key}")
                 except ValueError as refusal:
