@@ -42,6 +42,20 @@ FINISHED_GOOD_PART = "finished_good_part"
 ANNUAL_UNITS = "annual_units"
 DEMAND_COLUMNS = (FINISHED_GOOD_PART, ANNUAL_UNITS)
 
+# ---- sources.csv ----
+# The extract manifest: one row per input file, saying which system it came out
+# of and when. It is the only file that describes the others.
+#
+# `system_of_record`, NOT `source_type`. `source_type` is already a part_master
+# column meaning make or buy, and an evidence panel showing "source type: buy"
+# beside "source type: ERP part master" would be two unrelated facts under one
+# word. DESIGN.md's evidence anatomy was renamed to match this, not the reverse:
+# the CSV column is the older name and is load-bearing in the verdict table.
+SOURCE_FILE = "source_file"
+SYSTEM_OF_RECORD = "system_of_record"
+RETRIEVED_AT = "retrieved_at"
+SOURCES_COLUMNS = (SOURCE_FILE, SYSTEM_OF_RECORD, RETRIEVED_AT)
+
 # Tooling ownership
 TOOLING_COMPANY = "company"
 TOOLING_SUPPLIER = "supplier"
@@ -86,6 +100,14 @@ class SupplierLink:
 
 
 @dataclass
+class SourceExtract:
+    """When one input file was pulled, and out of what."""
+    source_file: str
+    system_of_record: str
+    retrieved_at: str
+
+
+@dataclass
 class LeadTime:
     part_number: str
     supplier_id: str
@@ -104,6 +126,7 @@ class World:
     lead_times: list = field(default_factory=list)
     demand: dict = field(default_factory=dict)
     finished_goods: list = field(default_factory=list)
+    sources: list = field(default_factory=list)
 
     def links_for(self, part_number):
         return [l for l in self.links if l.part_number == part_number]

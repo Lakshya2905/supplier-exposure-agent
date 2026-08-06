@@ -126,10 +126,10 @@ def evidence_for(part_number, supplier_records, exploded_rows, demand_plan,
     from ..normalise import canonical_key
 
     quoted_by_key = {canonical_key(name): (name, quoted, p95)
-                     for name, quoted, p95 in lead_time_records}
+                     for name, quoted, p95, _row in lead_time_records}
 
     supplier_rows, join_notes = [], []
-    for name, region in sorted(supplier_records):
+    for name, region, _row in sorted(supplier_records):
         matched = quoted_by_key.get(canonical_key(name))
         if matched and matched[0] != name:
             join_notes.append(

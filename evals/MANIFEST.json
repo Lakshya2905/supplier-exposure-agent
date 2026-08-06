@@ -1,10 +1,11 @@
 {
   "files": {
-    "answer_key.json": "aa1732652a8e23bd077bce9ef095b90104e6b16f0b595fcdb29ef0419bc229e0",
+    "answer_key.json": "72836fa365976bf7f22e22e3b573edd6ca8204ba16ea265e8ab3453e7d4aee9d",
     "inputs/bom.csv": "2f9f5ebe3c59337dd26dfce22fa8a181ba3edbb4a401b8c6ecceb392dc45e5e9",
     "inputs/demand_plan.csv": "649be1c9b36960067314c43a636ed2b49d1d831a768f6a7f0a6ef756183bbbcf",
     "inputs/lead_times.csv": "8a80e57094e6366c3fb166a66c2f1115d5840ca11da02896fe9c6fc0820b5cd2",
     "inputs/part_master.csv": "8dd8baf91516870df0aa7ba6a21f352f7f4ac5ba1cab3ea64ef7da24f1379d7b",
+    "inputs/sources.csv": "976021fc3a6794c250ecb3ebbb651ddaa4876f0e8660812a71e40542dcfa66ba",
     "inputs/suppliers.csv": "bef7e98390e564a3d51823089b6d0a0602acd9f297196955b16b8d3121dc2e3f"
   },
   "note": "The manifest DETECTS an edit to a frozen file. It does not PREVENT one: a commit that rewrites a frozen file and its manifest entry together passes this check, because the check compares the set against its own record of itself. The control that closes it is branch protection requiring this gate to be green before a merge, which IS in effect on origin/main, enforced for admins, with force pushes and deletion refused. It is a property of the remote and not of a checkout: a commit made and tested purely locally is not covered by it until it is pushed.",
