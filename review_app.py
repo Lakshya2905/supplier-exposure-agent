@@ -272,6 +272,34 @@ CONSOLE_CSS = """
   [data-testid="stMetric"], [data-testid="stAlert"] {
       border-radius: 3px !important; box-shadow: none !important;
   }
+
+  /* ------------------------------------------------------------- focus --
+     WCAG 2.4.7 wants a visible focus indicator and 2.4.11 wants it at 3:1
+     against BOTH the element and the surface behind it. The accent clears that
+     on every surface in this interface by a wide margin: 6.40:1 on a chip,
+     6.53:1 on a button, 7.48:1 on a panel, 7.94:1 on the page, 8.23:1 in the
+     sidebar.
+
+     THE ACCENT IS THE RIGHT COLOUR HERE, not an exception to its contract. The
+     contract reserves it for what a reviewer can act on, and focus only ever
+     lands on something actionable, so the ring says exactly what the accent
+     always says.
+
+     A 2px ring with a 2px offset rather than a background change: a fill would
+     compete with the filled-versus-outlined distinction the chips already use,
+     and offsetting keeps the ring clear of the element's own border. */
+  :is(button, a, input, select, textarea, summary, [role="radio"],
+      [role="combobox"], [role="option"], [tabindex]):focus-visible {
+      outline: 2px solid #7FB2D9 !important;
+      outline-offset: 2px !important;
+      border-radius: 2px;
+  }
+  /* Streamlit paints its own focus treatment on several controls. Ours replaces
+     it rather than sitting beside it, so a control cannot end up with two rings
+     saying the same thing in different colours. */
+  :is(button, input, select, textarea):focus {
+      box-shadow: none !important;
+  }
 </style>
 """
 st.markdown(CONSOLE_CSS, unsafe_allow_html=True)

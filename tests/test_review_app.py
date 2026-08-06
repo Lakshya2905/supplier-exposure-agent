@@ -232,6 +232,33 @@ class TestTheSpacingScaleIsDeclaredOnce(unittest.TestCase):
         self.assertIn(":has(> [data-testid=", selectors)
 
 
+class TestFocusIsVisible(unittest.TestCase):
+    """WCAG 2.4.7 and 2.4.11. There was no focus treatment at all before this."""
+
+    def setUp(self):
+        css = SOURCE.split('CONSOLE_CSS = """')[1].split('"""')[0]
+        self.rule = css.split(":focus-visible {")[1].split("}")[0]
+
+    def test_the_ring_is_the_accent(self):
+        # Not an exception to the accent contract but an instance of it: the
+        # accent marks what a reviewer can act on, and focus only ever lands on
+        # something actionable.
+        self.assertIn("#7FB2D9", self.rule)
+
+    def test_the_ring_is_thick_enough_to_see_and_offset_from_the_element(self):
+        self.assertIn("outline: 2px solid", self.rule)
+        self.assertIn("outline-offset: 2px", self.rule)
+
+    def test_focus_is_not_signalled_by_colour_alone(self):
+        # An outline is a shape appearing where there was none, so it survives
+        # greyscale. A rule that only recoloured the element would not.
+        self.assertIn("outline", self.rule)
+
+    def test_streamlits_own_focus_treatment_is_replaced_not_stacked(self):
+        css = SOURCE.split('CONSOLE_CSS = """')[1].split('"""')[0]
+        self.assertIn("box-shadow: none !important", css.split(":focus {")[1])
+
+
 class TestExposureSurface(unittest.TestCase):
 
     @classmethod
