@@ -171,17 +171,15 @@ CONSOLE_CSS = """
 
   /* ------------------------------------------------- panels and badges --
      Surfaces and borders carry structure: where one group ends and the next
-     begins. Hue on a chip carries CATEGORY.
+     begins. THE CHIP CARRIES NO HUE AT ALL.
 
-     THE PALETTE IS NOMINAL BY ARITHMETIC. Every chip is drawn at one
-     saturation and one lightness and differs only in hue, and the hues are
-     confined to a cool band, because a set can be perfectly equal in weight
-     and still rank if one member is the colour of an alarm. There is no
-     red-amber-green here and no warm-to-cool progression: an ordered colour
-     encoding across incommensurable states is the composite this system
-     refuses to compute, arriving through the palette instead of the
-     arithmetic. Autonomy keeps a filled-versus-outlined distinction, which
-     separates two categories without ranking them. */
+     A previous revision drew each category at one HSL saturation and lightness
+     and called that a nominal palette. HSL lightness is not perceptual
+     lightness, so the claim was false: in CIELAB the six completeness entries
+     spanned 15.3 L* points and sorted into a brightness ramp in declaration
+     order. The label already named the category, and CLAUDE.md requires that
+     stripping every colour lose no information, so the hue was carrying nothing
+     while looking like an encoding. One neutral chip; form carries the rest. */
   /* 12px is the floor. The previous 0.68rem (10.9px) uppercase monospace with
      0.05em tracking applied the slowest reading mode, letter by letter with no
      word shape, to the densest label in the interface, and a long category name
