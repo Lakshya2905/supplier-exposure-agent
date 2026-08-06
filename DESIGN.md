@@ -186,34 +186,57 @@ WCAG AA, several above 12:1.
 | `border-panel` | `#272D33` | panel edge |
 | `border-ui` | `#6B7278` | anything whose boundary must be identifiable (3.47:1 on surface, 3.69:1 on bg) |
 
-### Text ramp, with the semantic mapping [PARTIAL]
+### Text ramp, with the semantic mapping [SHIPPED]
 
-> [PARTIAL] The six colours and their ratios ship and are verified. The semantic mapping (when a note applies versus a caption) exists only here; nothing enforces it.
+> [SHIPPED] The tokens are declared once in `:root` and every text colour in the stylesheet names one. `tests/test_design_contracts.py` refuses a seventh step, and refuses a caption whose text varies with the data.
 
 Five greys with no usage rule will be chosen by feel and drift within a week, so
-the rule is part of the system.
+the rule is part of the system. Twelve distinct text colours shipped against
+these six, which is the same failure the type scale had: a list, decided one
+rule at a time. Every one of the six extras folded onto a step that already
+existed, which is the evidence that none of them was carrying a distinction.
 
 | Token | Hex | On bg | Means |
 |-------|-----|------:|-------|
 | `text-title` | `#F0F2F4` | 16.03:1 | h1 only |
-| `text-primary` | `#E3E6E8` | 14.35:1 | a finding, the thing you came to read |
+| `text-primary` | `#E3E6E8` | 14.35:1 | a finding, and any value read from a source: identifiers, figures |
 | `text-body` | `#D5DADE` | 12.78:1 | prose, chip labels, absence states |
 | `text-note` | `#9BA3AA` | 7.04:1 | a qualification attached to a finding |
 | `text-caption` | `#838C94` | 5.26:1 | instructions about the interface, never about the data |
-| `text-section` | `#8FA0AD` | 6.68:1 | h2 section labels |
+| `text-section` | `#8FA0AD` | 6.68:1 | a section label, at any heading level below h1 |
+
+**Heading level is carried by size, weight and position, never by hue.** `h3`
+through `h6` used to have a colour of their own, which made "how deep is this
+heading" a thing the palette answered twice and the type scale answered once.
 
 `text-note` and `text-caption` are not interchangeable. A note is about the data.
 A caption is about the interface. If it would still be true with different data,
 it is a caption.
 
-### The accent contract [PARTIAL]
+**Only one direction of that is mechanisable, and it is enforced.** A caption
+that interpolates a computed value is provably about the data, so it is provably
+in the wrong register; the converse is a judgment about meaning and is left to
+review. Five captions were carrying counts and are now notes. A caption may still
+name a module-level constant: "ordered by part number" reads the same against any
+dataset.
 
-> [PARTIAL] Accent usage and every ratio below ship and are verified. The requirement that colour never be the only cue for actionability (WCAG 1.4.1) is a target.
+**Two steps were not reaching the screen at all.** Streamlit's theme sets
+`textColor` in `config.toml` and paints headings with it at a specificity these
+element rules lose to, so every heading on the page measured `text-primary` and
+`text-title` and `text-section` were never painted. That was equally true when
+the declarations were literals — tokenising did not cause it. **No scan of the
+stylesheet could have found it**, because the stylesheet was right; the rendered
+page was wrong. Found by measuring `getComputedStyle` on the running app.
+
+### The accent contract [SHIPPED]
+
+> [SHIPPED] Accent usage and every ratio below ship and are verified, and every accent element now carries a second, non-colour cue. `tests/test_design_contracts.py` refuses an accent rule with no affordance in the same block.
 
 - **`accent` `#7FB2D9`**, 7.94:1 on bg, 7.48:1 on surface, 6.91:1 on panel head.
 - The accent marks **only** what a reviewer can act on or navigate to: links, expander summaries, the active nav rule, button borders, and the outlined autonomy chip (which is exactly the `recommends` state, the one that gets a Confirm and Reject button).
 - The accent is **never** applied to a finding, a part, a dimension, or a category.
-- **Colour is never the only cue for actionability** (WCAG 1.4.1). Every actionable element also carries a non colour affordance: an underline, a caret, a bracket, or a border.
+- **Colour is never the only cue for actionability** (WCAG 1.4.1). Every actionable element also carries a non colour affordance: links and expander summaries an underline, buttons and the outlined chip a border, the selected nav item a left rule, focus an outline. The expander summary carries its own underline rather than relying on Streamlit's chevron: the chevron is a real affordance and it is there, but it is a vendor's markup and not a contract, so the only thing standing between that control and a colour-only cue would be somebody else's release note.
+- **The link colour was losing, and the source said otherwise.** Streamlit styles its own anchors from a hashed emotion class, which beats an element rule, so every link rendered in Streamlit's blue — measured `rgb(61, 157, 243)` against the accent's `rgb(127, 178, 217)` — while the stylesheet and a test both said accent. The underline had been winning the whole time, because Streamlit sets no `text-decoration` there, which is what made it quiet: the affordance was right and only the colour was wrong.
 - Nothing in the chip vocabulary may land near the accent's hue, `oklch(0.742 0.078 242)`. This is why the category palette does not use hue at all.
 
 ### The category chip: one neutral chip, form carries taxonomy [SHIPPED]
@@ -436,7 +459,19 @@ call site, not at the binding.
 
 ## The Anti-Ranking Contract [PARTIAL]
 
-> [PARTIAL] Dimensions stay separate, no sort control exists, and the order label now declares the order meaningless as of `f4130e0`. The equal-area rule and the written no-default-sort rule are still targets, enforced by nothing.
+> [PARTIAL] Dimensions stay separate, no sort control exists, the order label declares the order meaningless as of `f4130e0`, and equal area now holds and is tested. The written no-default-sort rule is still enforced by nothing.
+
+**Equal area was being violated by the lattice itself.** Each layer sized its
+columns to its own group count, so a layer holding one group filled the page and
+a group sharing a layer with two others got a third of it. Nothing about a group
+differed between those two states except how many siblings it happened to have,
+and a reader has no way to know that: a full-width panel simply reads as the
+important one. Vertical position carries dominance and is meant to; width
+carried nothing and looked like it carried something, which is the objection
+that retired the category hue. `lattice_width()` now returns one column count
+for the whole lattice. Measured at 1440px: every group panel is 332px across
+layers of three different sizes, and the coverage panel stays full width because
+it is a page-level panel rather than a group.
 
 The five scoring dimensions stay separate forever. That is a correctness
 constraint, and layout can violate it as easily as arithmetic can.
@@ -596,3 +631,6 @@ with numbers:
 | 2026-08-06 | Anatomy field 2 renamed from "source type" to "system of record" | `source_type` is a `part_master.csv` column meaning make or buy and is load-bearing in the verdict table. One word cannot carry both, and the CSV name is the older one |
 | 2026-08-06 | `no record` promoted from reserved to shipped | The extract manifest is what made the distinction available: a file with a retrieval time was pulled, so an absence in it is recorded rather than unexamined |
 | 2026-08-06 | Findings moved out of the layer loop into one list (QA ISSUE-005) | 36 findings for 21 parts, 14 of them verbatim duplicates. Rendering each part under its first group would have deduplicated equally and made placement depend on iteration order, which reads as a ranking |
+| 2026-08-06 | Text ramp declared once in `:root`, twelve colours folded to six | Every extra folded onto a step that already existed, which is the evidence none was carrying a distinction. The caption rule is enforced in the direction that is mechanisable |
+| 2026-08-06 | Heading and link colours given `!important` | Both were losing to Streamlit's own rules while the stylesheet and its tests agreed they were right. Two of the six ramp steps were never painted. Only measuring the rendered page could have found it |
+| 2026-08-06 | One column count for the whole dominance lattice | A group's width varied with how many siblings its layer held, so a solo group filled the page and read as the important one. Width carried nothing and looked like it carried something |

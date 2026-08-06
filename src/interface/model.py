@@ -636,6 +636,23 @@ def coverage(profiles, report, thresholds, catalogue):
 MARK = "x"
 
 
+def lattice_width(layers):
+    """One column count for the whole lattice, so no group is wider than another.
+
+    EQUAL AREA IS THE ENCODING. The dominance lattice used to size each layer to
+    its own group count, so a layer holding one group filled the page and a
+    group sharing a layer with two others got a third of it. Nothing about a
+    group changed between those two states except how many siblings it happened
+    to have, and the reader has no way to know that: a full-width panel simply
+    reads as the important one.
+
+    Vertical position carries dominance and is meant to. Width carried nothing
+    and looked like it carried something, which is the same objection that
+    retired the category hue.
+    """
+    return max((len(layer) for layer in layers), default=1)
+
+
 def blocking_matrix(part_numbers, evidence_by_part):
     """Which finished goods each part can stop.
 

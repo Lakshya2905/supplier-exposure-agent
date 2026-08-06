@@ -71,6 +71,31 @@ CONSOLE_CSS = """
       --space-xl: 1.5rem;   /* 24px */
       --space-2xl: 2rem;    /* 32px */
       --space-3xl: 3rem;    /* 48px */
+
+      /* THE TEXT RAMP, AND WHAT EACH STEP MEANS. Six tokens shipped in
+         DESIGN.md and twelve distinct text colours shipped in this file, which
+         is the same failure as the ten font sizes: a list, chosen by feel, one
+         rule at a time. The six off-ramp greys are gone and every one of them
+         mapped onto a step that already existed, which is the evidence that
+         none of them was carrying a distinction.
+
+         The mapping is the part that matters. Five greys with no usage rule
+         will drift within a week, so the rule is part of the system and a test
+         asserts no rule below invents a seventh. */
+      --text-title: #F0F2F4;    /* 16.03:1  h1 only */
+      --text-primary: #E3E6E8;  /* 14.35:1  a finding, and any value read from
+                                             a source: identifiers, figures */
+      --text-body: #D5DADE;     /* 12.78:1  prose, chip labels, absence states */
+      --text-note: #9BA3AA;     /*  7.04:1  a qualification attached to a finding */
+      --text-caption: #838C94;  /*  5.26:1  instructions about the interface,
+                                             never about the data */
+      --text-section: #8FA0AD;  /*  6.68:1  a section label, at any heading level
+                                             below h1. Level is carried by size,
+                                             weight and position, never by hue */
+      --accent: #7FB2D9;        /*  7.94:1  ONLY what a reviewer can act on */
+      /* The print substrate, declared here so no rule anywhere states a text
+         colour as a literal. See the print block for why it is not a filter. */
+      --text-print: #000000;
   }
   /* Middle density. The earlier revision read as an essay and the one after it
      read as congested; this sits between them. Where a region felt crowded the
@@ -86,17 +111,29 @@ CONSOLE_CSS = """
       font-size: var(--title) !important; font-weight: 600 !important;
       letter-spacing: -0.01em;
       margin: var(--space-sm) 0 var(--space-md) 0 !important;
-      padding: 0 !important; color: #F0F2F4; line-height: 1.35;
+      padding: 0 !important; color: var(--text-title) !important;
+      line-height: 1.35;
   }
   h2 {
       font-size: var(--ui-base) !important; font-weight: 600 !important;
-      text-transform: uppercase; letter-spacing: 0.08em; color: #8FA0AD;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--text-section) !important;
       margin: var(--space-xl) 0 var(--space-sm) 0 !important; padding: 0 !important;
       line-height: 1.45;
   }
+  /* THE HEADING COLOURS NEEDED !important AND NOBODY HAD NOTICED. Streamlit's
+     theme sets textColor in config.toml and paints headings with it at a
+     specificity these element rules lose to, so h1 and every h2 through h6
+     rendered at the theme colour. Two of the six ramp steps, title and section,
+     never reached the screen at all: measured, every heading on the page was
+     rgb(227, 230, 232), which is text-primary.
+
+     This was true before the ramp existed, when the same declarations were
+     literals. Tokenising did not cause it; measuring the rendered page is what
+     found it, and no scan of this file could have. */
   h3, h4, h5, h6 {
       font-size: var(--ui-base) !important; font-weight: 600 !important;
-      color: #C7CDD3;
+      color: var(--text-section) !important;
       margin: var(--space-lg) 0 var(--space-xs) 0 !important; padding: 0 !important;
       line-height: 1.45;
   }
@@ -105,28 +142,51 @@ CONSOLE_CSS = """
       margin: var(--space-xl) 0 var(--space-lg) 0;
   }
   [data-testid="stVerticalBlock"] { gap: var(--space-md); }
-  p, li { line-height: 1.5; color: #D5DADE; }
+  p, li { line-height: 1.5; color: var(--text-body); }
 
   p.finding {
       font-size: var(--doc); line-height: 1.58; max-width: 104ch;
-      margin: var(--space-md) 0 var(--space-xs) 0; color: #E3E6E8;
+      margin: var(--space-md) 0 var(--space-xs) 0; color: var(--text-primary);
   }
   p.note {
       font-size: var(--ui-sm); line-height: 1.5; max-width: 104ch;
-      color: #9BA3AA; margin: 0 0 var(--space-sm) 0;
+      color: var(--text-note); margin: 0 0 var(--space-sm) 0;
   }
   .stCaption, [data-testid="stCaptionContainer"] p {
-      font-size: var(--ui-xs) !important; color: #838C94 !important;
+      font-size: var(--ui-xs) !important; color: var(--text-caption) !important;
       line-height: 1.5; max-width: 104ch;
       margin-bottom: var(--space-sm) !important;
   }
-  a, a:visited { color: #7FB2D9; }
+  /* COLOUR IS NEVER THE ONLY CUE FOR ACTIONABILITY (WCAG 1.4.1). Every accent
+     element carries a second, non-colour affordance, so a reader with any form
+     of colour vision deficiency, a greyscale screenshot, or the print
+     stylesheet still knows what can be acted on. Links and expander summaries
+     get an underline; buttons and the outlined chip already carry a border; the
+     selected nav item carries a left rule; focus carries an outline.
+
+     A test asserts the pairing rather than trusting it: any rule that sets
+     `color: var(--accent)` must set an affordance in the same block. */
+  /* `!important` because the bare declaration LOST, and losing is invisible in
+     a source scan. Streamlit styles its own anchors from a hashed emotion class,
+     which is class specificity against this rule's element specificity, so every
+     link on the page rendered in Streamlit's blue while the stylesheet said
+     accent and a test agreed with the stylesheet. Measured in the browser at
+     rgb(61, 157, 243) rather than the accent's rgb(127, 178, 217).
+
+     The underline had been winning the whole time, because Streamlit sets no
+     text-decoration there. That is what made the defect quiet: the affordance
+     was right and only the colour was wrong. */
+  a, a:visited {
+      color: var(--accent) !important;
+      text-decoration: underline; text-underline-offset: 0.15em;
+      text-decoration-thickness: 1px;
+  }
 
   code, .identifier, .ids span {
       font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
                    monospace;
       font-size: var(--ui-sm); background: transparent !important;
-      color: #C9D2D9 !important; padding: 0 !important;
+      color: var(--text-primary) !important; padding: 0 !important;
   }
   /* THE MERGE SIGIL. A data qualification, so it takes note weight and NOT the
      accent: the accent means "you can act on this", and a reader cannot act on
@@ -134,7 +194,7 @@ CONSOLE_CSS = """
      a tally, and a tally is a magnitude drawn as punctuation. */
   .sigil {
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      color: #9BA3AA;
+      color: var(--text-note);
   }
   .ids {
       display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-lg);
@@ -146,13 +206,13 @@ CONSOLE_CSS = """
   table.tight td {
       border-top: 1px solid #262B30;
       padding: var(--space-xs) var(--space-md) var(--space-xs) 0;
-      font-size: var(--ui-sm); line-height: 1.5; color: #B6BEC5; vertical-align: top;
+      font-size: var(--ui-sm); line-height: 1.5; color: var(--text-body); vertical-align: top;
   }
   table.tight tr:first-child td { border-top: none; }
   table.tight td.num {
       text-align: right; width: 4rem; font-variant-numeric: tabular-nums;
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      color: #E3E6E8; white-space: nowrap;
+      color: var(--text-primary); white-space: nowrap;
   }
 
   [data-testid="stExpander"],
@@ -162,9 +222,15 @@ CONSOLE_CSS = """
       box-shadow: none !important; background: transparent !important;
   }
   [data-testid="stExpander"] { margin: 0 0 var(--space-md) 0; }
+  /* The summary carries an underline of its own rather than relying on
+     Streamlit's chevron. The chevron is a real affordance and it is there, but
+     it is Streamlit's element and not a contract, so the one thing standing
+     between this control and a colour-only cue would be a vendor's markup. */
   [data-testid="stExpander"] summary {
-      font-size: var(--ui-sm) !important; color: #7FB2D9 !important;
+      font-size: var(--ui-sm) !important; color: var(--accent) !important;
       padding: 0 !important; width: max-content;
+      text-decoration: underline; text-underline-offset: 0.15em;
+      text-decoration-thickness: 1px;
   }
   [data-testid="stExpander"] summary p { font-size: var(--ui-sm) !important; }
   [data-testid="stExpanderDetails"] {
@@ -185,11 +251,11 @@ CONSOLE_CSS = """
 
   .stButton > button {
       border-radius: 3px; border: 1px solid #3E5C74; background: #1E2933;
-      color: #9CC6E3; font-size: var(--ui-sm); font-weight: 500;
+      color: var(--accent); font-size: var(--ui-sm); font-weight: 500;
       padding: var(--space-xs) var(--space-md); box-shadow: none;
   }
   .stButton > button:hover {
-      background: #2A3B49; color: #D6E8F5; border-color: #7FB2D9;
+      background: #2A3B49; color: var(--accent); border-color: #7FB2D9;
   }
 
   section[data-testid="stSidebar"] {
@@ -215,10 +281,10 @@ CONSOLE_CSS = """
       transform: scale(0.8); opacity: 0.75;
   }
   section[data-testid="stSidebar"] [role="radiogroup"] p {
-      font-size: var(--ui-sm) !important; line-height: 1.45; color: #8B949C;
+      font-size: var(--ui-sm) !important; line-height: 1.45; color: var(--text-caption);
   }
   section[data-testid="stSidebar"] [role="radiogroup"] strong {
-      color: #DDE3E8; font-weight: 600;
+      color: var(--text-body); font-weight: 600;
   }
 
   /* ------------------------------------------------- panels and badges --
@@ -241,11 +307,11 @@ CONSOLE_CSS = """
       display: inline-block; font-size: var(--ui-xs); font-weight: 500;
       letter-spacing: 0.02em; padding: var(--space-xs) var(--space-sm);
       border-radius: 3px;
-      background: #242A30; color: #D5DADE; border: 1px solid #333B42;
+      background: #242A30; color: var(--text-body); border: 1px solid #333B42;
       margin-right: var(--space-xs); vertical-align: 0.06rem;
   }
   .badge.open {
-      background: transparent; color: #7FB2D9; border-color: #3E5C74;
+      background: transparent; color: var(--accent); border-color: #3E5C74;
   }
   /* Absence is the same footprint and the same text weight as presence. The
      dashed rule is the only difference, and it is a form cue, so it survives
@@ -277,7 +343,7 @@ CONSOLE_CSS = """
       padding: var(--space-sm) var(--space-md); background: #1E242A;
       border-radius: 4px 4px 0 0;
   }
-  .panelhead .title { font-size: var(--ui-base); font-weight: 600; color: #E3E6E8; }
+  .panelhead .title { font-size: var(--ui-base); font-weight: 600; color: var(--text-primary); }
 
   [data-testid="stMetric"], [data-testid="stAlert"] {
       border-radius: 3px !important; box-shadow: none !important;
@@ -331,7 +397,7 @@ CONSOLE_CSS = """
       :root { --doc: 10.5pt; --ui-sm: 9.5pt; --ui-xs: 8.5pt; --ui-base: 10pt;
               --title: 15pt; }
       html, body, .block-container, [data-testid="stMain"] {
-          background: #FFFFFF !important; color: #000000 !important;
+          background: #FFFFFF !important; color: var(--text-print) !important;
       }
       /* EVERYTHING, not a list of selectors. The first version of this block
          enumerated the elements to blacken, which is a whitelist: anything not
@@ -346,7 +412,7 @@ CONSOLE_CSS = """
          it wins. Rendering to PDF is what showed this: the first version left 13
          fills at #E3E6E8, #C9D2D9 and #838C94, all invisible on white. */
       :root *, :root *::before, :root *::after {
-          color: #000000 !important;
+          color: var(--text-print) !important;
           background-color: transparent !important;
           box-shadow: none !important;
       }
@@ -367,7 +433,7 @@ CONSOLE_CSS = """
       .panelhead { background: transparent !important;
                    border-bottom: 1pt solid #000000 !important; }
       .badge { border: 1pt solid #000000 !important; background: transparent !important;
-               color: #000000 !important; }
+               color: var(--text-print) !important; }
       .badge.absent { border-style: dashed !important; }
 
       /* Evidence is the point of the document, so it prints open rather than
@@ -696,8 +762,13 @@ def render_exposure(surface, find_out):
     # are incomparable. The findings themselves run full width underneath,
     # because a sentence squeezed into a quarter-width column wraps into a
     # ribbon and stops being readable prose, and the sentence is the deliverable.
+    # ONE WIDTH FOR EVERY GROUP, whatever its layer holds. Sizing each layer to
+    # its own group count gave a solo group the full page and a group with two
+    # siblings a third of it, and the only thing that differed between them was
+    # how many siblings they happened to have.
+    width = view.lattice_width(surface.layers)
     for layer in surface.layers:
-        columns = st.columns(len(layer)) if len(layer) > 1 else [st.container()]
+        columns = st.columns(width)
         for column, group in zip(columns, layer):
             with column:
                 with st.container(border=True):
@@ -773,9 +844,9 @@ def render_blocking_matrix(surface):
         return
     goods, matrix = view.blocking_matrix(parts, surface.evidence_by_part)
     st.subheader("What each part blocks")
-    st.caption(f"A mark means the part appears in that finished good. "
-               f"{len(parts)} exposed parts, {len(goods)} finished goods. "
-               f"Marks are identical: this is which, never how much.")
+    st.caption("A mark means the part appears in that finished good. Marks "
+               "are identical: this is which, never how much.")
+    note(f"{len(parts)} exposed parts, {len(goods)} finished goods.")
     st.dataframe(
         list(matrix), hide_index=True, width="stretch",
         column_config={"part": st.column_config.TextColumn("part", width=110)})
@@ -790,7 +861,7 @@ def render_find_out(surface):
     for row in surface.rows:
         st.markdown(f"## `{row.key}`")
         finding(row.sentence)
-        st.caption(row.detail["order_label"])
+        st.caption(ranking.DEFAULT_ORDER_LABEL)
         st.markdown(
             "<p class='note'>" +
             "  ".join(identifier(part) for part in row.detail["parts"]) +
@@ -805,9 +876,9 @@ def render_confirm(surface, result):
     grid = view.cluster_membership(result.report)
     if grid:
         st.subheader("Who sits with whom")
-        st.caption(f"{len(grid)} exposed parts, with the supplier and the "
-                   f"region each one is grouped under. Identifiers only: "
-                   f"nothing here is ordered or scored.")
+        st.caption("Identifiers only: nothing here is ordered or scored.")
+        note(f"{len(grid)} exposed parts, with the supplier and the region "
+             f"each one is grouped under.")
         st.dataframe(list(grid), hide_index=True, width="stretch")
     # Held outside the widget. This input exists only on this surface, so
     # Streamlit discards its state the moment a reviewer navigates away, and
@@ -824,8 +895,8 @@ def render_confirm(surface, result):
             # The rendered sentence already names every member, so the list is
             # not repeated here. Saying it twice is the interface disagreeing
             # with itself about which one is the record.
-            st.caption(f"{row.detail['member_count']} members, confirmed as "
-                       f"one act")
+            note(f"{row.detail['member_count']} members, confirmed as "
+                 f"one act")
         control_columns = st.columns(len(row.controls) + 1)
         reason = control_columns[-1].selectbox(
             "Reason", row.controls[0].reason_codes, index=None,
@@ -877,7 +948,7 @@ def render_decision_panel(log, total_rows):
     st.subheader(govrender.DECISION_PANEL_HEADING)
     # The denominator first, which is how the exposure surface already works:
     # what is outstanding is the unknown, and it leads.
-    st.caption(govrender.decision_panel_count(
+    note(govrender.decision_panel_count(
         len(events), max(total_rows - len(events), 0)))
     note(govrender.DECISION_PANEL_SCOPE)
 
