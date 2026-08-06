@@ -17,8 +17,9 @@ from .demand import usage_by_part
 from .explosion import explode, rows_by_part
 from .identify import identify_all
 from .interface import model as view
-from .readers import (read_bom, read_demand_plan, read_lead_times,
-                      read_part_master, read_suppliers)
+from .readers import (read_bom, read_demand_plan, read_demand_rows,
+                      read_lead_times, read_part_master, read_sources,
+                      read_suppliers)
 from .scoring import score_part
 from .synthetic import verdicts as V
 
@@ -88,6 +89,8 @@ def run(data_dir=None, config_path="config/archetypes.yaml"):
     demand = read_demand_plan(data_dir / "demand_plan.csv")
     suppliers = read_suppliers(data_dir / "suppliers.csv")
     lead_times = read_lead_times(data_dir / "lead_times.csv")
+    extracts = read_sources(data_dir / "sources.csv")
+    demand_row_numbers = read_demand_rows(data_dir / "demand_plan.csv")
 
     rows = rows_by_part(explode(edges, known_parts=set(parts)))
     usage = usage_by_part(rows, demand)
@@ -118,7 +121,8 @@ def run(data_dir=None, config_path="config/archetypes.yaml"):
 
     evidence = {
         part: view.evidence_for(part, suppliers.get(part, ()), rows[part],
-                                demand, lead_times.get(part, ()))
+                                demand, lead_times.get(part, ()), extracts,
+                                demand_row_numbers)
         for part in profiles
     }
 

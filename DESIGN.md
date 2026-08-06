@@ -274,6 +274,17 @@ collapse them into one shrug. Each is a dashed chip with distinct label text.
 | `not_applicable` | `not applicable` | the question does not attach to this part |
 | `no_thresholds` | `not configured` | a threshold nobody has set, and the system will not choose one |
 
+**`no record` has since shipped, and what unblocked it is worth recording.** It
+was reserved because the model could not tell "the source has no row for this"
+apart from "nobody has looked". The extract manifest settles exactly that: a file
+with a system of record and a retrieval time *was* pulled, so an absence in it is
+a recorded absence. The evidence panel now says which source was pulled, when,
+and that it holds no row for this part.
+
+| Kind | Label | Means |
+|------|-------|-------|
+| `no_record` | `no record` | the source was retrieved on a stated date and has no row for this |
+
 **Reserved, not implemented.** The model cannot currently distinguish these, and
 an earlier draft of this document specified them as though it could. Inventing a
 label for a state the data cannot tell apart is the interface claiming a precision
@@ -282,10 +293,15 @@ distinction:
 
 | State | Label when it exists | Means |
 |-------|----------------------|-------|
-| not collected | `no record` | the source has no row for this |
 | stale | `as of <date>` | a record exists but predates the as-of horizon |
 | conflicting | `sources disagree` | two sources answer differently and neither wins |
 | structurally unknowable | `cannot be established` | no source could answer this even in principle |
+
+`sources disagree` is closer than it was: the evidence panel renders
+contradictory lead time records side by side without choosing. What is missing
+is the *chip*, because nothing in seed 42 produces a contradiction, and a label
+whose only exercise is a unit test would be a claim about data this system has
+never seen.
 
 **An unrecognised kind gets no chip rather than a guessed one**, for the same
 reason the palette refuses to invent a colour: a wrong label on an absence is
@@ -309,34 +325,52 @@ as zero; a recorded zero is real.
 findings, not after. The count of unknowns is set at least as prominently as any
 finding.
 
-## Evidence [TARGET]
+## Evidence [SHIPPED]
 
-> [TARGET] **Not implemented.** Evidence today is a collapsed expander with supplier rows, demand rows and a lead time record. None of the anatomy below is a structured contract, and the fuzzy-merge sigil does not exist.
+> [SHIPPED] The anatomy is a structured contract in `src/interface/model.py` and every field resolves to something in the data. `tests/test_evidence_anatomy.py` checks that a citation can be **followed**, not that the panel contains the right words.
 
 The memorable thing is "every claim shows its work," so evidence is specified in
 more detail than the palette.
 
-### Anatomy [TARGET]
-
-> [TARGET] None of these six fields is currently a specified, enforced part of an evidence record.
+### Anatomy [SHIPPED]
 
 Every claim resolves to one or more evidence records, and each record carries:
 
-1. **source id** (mono): the file and row that produced the value.
-2. **source type**: which system of record, and whether it is authoritative or derived.
-3. **field cited**: the exact column, spelled as the source spells it.
-4. **as of**: when the record was retrieved.
+1. **source id** (mono): the file and row that produced the value. Carried by the reader from the line the value came off, before the sort reorders anything.
+2. **system of record**: which system the extract came out of, and whether the value is `recorded` (it appears verbatim in a file) or `derived` (this pipeline computed it).
+3. **field cited**: the exact column, spelled as the source spells it. The constants come from the same module the readers use, so a rename moves both together.
+4. **as of**: when the record was retrieved, from `sources.csv`.
 5. **transformation applied**: any normalisation, unit conversion, or fuzzy name merge, stated with both the original and the resolved string.
-6. **inverse link**: from evidence back to the raw record, so the chain is walkable in both directions.
+6. **inverse link**: the locator, `file:row`, which the plain-text export also carries, so a raw line can be traced back to the claims that used it.
 
-### Rules [TARGET]
+**Field 2 was called "source type" and that name was already taken.**
+`source_type` is a `part_master.csv` column meaning make or buy, and it is
+load-bearing in the verdict table. A panel showing "source type: buy" beside
+"source type: ERP part master" puts two unrelated facts under one word, so the
+anatomy was renamed rather than the column.
 
-> [TARGET] The read-only rule and the no-write-path rule ship. The rest are targets.
+**Two of these six had no source until the generator grew one.** System of
+record and as-of could not be answered from seed 42's data at all, and the
+alternative was to render them from constants in the interface. That would have
+been the panel whose entire job is proving nothing was invented inventing a
+provenance at render time. `sources.csv` is the fix: the generator emits the
+extract manifest and the pipeline reads it like any other input. See
+`docs/DATA_DICTIONARY.md`.
+
+**A derived value cites no line, deliberately.** A contribution figure appears in
+no file, so a locator beside it would point at a row holding a different number,
+and a reviewer who followed it could not tell which of the two was wrong.
+`Citation.__post_init__` refuses to construct either mistake.
+
+### Rules [PARTIAL]
+
+> [PARTIAL] Every rule below ships except the sigil being its own target: the sigil renders and the merge is stated beside it, but there is nothing to open.
 
 - **The evidence view shows the source as the source spells it.** Original column headers, original casing, original whitespace. No relabeling, no realignment to the pretty grid, no unit prettification. If it looked designed, a reviewer would suspect it had been processed.
-- **A fuzzy merge is always visible before it is asked about.** A value that survived a name merge carries an inline mono sigil, and the sigil is itself a target: opening it shows both strings and the rule that fired. This is currently buried inside an expander and should not be.
-- **Absent evidence is a specified state, not an empty panel.** A claim with no evidence says so in the same vocabulary as the Absence section.
-- **Contradictory evidence is shown, never resolved.** Both records render. The tool does not pick.
+- **A merge is always visible before it is asked about.** It was buried inside the expander, which put the one inference a reviewer is most likely to disagree with behind a click. The finding now carries an inline mono sigil at `text-note` — never the accent, because a reader cannot act on a merge — and the merge, with both strings, sits beside it outside the panel. **One sigil whatever the count**: repeated marks are a tally, and a tally is a magnitude drawn as punctuation.
+- **The two merges are not the same claim.** A cross-file merge reconciles two spellings across two files and changes no count. A duplicate vendor merge collapses two rows of *one* file into one supplier and therefore **changes the supplier count**, which is the number the verdict turns on. A reviewer counting rows in the panel gets two where the sentence says one, so the collapse is stated rather than left to be inferred.
+- **Absent evidence is a specified state, not an empty panel.** A claim with no evidence says so in the same vocabulary as the Absence section, and names the source and its retrieval date.
+- **Contradictory evidence is shown, never resolved.** Both records render. The tool does not pick. The previous join was a dict comprehension keyed by canonical name, so two rows that canonicalised together silently kept the last one — a latent trap rather than a live defect, since nothing in seed 42 triggers it.
 - **Never render a bare count of sources.** "3 sources" invites reading count as strength, and three weak records do not outrank one authoritative one. Show source identity and type. Never render a tally as repeated marks.
 - **Evidence is exportable as plain text**, carrying file, retrieval time, row ids, and every transformation applied, so a citation can be pasted into a review memo intact.
 
@@ -558,3 +592,7 @@ with numbers:
 | 2026-08-05 | Category hue retired in code (`282657a`) | Nine of eleven hues never reached a badge, so this was a latent trap rather than a live defect. The first caller to write `badge(row.completeness)` would have shipped an ordered ramp with three guards saying it could not rank |
 | 2026-08-05 | Absence kinds named in the coverage panel (`9e3c25a`) | Three kinds shipped, four reserved. Labels exist only for distinctions the model can actually make |
 | 2026-08-05 | Order label stopped promising a rank-by control (`f4130e0`) | Resolved QA ISSUE-007 under the anti-ranking contract rather than by building the control, because sorting by one dimension declares it the ranking |
+| 2026-08-06 | Provenance emitted by the generator, not assembled in the interface | Two of the six anatomy fields had no source in the data. Rendering them from constants would have made the panel that proves nothing was invented invent a provenance at render time |
+| 2026-08-06 | Anatomy field 2 renamed from "source type" to "system of record" | `source_type` is a `part_master.csv` column meaning make or buy and is load-bearing in the verdict table. One word cannot carry both, and the CSV name is the older one |
+| 2026-08-06 | `no record` promoted from reserved to shipped | The extract manifest is what made the distinction available: a file with a retrieval time was pulled, so an absence in it is recorded rather than unexamined |
+| 2026-08-06 | Findings moved out of the layer loop into one list (QA ISSUE-005) | 36 findings for 21 parts, 14 of them verbatim duplicates. Rendering each part under its first group would have deduplicated equally and made placement depend on iteration order, which reads as a ranking |

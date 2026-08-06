@@ -41,9 +41,21 @@ class Row:
         self.qty_per_finished_good = Fraction(qty)
 
 
+# The extract manifest a real run reads from sources.csv. Every citation needs
+# one: `evidence_for` refuses to build a record whose file has no manifest row,
+# rather than printing a blank where a reviewer expects a date.
+EXTRACTS = {
+    "suppliers.csv": ("approved vendor list", "2026-07-28T18:00:00+00:00"),
+    "lead_times.csv": ("supplier quote history", "2026-07-17T18:00:00+00:00"),
+    "demand_plan.csv": ("production plan", "2026-07-31T12:00:00+00:00"),
+}
+
+
 def evidence(part="AA-P-01"):
     return view.evidence_for(
         part,
+        extracts=EXTRACTS,
+        demand_row_numbers={"FG-01": 1},
         # The trailing integer on each record is the 1-based data row it was
         # read from, which is what lets an evidence record cite a locator
         # instead of asking a reviewer to find the row themselves.

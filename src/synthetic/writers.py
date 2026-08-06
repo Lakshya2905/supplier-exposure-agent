@@ -12,22 +12,17 @@ testable.
 """
 import csv
 
-from .model import (ANNUAL_SPEND_USD, ANNUAL_UNITS, BOM_COLUMNS, CHILD_PART,
-                    DEMAND_COLUMNS, DESCRIPTION, FINISHED_GOOD_PART,
-                    LEAD_TIME_COLUMNS, LEAD_TIME_P95_DAYS, ON_HAND_UNITS,
-                    PARENT_PART, PART_MASTER_COLUMNS, PART_NUMBER,
+from .model import (ANNUAL_SPEND_USD, ANNUAL_UNITS, BOM_COLUMNS, BOM_FILE,
+                    CHILD_PART, DEMAND_COLUMNS, DEMAND_FILE, DESCRIPTION,
+                    FINISHED_GOOD_PART, LEAD_TIME_COLUMNS, LEAD_TIME_P95_DAYS,
+                    LEAD_TIMES_FILE, ON_HAND_UNITS, PARENT_PART,
+                    PART_MASTER_COLUMNS, PART_MASTER_FILE, PART_NUMBER,
                     QTY_PER_PARENT, QUALIFICATION_DATE,
                     QUOTED_LEAD_TIME_DAYS, RETRIEVED_AT, SOURCE_FILE,
-                    SOURCE_TYPE, SOURCES_COLUMNS, SOURCING_LIST_STATUS,
-                    SUPPLIER_COLUMNS, SUPPLIER_NAME, SUPPLIER_REGION,
-                    SYSTEM_OF_RECORD, TOOLING_OWNER)
-
-BOM_FILE = "bom.csv"
-PART_MASTER_FILE = "part_master.csv"
-SUPPLIERS_FILE = "suppliers.csv"
-LEAD_TIMES_FILE = "lead_times.csv"
-DEMAND_FILE = "demand_plan.csv"
-SOURCES_FILE = "sources.csv"
+                    SOURCE_TYPE, SOURCES_COLUMNS, SOURCES_FILE,
+                    SOURCING_LIST_STATUS, SUPPLIER_COLUMNS, SUPPLIER_NAME,
+                    SUPPLIER_REGION, SUPPLIERS_FILE, SYSTEM_OF_RECORD,
+                    TOOLING_OWNER)
 
 
 def _blank_if_none(value):
