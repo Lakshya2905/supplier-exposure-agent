@@ -501,9 +501,12 @@ initial, and file.
 - Evidence flattens into numbered references rather than collapsing.
 - Absence states must remain visible in greyscale, which the dashed border already guarantees.
 
-## Test Contract [TARGET]
+## Test Contract [SHIPPED]
 
-> [TARGET] **Not implemented.** The banned-widget source scan ships. None of the property assertions below exist; the tests that do exist check notation, which is how the Color defect survived.
+> [SHIPPED] `tests/test_design_properties.py`. Nothing there compares a hex
+> pair: every assertion computes a ratio or a CIELAB distance from the colours
+> the stylesheet declares and fails on the number. Verified by regression:
+> dropping the chip label to the border token fails the legibility assertion.
 
 **Where a contract can be a construction-time raise instead of a test, make it
 one.** A guard that runs when the value is built beats a guard that runs when CI
