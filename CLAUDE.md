@@ -33,8 +33,13 @@ Agent 3 of a multi-agent supply chain system. Answers: which single points of fa
   the readings agree AND what they agree on is an answer. A `readings_disagree`
   verdict therefore never executes, however the readings compared.
 - Every measure keeps its unit. A dimension expressed as a unitless number in a
-  fixed range is a composite already assembled, whichever way it is displayed.
-  Refusing to sum is not sufficient; refusing to normalise is.
+  fixed range is a composite already assembled. Refusing to sum is not
+  sufficient; refusing to normalise is. **This still holds for every stored
+  measure.** The clause "whichever way it is displayed" was dropped on
+  2026-08-06 with the visual encoding rule above: an axis is a rescaling, so a
+  chart of one dimension in its own units is now allowed. Nothing may put two
+  dimensions on one axis, because that is the composite rather than a picture
+  of one.
 - Absence is not zero, and a bound is not an abstention. Where incompleteness is
   reported to more than one consumer, report the fact of it and let each
   consumer name the bound direction, because the safe direction is not constant.
@@ -54,10 +59,27 @@ Agent 3 of a multi-agent supply chain system. Answers: which single points of fa
   nothing to click; a recommends finding has a control. A styling distinction is
   one commit from evaporating, so the model refuses to construct an executed row
   carrying a control.
-- Visual encodings are nominal only. Hue may distinguish categories; intensity,
-  size, length and fill fraction may not, because an ordinal encoding of a
-  heterogeneous set is a composite drawn rather than computed. Strip every
-  colour and no information may be lost.
+- **RETIRED 2026-08-06 by the owner, deliberately and on the record.** The rule
+  was: "Visual encodings are nominal only. Hue may distinguish categories;
+  intensity, size, length and fill fraction may not, because an ordinal encoding
+  of a heterogeneous set is a composite drawn rather than computed. Strip every
+  colour and no information may be lost."
+
+  Charts, a choropleth and red/amber/green colouring are now permitted, on the
+  Dashboard surface and anywhere else. The owner was told what it costs before
+  deciding: an ordinal encoding across incommensurable dimensions is a composite
+  a reader assembles by eye, which is the thing the arithmetic still refuses to
+  compute. That objection has not become wrong; it has been overruled.
+
+  **The arithmetic rule is untouched and still holds.** No composite score, no
+  weights, no `__add__` on a profile, and every stored measure keeps its unit.
+  `tests/test_scoring.py` enforces all of it and none of those tests changed. A
+  chart may draw one dimension in its own units; nothing sums two.
+
+  What was given up, stated plainly so nobody has to reconstruct it: a
+  greyscale screenshot or a colour-blind reader no longer recovers everything
+  the screen carries, and the five dimensions can now be compared by eye across
+  units that do not commensurate.
 - Every executed finding carries reachable, read-only evidence. A conclusion a
   reviewer cannot check is one they must trust, and trust is what this system
   replaces with verification.

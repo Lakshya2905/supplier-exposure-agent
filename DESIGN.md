@@ -483,28 +483,74 @@ constraint, and layout can violate it as easily as arithmetic can.
 - **Reading order is not priority.** If a set must be laid out linearly, say so.
 - **The order label stays; the promise of a control goes.** `CLAUDE.md` requires that any default ordering be arbitrary, stable, and labelled in the output, "because a plausible default is read as a ranking." `DEFAULT_ORDER_LABEL` in `src/ranking.py:40` reads "ordered by part number; choose a dimension to rank by". The first clause satisfies that rule and must stay. The second promises a control that does not exist anywhere in the app (0 sort controls, 0 sliders, 0 radios outside navigation) and that this contract says should never exist. Drop the second clause only.
 
-### Banned widgets, and what to use instead [PARTIAL]
+### Banned widgets [RETIRED 2026-08-06]
 
-> [PARTIAL] The first five rows are enforced by a source scan in `tests/test_review_app.py`. The `st.metric(delta=)`, dataframe-sort and red/amber/green rows are additions here and are not yet enforced.
+> [RETIRED] The owner retired the nominal-only encoding rule on 2026-08-06, after being told what it costs. Charts, a choropleth and red/amber/green are permitted. The source scan that enforced this list is gone; `tests/test_scoring.py` still forbids the arithmetic composite and did not change.
 
-Every one of these is a normalised scale by construction, which is the composite
-arriving through a widget rather than through arithmetic. `tests/test_review_app.py`
-scans the source to enforce the list.
+The list is kept because the reasoning is still true, and because a reader who
+finds a bar chart here should be able to see that it was a decision rather than
+an oversight. **These are arguments that were overruled, not arguments that were
+refuted.**
 
-| Banned | Why | Instead |
+| Was banned | The objection, which still stands | Status |
 |--------|-----|---------|
-| `st.progress`, `ProgressColumn` | a literal 0 to 1 bar | the figure, in mono, with its unit |
-| `BarChartColumn`, `LineChartColumn`, `AreaChartColumn` | magnitude as length inside a table | a column of tabular figures |
-| `st.bar_chart`, `st.line_chart`, `st.area_chart`, `st.scatter_chart` | shared axis across incommensurable dimensions | small multiples with identical geometry, or a table |
-| `background_gradient`, `color_gradient` | ordinal encoding of a heterogeneous set | one neutral chip |
-| `st.slider` | a threshold with no owner and no version | a value in `config/archetypes.yaml`, owned and versioned |
-| `st.metric(delta=...)` | ships red and green delta arrows, which is RAG plus magnitude | state the two figures and their dates |
-| `st.dataframe` column sort | free per column sort supplies a ranking silently | pass explicitly ordered data; disable or ignore column sort |
-| red / amber / green anywhere | three stops on one ordered axis wearing a costume | the label, in words |
+| `st.progress`, `ProgressColumn` | a literal 0 to 1 bar | permitted |
+| `BarChartColumn`, `LineChartColumn`, `AreaChartColumn` | magnitude as length inside a table | permitted |
+| `st.bar_chart`, `st.line_chart`, `st.area_chart`, `st.scatter_chart` | shared axis across incommensurable dimensions | permitted for ONE dimension in its own units |
+| `background_gradient`, `color_gradient` | ordinal encoding of a heterogeneous set | permitted |
+| `st.slider` | a threshold with no owner and no version | **still banned**: this is about threshold ownership, not encoding, and `config/archetypes.yaml` remains where a threshold lives |
+| `st.metric(delta=...)` | ships red and green delta arrows | permitted |
+| `st.dataframe` column sort | free per column sort supplies a ranking silently | permitted |
+| red / amber / green anywhere | three stops on one ordered axis wearing a costume | permitted |
 
-Green is unavailable even where it looks harmless. No dimension here has a "good":
-a part with one qualified supplier is not good, it is concentrated, which may be
-fine or fatal depending on the other four dimensions.
+**The one line that did not move.** Nothing may put two dimensions on a single
+axis. That is not the encoding rule, it is the composite rule, and it is
+enforced in `src/scoring.py` at construction: a profile has no `total`, no
+`weight` and no `__add__`, and every measure keeps a physical unit. A chart may
+draw lead time in days; no chart may draw lead time against blast radius as
+though the two commensurate.
+
+Green is still worth thinking about before using it. No dimension here has a
+"good": a part with one qualified supplier is not good, it is concentrated,
+which may be fine or fatal depending on the other four.
+
+## The Dashboard Surface [SHIPPED]
+
+> [SHIPPED] Added 2026-08-06, when the owner retired the nominal-only encoding rule. Four figure tiles, a region choropleth, five small multiples and a supplier-to-part incidence grid.
+
+**A fourth surface, not a merger of the other three.** Each of those has one row
+entity and answers one question. This one has no row entity and answers none of
+them: it is an overview, and every decision is still made elsewhere. That is why
+adding it does not breach "three surfaces, never one table" — it is not a table
+of parts, fields and clusters flattened together.
+
+**It is the landing surface.** A visitor meets the shape of the set before the
+findings.
+
+What it draws, and the one line each respects:
+
+| Element | Encoding | The care taken |
+|---|---|---|
+| Figure tiles | number | Every tile carries its denominator. A count with no denominator invites reading 21 as large or small when neither is knowable. No `delta`: there is no previous run, and an arrow pointing at a number that does not exist is worse than no arrow |
+| Region choropleth | sequential fill | The data has four regions and no coordinates. Countries are a **drawing convention**, and the surface says so above the map, because a map is the most believable thing on a page |
+| Five small multiples | length | **Identical geometry, five separate axes.** Retiring the encoding rule allowed the charts; it did not make days and finished-good units the same quantity. Rows are padded to three columns so a row of two does not draw wider boxes |
+| Incidence grid | presence | Binary. The shade carries nothing |
+
+**Absence keeps its own count in every series.** A histogram built by filtering
+out the unknowns is a picture of the answerable parts presented as a picture of
+the parts, so each chart states how many were not established beneath it.
+
+**The two reasons a part is missing from the incidence grid are not one fact.**
+A part can be absent because the grid is capped, or because it has no supplier
+row at all — and the second is the finding, the parts with nobody to call.
+Reporting one count for both would bury it.
+
+Three defects that only using the page found: the paired lead-time chart drew
+two overlapping histograms with its legend switched back off by the shared
+layout helper, so nothing said which was quoted and which was p95; the
+choropleth captured the mouse wheel, so scrolling the page over the map zoomed
+the map and the page stayed put; and the tile denominators were captions, which
+the caption contract correctly rejected as data.
 
 ## Spacing [TARGET]
 
@@ -634,3 +680,6 @@ with numbers:
 | 2026-08-06 | Text ramp declared once in `:root`, twelve colours folded to six | Every extra folded onto a step that already existed, which is the evidence none was carrying a distinction. The caption rule is enforced in the direction that is mechanisable |
 | 2026-08-06 | Heading and link colours given `!important` | Both were losing to Streamlit's own rules while the stylesheet and its tests agreed they were right. Two of the six ramp steps were never painted. Only measuring the rendered page could have found it |
 | 2026-08-06 | One column count for the whole dominance lattice | A group's width varied with how many siblings its layer held, so a solo group filled the page and read as the important one. Width carried nothing and looked like it carried something |
+| 2026-08-06 | **Nominal-only encoding rule retired, by the owner, on the record** | Asked for a dashboard with charts and a world map; told what it costs before deciding. The objection was overruled, not refuted: an ordinal encoding across incommensurable dimensions is a composite a reader assembles by eye. A greyscale screenshot no longer recovers everything the screen carries |
+| 2026-08-06 | The arithmetic composite rule kept, explicitly | Separate from the encoding rule and about what the agent computes rather than how it looks. No total, no weight, no `__add__`, every stored measure keeps its unit, and `tests/test_scoring.py` is unchanged |
+| 2026-08-06 | Dashboard added as a fourth surface, and as the landing page | It has no row entity and decides nothing, so it does not flatten the three decision surfaces into one table |

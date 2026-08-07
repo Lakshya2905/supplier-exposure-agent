@@ -7,23 +7,32 @@ denormalised. That is not a preference; flattening clusters to parts would make
 a reviewer confirm one judgment once per member and would empty `member_count`
 of meaning.
 
-WIDGETS THAT ENCODE MAGNITUDE AS LENGTH OR FRACTION ARE BANNED. `st.progress`,
-progress and bar-chart column configs, multi-series charts and colour ramps are
-all normalised scales by construction, which is the composite arriving through a
-widget rather than through arithmetic. `tests/test_review_app.py` enforces the
-list by scanning this file.
+WIDGETS THAT ENCODE MAGNITUDE WERE BANNED UNTIL 2026-08-06, when the owner
+retired the encoding rule deliberately and with the cost stated. Charts, a
+choropleth and red/amber/green are permitted, and the Dashboard surface uses
+them. CLAUDE.md and DESIGN.md carry the decision; this file does not re-argue it.
+
+THE ARITHMETIC RULE DID NOT MOVE, and it is the one that made the encoding rule
+worth having. No chart here puts two dimensions on one axis, because days and
+finished-good units are not the same quantity and no picture makes them one.
+`src/scoring.py` still refuses a total, a weight and an `__add__`, and
+`tests/test_scoring.py` still checks it.
 
 AUTONOMY IS AN AFFORDANCE. Rows that execute get no button. That is checked in
 the model, which refuses to construct such a row, and again here.
 """
 from datetime import datetime, timezone
 
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
 from src import governance as gov
 from src.governance import render as govrender
 from src import ranking
 from src.interface import actions
+from src.interface import dashboard as dash
 from src.interface import model as view
 from src.pipeline import default_data_dir, run, surfaces
 from src.synthetic.model import (ANNUAL_UNITS, QUOTED_LEAD_TIME_DAYS,
@@ -35,12 +44,13 @@ st.set_page_config(page_title="Supplier exposure review", layout="wide")
 # rows, aligned columns, monospace identifiers, high information per screen.
 # Bordered panels and surface fills carry structure; badges carry category.
 #
-# NOTHING HERE ENCODES A MAGNITUDE, and that is a correctness constraint rather
-# than a stylistic one. Every badge is one colour and one weight, because a set
-# where one chip is red and another green has an order, and an ordered encoding
-# across incommensurable states is the composite this system refuses to compute
-# arriving through the palette instead of the arithmetic. The accent appears
-# only on things a reviewer can act on.
+# THE CHIP VOCABULARY IS STILL NOMINAL, and that is now a choice rather than a
+# rule. Every badge is one colour and one weight: a set where one chip is red and
+# another green has an order, and the three decision surfaces are where a reader
+# is deciding, so nothing there should suggest an order the arithmetic will not
+# defend. The Dashboard surface, added when the encoding rule was retired, uses
+# colour and length freely. The accent still appears only on what can be acted
+# on, and every accent element still carries a second, non-colour cue.
 CONSOLE_CSS = """
 <style>
   /* THE TYPE SCALE, DECLARED ONCE. Ten sizes shipped before this, with step
@@ -852,6 +862,198 @@ def render_blocking_matrix(surface):
         column_config={"part": st.column_config.TextColumn("part", width=110)})
 
 
+CHART_BG = "rgba(0,0,0,0)"
+CHART_GRID = "#262B30"
+CHART_INK = "#9BA3AA"
+CHART_SEQUENTIAL = ("#1E2933", "#2F4A5E", "#417089", "#5C93B4", "#7FB2D9")
+# One hue per dimension. NOMINAL: the dimensions have no order, so neither does
+# this list, and no hue here is darker or stronger than another by intent.
+DIMENSION_HUE = {
+    "lead_time_to_recover": "#7FB2D9",
+    "blast_radius": "#C79BD9",
+    "buffer_cover": "#7FD9C0",
+    "portability": "#D9C27F",
+    "concentration": "#D99B9B",
+}
+
+
+def chart_layout(figure, height=240):
+    """One layout for every chart, so geometry never carries a difference."""
+    figure.update_layout(
+        height=height, margin=dict(l=8, r=8, t=8, b=8),
+        paper_bgcolor=CHART_BG, plot_bgcolor=CHART_BG,
+        font=dict(color=CHART_INK, size=12),
+        showlegend=False, bargap=0.08)
+    figure.update_xaxes(gridcolor=CHART_GRID, zeroline=False)
+    figure.update_yaxes(gridcolor=CHART_GRID, zeroline=False)
+    return figure
+
+
+def render_dashboard(result):
+    """The overview surface.
+
+    A FOURTH SURFACE, NOT A MERGER OF THE OTHER THREE. Each of those has one row
+    entity and answers one question; this one has no row entity and answers none
+    of them. It is an overview, and it links to the surfaces that decide.
+
+    The encoding rule that would have forbidden every chart below was retired by
+    the owner on 2026-08-06. CLAUDE.md and DESIGN.md record the decision and what
+    it cost; this function does not re-argue it. What it does keep is the one
+    rule that did not move: every chart draws ONE dimension in ONE unit, and
+    nothing here puts two dimensions on one axis.
+    """
+    st.title("Dashboard")
+    st.caption("An overview. Every decision is made on the other three "
+               "surfaces, which this page links to and does not replace.")
+
+    for column, tile in zip(st.columns(len(dash.tiles(result))),
+                            dash.tiles(result)):
+        # No delta. There is no previous run to compare against, and a delta
+        # against nothing is an arrow pointing at a number that does not exist.
+        column.metric(tile.label, f"{tile.value:,}", help=tile.of or None)
+        if tile.of:
+            # A NOTE, NOT A CAPTION. The denominator is a fact about the data,
+            # and it changes with the dataset, so it is in the wrong register as
+            # a caption. The contract test caught this on its first run against
+            # this surface, which is the first thing it has caught that was not
+            # already there.
+            column.markdown(f"<p class='note'>{tile.of}</p>",
+                            unsafe_allow_html=True)
+
+    st.divider()
+    render_region_map(result)
+    st.divider()
+    render_dimension_multiples(result)
+    st.divider()
+    render_incidence(result)
+
+
+def render_region_map(result):
+    st.subheader("Where the suppliers are")
+    # THE MAP IS THE MOST BELIEVABLE THING ON THE PAGE, so it says what it is
+    # before it says anything else. Four synthetic regions, no coordinates in
+    # the data, and countries chosen as a drawing convention.
+    note("The dataset has four regions and no coordinates. Countries are a "
+         "drawing convention for those regions, not a claim that any supplier "
+         "is in a particular country.")
+    rows = dash.regions(result)
+    frame = pd.DataFrame([
+        {"country": country, "region": row.label,
+         "suppliers": row.suppliers, "parts": row.parts,
+         "exposed parts": row.exposed_parts}
+        for row in rows for country in row.countries])
+    figure = px.choropleth(
+        frame, locations="country", locationmode="country names",
+        color="exposed parts", hover_name="region",
+        hover_data=["suppliers", "parts"],
+        color_continuous_scale=list(CHART_SEQUENTIAL))
+    figure.update_geos(bgcolor=CHART_BG, showframe=False, showcoastlines=False,
+                       landcolor="#1B1F23", lakecolor=CHART_BG,
+                       countrycolor=CHART_GRID, projection_type="natural earth")
+    chart_layout(figure, height=380)
+    figure.update_layout(coloraxis_colorbar=dict(title="exposed<br>parts"))
+    # scrollZoom off: a geo plot captures the wheel, so scrolling the page over
+    # the map zoomed the map instead and the page stayed put. Found by trying to
+    # scroll past it.
+    st.plotly_chart(figure, use_container_width=True,
+                    config={"scrollZoom": False, "displayModeBar": False})
+
+    st.dataframe(
+        [{"region": row.label, "suppliers": row.suppliers,
+          "parts with a supplier here": row.parts,
+          "exposed parts": row.exposed_parts} for row in rows],
+        hide_index=True, width="stretch")
+
+
+def render_dimension_multiples(result):
+    """Five charts, identical geometry, each in its own unit.
+
+    IDENTICAL GEOMETRY IS STILL THE RULE HERE, and it is not a leftover. The
+    dimensions do not commensurate, so a taller box or a wider axis would be a
+    comparison the units do not support. Retiring the encoding rule allowed the
+    charts; it did not make days and finished-good units the same thing.
+    """
+    st.subheader("The five dimensions, each in its own unit")
+    st.caption("Five separate axes on purpose. No chart here puts two "
+               "dimensions together, because there is no unit in which days "
+               "and finished-good units are the same quantity.")
+
+    series = dash.dimension_series(result)
+    for chunk_start in range(0, len(series), 3):
+        chunk = series[chunk_start:chunk_start + 3]
+        # Padded to three so a row of two does not draw wider boxes than a row
+        # of three, which would make width mean something again.
+        for column, item in zip(st.columns(3), chunk):
+            with column:
+                st.markdown(f"###### {item.dimension.replace('_', ' ')}")
+                st.plotly_chart(dimension_figure(item),
+                                use_container_width=True,
+                                key=f"dim-{item.dimension}")
+                note(f"unit: {item.unit}. {item.assessed} assessed, "
+                     f"{item.unknown} not established.")
+
+
+def dimension_figure(item):
+    hue = DIMENSION_HUE.get(item.dimension, "#7FB2D9")
+    if item.is_categorical:
+        figure = go.Figure(go.Bar(
+            x=list(item.categories), y=list(item.categories.values()),
+            marker_color=hue))
+    elif item.values and isinstance(item.values[0], tuple):
+        # A PAIRED MEASURE. Lead time carries (quoted, p95): both are days, so
+        # both belong on this axis. Drawing only one would be the tool choosing
+        # which half of the measure counts.
+        figure = go.Figure()
+        for index, (label, shade) in enumerate((("quoted", hue),
+                                                ("p95", CHART_SEQUENTIAL[1]))):
+            figure.add_trace(go.Histogram(
+                x=[value[index] for value in item.values],
+                name=label, marker_color=shade, opacity=0.75, nbinsx=24))
+        # AFTER chart_layout, not before. chart_layout sets showlegend=False for
+        # the single-series charts, so setting it here first meant the paired
+        # chart drew two overlapping histograms with nothing saying which was
+        # quoted and which was p95.
+        chart_layout(figure)
+        figure.update_layout(barmode="overlay", showlegend=True,
+                             legend=dict(orientation="h", y=1.15,
+                                         font=dict(size=11)))
+        return figure
+    else:
+        figure = go.Figure(go.Histogram(x=list(item.values),
+                                        marker_color=hue, nbinsx=24))
+    return chart_layout(figure)
+
+
+def render_incidence(result):
+    parts, suppliers, grid = dash.incidence(result)
+    st.subheader("Which supplier touches which exposed part")
+    total_exposed = len(dash.exposed_parts(result))
+    st.caption("A filled cell means that supplier appears on that part. The "
+               "cell is present or absent; the shade carries nothing.")
+    # NO SILENT CAP, AND THE TWO REASONS FOR A MISSING PART ARE NOT THE SAME
+    # FACT. A part can be absent because the matrix is capped, or because it has
+    # no supplier row at all, and the second is a finding rather than a display
+    # limit: those are the parts with nobody to call. Reporting one count for
+    # both would bury it.
+    without_supplier = total_exposed - len(no_supplier_excluded := [
+        part for part in dash.exposed_parts(result)
+        if any(row[0] == part for row in dash.supplier_rows(result))])
+    capped = len(no_supplier_excluded) - len(parts)
+    note(f"{len(parts)} exposed parts drawn against {len(suppliers)} suppliers.")
+    if without_supplier:
+        note(f"{without_supplier} exposed parts have no supplier row at all, so "
+             f"they are absent from this grid rather than drawn empty. That is "
+             f"the finding, not a gap in the picture.")
+    if capped > 0:
+        note(f"{capped} further parts are not drawn: this grid is capped.")
+    figure = go.Figure(go.Heatmap(
+        z=grid, x=list(parts), y=list(suppliers),
+        colorscale=[[0, "#1B1F23"], [1, "#7FB2D9"]], showscale=False,
+        xgap=1, ygap=1))
+    chart_layout(figure, height=max(320, 18 * len(suppliers)))
+    st.plotly_chart(figure, use_container_width=True)
+
+
 def render_find_out(surface):
     st.title(surface.question)
     st.caption("One row per field to fetch, not per part. Each row is one trip "
@@ -966,9 +1168,11 @@ def render_decision_panel(log, total_rows):
 # Short names for navigation, with the question beneath. The questions stay as
 # page headings where they carry the surface's purpose; in a sidebar a full
 # sentence per item reads as prose rather than as navigation.
-NAV_NAME = {view.EXPOSURE: "Exposure", view.FIND_OUT: "Find out",
-            view.CONFIRM: "Confirm"}
-NAV_SUBTITLE = {view.EXPOSURE: "what is worst",
+DASHBOARD = "dashboard"
+NAV_NAME = {DASHBOARD: "Dashboard", view.EXPOSURE: "Exposure",
+            view.FIND_OUT: "Find out", view.CONFIRM: "Confirm"}
+NAV_SUBTITLE = {DASHBOARD: "the shape of the whole set",
+                view.EXPOSURE: "what is worst",
                 view.FIND_OUT: "what should I go and get",
                 view.CONFIRM: "do I agree with your model"}
 
@@ -1008,11 +1212,16 @@ def main():
     st.sidebar.title("Supplier exposure")
     choice = st.sidebar.radio(
         "Surface",
-        (view.EXPOSURE, view.FIND_OUT, view.CONFIRM),
+        (DASHBOARD, view.EXPOSURE, view.FIND_OUT, view.CONFIRM),
         format_func=lambda name: f"**{NAV_NAME[name]}**  \n"
                                  f"{NAV_SUBTITLE[name]}")
-    st.sidebar.caption("Three surfaces, deliberately separate. Their rows are "
-                       "different things: a part, a field, a cluster.")
+    st.sidebar.caption("Three decision surfaces, deliberately separate. Their "
+                       "rows are different things: a part, a field, a cluster. "
+                       "The dashboard is an overview and decides nothing.")
+
+    if choice == DASHBOARD:
+        render_dashboard(result)
+        return
 
     surface = built[choice]
     if choice == view.EXPOSURE:
