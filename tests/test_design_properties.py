@@ -249,3 +249,65 @@ class TestTheseFiguresAreForOneSubstrate(unittest.TestCase):
 
 if __name__ == "__main__":  # keep last: classes below an entrypoint never run
     unittest.main()
+
+
+def python_colour(name):
+    """A colour constant from the app's Python, not from its CSS.
+
+    The map palette cannot live in the stylesheet: plotly paints an SVG from
+    values passed in Python, so CSS never reaches it. Read from source rather
+    than imported, because importing `review_app` runs the Streamlit app.
+    """
+    match = re.search(rf'^{name} = "(#[0-9A-Fa-f]{{6}})"', SOURCE, re.M)
+    return match.group(1) if match else None
+
+
+def python_scale(name):
+    block = re.search(rf"^{name} = \(([^)]*)\)", SOURCE, re.M).group(1)
+    return re.findall(r"#[0-9A-Fa-f]{6}", block)
+
+
+class TestTheMapSeparatesAbsenceFromALowCount(unittest.TestCase):
+    """Unfilled land is NOT a region in this dataset. That is a question the
+    data does not answer, and it is a different claim from a region with the
+    fewest exposed parts.
+
+    The map is the one place those two are told apart by fill alone: there is
+    no label on a country, so if the palette's floor sat near the land colour
+    a reader would have no way to distinguish "least exposed" from "not a
+    supplier region at all". CHART_SEQUENTIAL's first stop is #1E2933, within
+    a step of the land, which is why the map has a palette of its own.
+    """
+
+    #: The CIE just-noticeable difference, ~2.3 ΔE, is the floor for "these are
+    #: perceptibly different at all". It is cited rather than chosen: it is what
+    #: the task requires, since two fills a reader cannot tell apart carry one
+    #: state between them. The measured value is far above it and is reported so
+    #: a future change that erodes the margin is visible before it fails.
+    JND = 2.3
+
+    def test_the_palette_floor_is_distinct_from_unmapped_land(self):
+        land = python_colour("MAP_LAND")
+        floor = python_scale("MAP_SCALE")[0]
+        measured = delta_e(land, floor)
+        self.assertGreater(measured, self.JND,
+                           f"the least-exposed region and land that is not a "
+                           f"region differ by {measured:.2f} ΔE, at or below "
+                           f"the {self.JND} just-noticeable difference, so the "
+                           f"map cannot say which of the two a country is")
+
+    def test_land_is_distinct_from_ocean(self):
+        # Otherwise the coastline is the only thing separating a continent from
+        # the sea, and it is drawn at 0.4px.
+        measured = delta_e(python_colour("MAP_LAND"), python_colour("MAP_OCEAN"))
+        self.assertGreater(measured, self.JND)
+
+    def test_the_palette_spans_a_usable_range(self):
+        scale = python_scale("MAP_SCALE")
+        self.assertGreater(delta_e(scale[0], scale[-1]), self.JND)
+
+    def test_the_map_palette_is_not_the_chart_palette(self):
+        # Stated as a property rather than left as a coincidence: if somebody
+        # collapses the two lists back into one, this fails and says why.
+        self.assertNotEqual(python_scale("MAP_SCALE"),
+                            python_scale("CHART_SEQUENTIAL"))

@@ -898,6 +898,16 @@ CHART_BG = "rgba(0,0,0,0)"
 CHART_GRID = "#262B30"
 CHART_INK = "#9BA3AA"
 CHART_SEQUENTIAL = ("#1E2933", "#2F4A5E", "#417089", "#5C93B4", "#7FB2D9")
+# THE MAP SCALE STARTS ABOVE THE LAND COLOUR, and that is a correctness point
+# rather than a taste one. CHART_SEQUENTIAL's first stop is #1E2933, which sits
+# within one step of unmapped land, so the least-exposed region and "not a
+# region at all" would have rendered as the same grey. Those are different
+# claims: one is a count, the other is a question the data does not answer.
+MAP_SCALE = ("#3A6076", "#477A96", "#5C93B4", "#6EA3C7", "#7FB2D9")
+MAP_LAND = "#232931"
+MAP_OCEAN = "#15181B"
+MAP_COAST = "#39424B"
+MAP_BORDER = "#2D343B"
 # One hue per dimension. NOMINAL: the dimensions have no order, so neither does
 # this list, and no hue here is darker or stronger than another by intent.
 DIMENSION_HUE = {
@@ -1019,22 +1029,48 @@ def render_region_map(result):
     note("The dataset has four regions and no coordinates. Countries are a "
          "drawing convention for those regions, not a claim that any supplier "
          "is in a particular country.")
+    note("Land with no fill is not a region in this dataset. That is a "
+         "question the data does not answer rather than a count of zero.")
     rows = dash.regions(result)
     frame = pd.DataFrame([
-        {"country": country, "region": row.label,
-         "suppliers": row.suppliers, "parts": row.parts,
+        {"country": code, "name": dash.COUNTRY_NAME.get(code, code),
+         "region": row.label, "suppliers": row.suppliers, "parts": row.parts,
          "exposed parts": row.exposed_parts}
-        for row in rows for country in row.countries])
+        for row in rows for code in row.countries])
     figure = px.choropleth(
-        frame, locations="country", locationmode="country names",
-        color="exposed parts", hover_name="region",
-        hover_data=["suppliers", "parts"],
-        color_continuous_scale=list(CHART_SEQUENTIAL))
-    figure.update_geos(bgcolor=CHART_BG, showframe=False, showcoastlines=False,
-                       landcolor="#1B1F23", lakecolor=CHART_BG,
-                       countrycolor=CHART_GRID, projection_type="natural earth")
-    chart_layout(figure, height=380)
-    figure.update_layout(coloraxis_colorbar=dict(title="exposed<br>parts"))
+        frame, locations="country", locationmode="ISO-3",
+        color="exposed parts", hover_name="name",
+        # `country` off: it is the ISO code, and repeating it under the country
+        # name it stands for is two spellings of one fact.
+        hover_data={"country": False, "region": True, "suppliers": True,
+                    "parts": True},
+        color_continuous_scale=list(MAP_SCALE))
+    # THE REST OF THE WORLD HAS TO BE DRAWN. `landcolor` and `countrycolor`
+    # were set before this without `showland` or `showcountries`, and both
+    # default to off under a choropleth, so nineteen filled countries floated
+    # in an empty rectangle: no Africa, no South America, no Australia, no
+    # Russia. Measured in the DOM as 0 land paths, 0 coastlines, 0 borders. A
+    # map missing four continents is not a stylistic choice, it is a map that
+    # says the world ends at the edge of the dataset.
+    figure.update_geos(
+        # THE GEO SUBPLOT PAINTS A WHITE RECTANGLE BY DEFAULT. `bgcolor`
+        # defaults to #fff and is not covered by paper_bgcolor or plot_bgcolor,
+        # so a dark page rendered the map as a white slab with the world inside
+        # it. Transparent rather than the ocean colour: the ocean layer fills
+        # the globe, and everything outside the globe belongs to the page.
+        bgcolor="rgba(0,0,0,0)",
+        showframe=False,
+        showland=True, landcolor=MAP_LAND,
+        showocean=True, oceancolor=MAP_OCEAN,
+        showcoastlines=True, coastlinecolor=MAP_COAST, coastlinewidth=0.4,
+        showcountries=True, countrycolor=MAP_BORDER, countrywidth=0.4,
+        showlakes=False, projection_type="natural earth",
+        lataxis_range=[-58, 84])
+    chart_layout(figure, height=420)
+    figure.update_traces(marker_line_color=MAP_COAST, marker_line_width=0.4)
+    figure.update_layout(coloraxis_colorbar=dict(
+        title="exposed<br>parts", thickness=10, len=0.7,
+        tickfont=dict(size=11)))
     # scrollZoom off: a geo plot captures the wheel, so scrolling the page over
     # the map zoomed the map instead and the page stayed put. Found by trying to
     # scroll past it.
@@ -1044,8 +1080,12 @@ def render_region_map(result):
     st.dataframe(
         [{"region": row.label, "suppliers": row.suppliers,
           "parts with a supplier here": row.parts,
-          "exposed parts": row.exposed_parts} for row in rows],
+          "exposed parts": row.exposed_parts,
+          "drawn as": ", ".join(dash.COUNTRY_NAME.get(code, code)
+                                for code in row.countries) or "not on the map"}
+         for row in rows],
         hide_index=True, width="stretch")
+
 
 
 def render_dimension_multiples(result):
