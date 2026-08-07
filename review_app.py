@@ -733,6 +733,19 @@ def render_coverage(panel):
             tight_table([(entry.count if entry.count else "",
                           absence_chip(entry.kind) + entry.sentence)
                          for entry in panel.notes]), unsafe_allow_html=True)
+        counts = dash.coverage_counts(panel)
+        if counts:
+            # THE SENTENCES STAY AND THE BAR SITS UNDER THEM. A chart of what is
+            # missing is a shape, not a statement: it cannot say WHICH KIND of
+            # not-assessed each row is, and that distinction is the reason the
+            # panel exists. The bar answers "which gap is biggest" and nothing
+            # else, which is why it is sorted by count and says so.
+            st.plotly_chart(count_bar(counts, hue="#9BA3AA"),
+                            use_container_width=True, key="coverage-bar",
+                            config={"displayModeBar": False})
+            st.caption("Ordered by count. Every bar is a number of parts, and "
+                       "the sentences above say which kind of unassessed each "
+                       "one is.")
 
 
 def absence_chip(kind):
@@ -794,6 +807,16 @@ def render_exposure(surface, find_out):
                     st.markdown(
                         identifier_block(row.key for row in group.rows),
                         unsafe_allow_html=True)
+
+    sizes = dash.group_sizes(surface)
+    if sizes:
+        st.plotly_chart(count_bar(sizes), use_container_width=True,
+                        key="group-sizes", config={"displayModeBar": False})
+        st.caption("Members per group, in the order the lattice draws them and "
+                   "NOT by size. Sorting this by count would contradict the "
+                   "layout directly above it, which says these groups are "
+                   "incomparable; a bar chart is a strong enough cue to "
+                   "overrule a caption.")
 
     st.divider()
     render_findings(surface)
@@ -857,9 +880,18 @@ def render_blocking_matrix(surface):
     st.caption("A mark means the part appears in that finished good. Marks "
                "are identical: this is which, never how much.")
     note(f"{len(parts)} exposed parts, {len(goods)} finished goods.")
-    st.dataframe(
-        list(matrix), hide_index=True, width="stretch",
-        column_config={"part": st.column_config.TextColumn("part", width=110)})
+    # A HEATMAP OF A BINARY GRID, which is the same claim the marks made: a cell
+    # is filled or it is not, and there is no middle value for a shade to carry.
+    # The two-stop colour scale has exactly two stops for that reason.
+    grid = [[1 if row.get(good) == view.MARK else 0 for row in matrix]
+            for good in goods]
+    figure = go.Figure(go.Heatmap(
+        z=grid, x=[row["part"] for row in matrix], y=list(goods),
+        colorscale=[[0, "#1B1F23"], [1, "#7FB2D9"]], showscale=False,
+        xgap=1, ygap=1))
+    chart_layout(figure, height=max(200, 40 * len(goods) + 120))
+    st.plotly_chart(figure, use_container_width=True, key="blocking-matrix",
+                    config={"displayModeBar": False})
 
 
 CHART_BG = "rgba(0,0,0,0)"
@@ -886,6 +918,57 @@ def chart_layout(figure, height=240):
         showlegend=False, bargap=0.08)
     figure.update_xaxes(gridcolor=CHART_GRID, zeroline=False)
     figure.update_yaxes(gridcolor=CHART_GRID, zeroline=False)
+    return figure
+
+
+def count_bar(pairs, hue="#7FB2D9", height=None):
+    """A horizontal bar of (label, count). ONE UNIT, ALWAYS.
+
+    Horizontal because the labels are archetype names and column names, and a
+    vertical bar chart turns those into rotated text nobody reads. Largest at
+    the top, which for a plotly category axis means reversing the list.
+    """
+    labels = [label for label, _ in pairs][::-1]
+    counts = [count for _, count in pairs][::-1]
+    figure = go.Figure(go.Bar(
+        x=counts, y=labels, orientation="h", marker_color=hue,
+        text=counts, textposition="outside",
+        textfont=dict(color=CHART_INK, size=11), cliponaxis=False))
+    chart_layout(figure, height=height or max(120, 34 * len(pairs) + 40))
+    figure.update_xaxes(showgrid=True)
+    figure.update_yaxes(showgrid=False)
+    return figure
+
+
+BASIS_HUE = {"supplier": "#7FB2D9", "region": "#C79BD9"}
+
+
+def cluster_size_bar(rows):
+    """Cluster sizes, coloured by grouping basis rather than by magnitude.
+
+    One trace per basis, so the legend names both and neither is drawn as the
+    other's competitor. A single undifferentiated ranking here would assert
+    that a supplier cluster of six loses to a region cluster of twenty-eight,
+    and those two are not answers to the same question.
+    """
+    figure = go.Figure()
+    for basis, hue in BASIS_HUE.items():
+        here = [(key, size) for key, size, this in rows if this == basis]
+        if not here:
+            continue
+        figure.add_trace(go.Bar(
+            x=[size for _k, size in here][::-1],
+            y=[key for key, _s in here][::-1],
+            orientation="h", name=f"by {basis}", marker_color=hue,
+            text=[size for _k, size in here][::-1], textposition="outside",
+            textfont=dict(color=CHART_INK, size=11), cliponaxis=False))
+    chart_layout(figure, height=max(160, 26 * len(rows) + 60))
+    figure.update_layout(showlegend=True, barmode="stack",
+                         legend=dict(orientation="h", y=1.04,
+                                     font=dict(size=11)))
+    figure.update_yaxes(showgrid=False,
+                        categoryorder="array",
+                        categoryarray=[key for key, _s, _b in rows][::-1])
     return figure
 
 
@@ -1060,6 +1143,13 @@ def render_find_out(surface):
                "to one system of record.")
     if not surface.rows:
         st.write("Nothing is waiting on a missing field.")
+    sizes = dash.field_sizes(surface)
+    if sizes:
+        st.plotly_chart(count_bar(sizes), use_container_width=True,
+                        key="field-sizes", config={"displayModeBar": False})
+        st.caption("Parts waiting on each field, largest first. This ordering "
+                   "is a ranking and is meant to be: the page asks what to go "
+                   "and get, and the answer is which single trip settles most.")
     for row in surface.rows:
         st.markdown(f"## `{row.key}`")
         finding(row.sentence)
@@ -1074,6 +1164,18 @@ def render_confirm(surface, result):
     st.title(surface.question)
     st.caption("Every item here is a modelling judgment the system will not "
                "make alone, however complete the data is.")
+
+    sizes = dash.cluster_sizes(result.report)
+    if sizes:
+        st.subheader("How much one decision covers")
+        st.plotly_chart(cluster_size_bar(sizes), use_container_width=True,
+                        key="cluster-sizes", config={"displayModeBar": False})
+        st.caption("Members per cluster, largest first. A cluster is confirmed "
+                   "as ONE act, so this is the size of the decision rather "
+                   "than the size of the exposure. Supplier and region "
+                   "groupings are coloured apart because they are not rivals: "
+                   "they answer different questions, both can be true at once, "
+                   "and no fact would settle one against the other.")
 
     grid = view.cluster_membership(result.report)
     if grid:

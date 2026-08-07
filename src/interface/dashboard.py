@@ -221,3 +221,67 @@ def incidence(result, limit=40):
     grid = [[1 if (part, supplier) in present else 0 for part in parts]
             for supplier in suppliers]
     return tuple(parts), tuple(suppliers), grid
+
+
+# ------------------------------------------- counts for the decision surfaces
+# Each returns (label, count) pairs in an EXPLICIT, STATED order, because
+# CLAUDE.md still requires that any default ordering be arbitrary and stable or
+# else meaningful and labelled. These are meaningful, so each caller says which
+# key it sorted on. None of them mixes units: every count below is a count of
+# parts, and there is no function here that puts two dimensions on one axis.
+
+
+def coverage_counts(coverage):
+    """What a page did not assess, largest first.
+
+    Sorted by count because that is the question the panel is answering: which
+    gap accounts for most of what is missing. A tie keeps subject order so the
+    result is stable rather than dependent on dict iteration.
+    """
+    return tuple(sorted(
+        ((note.subject, note.count) for note in coverage.notes if note.count),
+        key=lambda pair: (-pair[1], pair[0])))
+
+
+def group_sizes(surface):
+    """Members per archetype group, IN LATTICE ORDER, never by size.
+
+    Sorting this by member count would contradict the lattice drawn directly
+    above it, which says in words that groups side by side are incomparable. A
+    bar chart is a strong enough cue to overrule a caption, so it keeps the
+    layout's own order and the caller says so.
+    """
+    return tuple((group.label, len(group.rows))
+                 for layer in surface.layers for group in layer)
+
+
+def field_sizes(surface):
+    """Parts waiting on each missing field, largest first.
+
+    This one IS a ranking and is meant to be: the surface asks what to go and
+    get, and the answer is which single trip settles the most memberships.
+    """
+    return tuple(sorted(
+        ((row.key, len(row.detail["parts"])) for row in surface.rows),
+        key=lambda pair: (-pair[1], pair[0])))
+
+
+def cluster_sizes(report):
+    """(key, size, basis) per cluster awaiting confirmation, largest first.
+
+    A reviewer confirms a cluster as one act, so size is how much one decision
+    covers. That is a property of the decision rather than of the exposure, and
+    it is the one number that legitimately orders this queue.
+
+    THE BASIS IS CARRIED BECAUSE THE TWO GROUPINGS ARE NOT RIVALS. Supplier
+    concentration and region concentration answer different questions, and the
+    README calls that a complementary disagreement: both can be true at once,
+    and no fact anybody could go and find would settle one against the other.
+    Drawing them as one undifferentiated ranking would put them in exactly the
+    relation the analysis says they are not in, so the caller colours by basis
+    and names both.
+    """
+    return tuple(sorted(
+        ((cluster.key, cluster.size, cluster.basis)
+         for cluster in report.review_queue()),
+        key=lambda row: (-row[1], row[0])))

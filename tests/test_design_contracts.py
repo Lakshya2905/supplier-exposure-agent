@@ -209,3 +209,87 @@ class TestNoGroupGetsMoreAreaThanAnother(unittest.TestCase):
 
 if __name__ == "__main__":  # keep last: classes below an entrypoint never run
     unittest.main()
+
+
+class TestTheChartsOnTheDecisionSurfaces(unittest.TestCase):
+    """Charts became permissible on 2026-08-06. Their ORDERINGS did not become
+    arbitrary, and the orderings are the part that would regress silently: a
+    bar chart sorted the wrong way asserts a ranking in the one place the
+    product spent eight stages refusing to compute one.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        from src.pipeline import default_data_dir, run, surfaces
+        from src.interface import dashboard
+        cls.dash = dashboard
+        cls.result = run(data_dir=default_data_dir())
+        cls.surfaces = surfaces(cls.result)
+
+    def test_group_sizes_keep_lattice_order_and_are_not_sorted_by_size(self):
+        """The chart sits directly under a lattice that says these groups are
+        incomparable. Sorting it by count would contradict that caption, and a
+        bar chart is a stronger cue than a caption."""
+        sizes = self.dash.group_sizes(self.surfaces[view.EXPOSURE])
+        counts = [count for _label, count in sizes]
+        self.assertGreater(len(sizes), 2)
+        self.assertNotEqual(counts, sorted(counts, reverse=True),
+                            "group sizes came back in descending order, so "
+                            "either the lattice changed or this is now sorted")
+
+    def test_group_sizes_match_the_lattice_the_page_draws(self):
+        expected = [(group.label, len(group.rows))
+                    for layer in self.surfaces[view.EXPOSURE].layers
+                    for group in layer]
+        self.assertEqual(list(self.dash.group_sizes(
+            self.surfaces[view.EXPOSURE])), expected)
+
+    def test_the_work_queue_is_ranked_and_that_is_deliberate(self):
+        # This surface asks what to go and get, so "which trip settles most" is
+        # the question rather than a smuggled conclusion.
+        counts = [count for _f, count in
+                  self.dash.field_sizes(self.surfaces[view.FIND_OUT])]
+        self.assertEqual(counts, sorted(counts, reverse=True))
+
+    def test_cluster_sizes_carry_their_basis(self):
+        """Supplier and region grouping are a COMPLEMENTARY disagreement: both
+        can be true at once and no fact settles one against the other. One
+        undifferentiated ranking would put them in exactly the relation the
+        analysis says they are not in."""
+        rows = self.dash.cluster_sizes(self.result.report)
+        self.assertTrue(rows)
+        for row in rows:
+            self.assertEqual(len(row), 3)
+        self.assertEqual({basis for _k, _s, basis in rows},
+                         {"supplier", "region"})
+
+    def test_every_ordering_is_stable_under_a_tie(self):
+        # CLAUDE.md: a default ordering must be arbitrary AND stable. Ties are
+        # where insertion order silently becomes the tiebreak.
+        rows = self.dash.cluster_sizes(self.result.report)
+        ties = [(size, key) for key, size, _b in rows]
+        self.assertEqual(ties, sorted(ties, key=lambda pair: (-pair[0],
+                                                             pair[1])))
+
+    def test_coverage_counts_drop_the_zero_rows(self):
+        # A zero-length bar is a row that reads as "nothing here" when the
+        # sentence beside it says a threshold is unset, which is not nothing.
+        counts = self.dash.coverage_counts(
+            self.surfaces[view.EXPOSURE].coverage)
+        self.assertTrue(counts)
+        self.assertTrue(all(count > 0 for _s, count in counts))
+
+    def test_no_chart_helper_mixes_two_dimensions(self):
+        """The one rule that did not move when the encoding rule was retired.
+
+        Every helper returns counts of parts. A function here that returned two
+        dimensions together would be the composite arriving through the picture,
+        which is the objection the arithmetic still enforces in scoring.py.
+        """
+        source = (Path(__file__).resolve().parent.parent / "src" / "interface"
+                  / "dashboard.py").read_text()
+        body = re.sub(r'""".*?"""', "", source, flags=re.S)
+        body = re.sub(r"#[^\n]*", "", body)
+        for forbidden in ("total", "weight", "composite", "normalis"):
+            with self.subTest(token=forbidden):
+                self.assertNotIn(forbidden, body)

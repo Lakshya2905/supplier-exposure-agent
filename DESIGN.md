@@ -552,6 +552,40 @@ choropleth captured the mouse wheel, so scrolling the page over the map zoomed
 the map and the page stayed put; and the tile denominators were captions, which
 the caption contract correctly rejected as data.
 
+### Charts on the three decision surfaces [SHIPPED]
+
+Once charts were permitted, the question stopped being *whether* and became
+*where*. Each one below answers a question the page was already asking; nothing
+was added because a page looked empty.
+
+| Surface | Chart | The question it answers | Its ordering |
+|---|---|---|---|
+| Exposure | coverage bar | which gap accounts for most of what was not assessed | by count, and it says so |
+| Exposure | group sizes | how many parts sit in each archetype | **lattice order, never by size** |
+| Exposure | blocking matrix | which finished goods each part can stop | binary grid, replaces the table |
+| Find out | parts per field | which single trip settles the most | by count, and this one *is* a ranking |
+| Confirm | cluster sizes | how much one confirmation covers | by count, **coloured by basis** |
+
+**The orderings are the part that regresses silently**, so each is tested. Two
+deserve their reasoning stated:
+
+**Group sizes keep the lattice's order and are never sorted by count.** The
+chart sits directly under a layout that says in words that these groups are
+incomparable. A bar chart is a stronger cue than a caption, so sorting it by
+size would overrule the thing it sits beneath.
+
+**Cluster sizes are coloured by basis, not merged into one ranking.** Supplier
+concentration and region concentration are a *complementary* disagreement: both
+can be true at once, and no fact anybody could go and find settles one against
+the other. A single undifferentiated bar chart would assert that a supplier
+cluster of six loses to a region cluster of twenty-eight, which puts them in
+exactly the relation the analysis says they are not in.
+
+**What was not built, and why.** No per-part radar or parallel-coordinates plot
+of the five dimensions. That is the one chart the retired rule and the surviving
+one agree about: it puts five units on one axis, which is the composite drawn
+rather than computed, and `src/scoring.py` still refuses to compute it.
+
 ## Spacing [TARGET]
 
 > [TARGET] **Not implemented.** 38 distinct rem values ship, 5 of which land on any grid.
@@ -683,3 +717,7 @@ with numbers:
 | 2026-08-06 | **Nominal-only encoding rule retired, by the owner, on the record** | Asked for a dashboard with charts and a world map; told what it costs before deciding. The objection was overruled, not refuted: an ordinal encoding across incommensurable dimensions is a composite a reader assembles by eye. A greyscale screenshot no longer recovers everything the screen carries |
 | 2026-08-06 | The arithmetic composite rule kept, explicitly | Separate from the encoding rule and about what the agent computes rather than how it looks. No total, no weight, no `__add__`, every stored measure keeps its unit, and `tests/test_scoring.py` is unchanged |
 | 2026-08-06 | Dashboard added as a fourth surface, and as the landing page | It has no row entity and decides nothing, so it does not flatten the three decision surfaces into one table |
+| 2026-08-07 | Charts added to the three decision surfaces, each answering a question the page already asked | Nothing was added because a page looked empty. The orderings are tested, because a bar sorted the wrong way asserts a ranking in the one place this product refuses to compute one |
+| 2026-08-07 | Group sizes drawn in lattice order, never by count | The chart sits under a layout that says these groups are incomparable, and a bar chart is a stronger cue than a caption |
+| 2026-08-07 | Cluster sizes coloured by grouping basis rather than merged | Supplier and region concentration are a complementary disagreement. One ranking would assert that a supplier cluster of six loses to a region cluster of twenty-eight |
+| 2026-08-07 | No radar or parallel-coordinates plot of the five dimensions | The one chart the retired encoding rule and the surviving composite rule agree about: five units on one axis is the composite drawn rather than computed |
