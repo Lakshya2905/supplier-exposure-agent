@@ -332,10 +332,17 @@ class TestFocusIsVisible(unittest.TestCase):
         self.rule = css.split(":focus-visible {")[1].split("}")[0]
 
     def test_the_ring_is_the_accent(self):
-        # Not an exception to the accent contract but an instance of it: the
-        # accent marks what a reviewer can act on, and focus only ever lands on
-        # something actionable.
-        self.assertIn("#7FB2D9", self.rule)
+        """Not an exception to the accent contract but an instance of it: the
+        accent marks what a reviewer can act on, and focus only ever lands on
+        something actionable.
+
+        Asserted on the TOKEN, not on a hex. This read `#7FB2D9` and failed when
+        the substrate moved to light while the rule was still correct, which is
+        the same shape as the print assertion that read `#000000`: a test that
+        checks how a value is spelled fails for reasons that have nothing to do
+        with what it protects.
+        """
+        self.assertIn("var(--accent)", self.rule)
 
     def test_the_ring_is_thick_enough_to_see_and_offset_from_the_element(self):
         self.assertIn("outline: 2px solid", self.rule)

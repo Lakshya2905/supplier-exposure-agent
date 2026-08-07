@@ -28,11 +28,40 @@ or against the specified colour values, not estimated. Contrast ratios are WCAG
 reasons the Color section explains. The arithmetic is deterministic and any reader
 can reproduce it.
 
-**Substrate caveat, applies to every contrast and equality figure in this file.**
-All of them are measured on the dark substrate (`#14171A` page, `#191D21` panel).
-**None of them transfer to white paper or a light theme.** A light or print variant
-voids every guarantee in this document until the numbers are re-measured on that
-substrate. See Print.
+**Substrate: light, since 2026-08-07.** Page `#F7F8FA`, panel `#FFFFFF`. Every
+contrast and equality figure below is measured on it.
+
+This document used to carry the warning that a light variant "voids every
+guarantee in this document until the numbers are re-measured on that substrate".
+That warning was taken at its word. **The ramp was not inverted; it was solved.**
+Each step was searched for the contrast its dark counterpart held against
+`#14171A`, and the light value is the first that meets or exceeds that floor:
+
+| Step | Dark | on `#14171A` | Light | on `#F7F8FA` |
+|---|---|---:|---|---:|
+| `text-title` | `#F0F2F4` | 16.03:1 | `#1A1C1E` | **16.08:1** |
+| `text-primary` | `#E3E6E8` | 14.35:1 | `#222527` | **14.51:1** |
+| `text-body` | `#D5DADE` | 12.78:1 | `#2C2E31` | **12.81:1** |
+| `text-note` | `#9BA3AA` | 7.04:1 | `#50555B` | **7.08:1** |
+| `text-caption` | `#838C94` | 5.26:1 | `#61686E` | **5.32:1** |
+| `text-section` | `#8FA0AD` | 6.68:1 | `#53585E` | **6.76:1** |
+| `accent` | `#7FB2D9` | 7.94:1 | `#194F7D` | **8.05:1** |
+
+**Three tests changed, and two of them had been asserting properties of the dark
+palette rather than of the design.** One required the sidebar to sit *below* the
+just-noticeable difference from the page, which was a finding about one set of
+greys turned into a requirement; it now asserts the conditional that was always
+the real rule — if two surfaces are within the JND, a rule has to separate them.
+Another asserted `border-ui` was too weak to serve as a focus ring, which was
+true on dark at 2.6:1 on a chip and is false on light at 4.2:1; it now asserts
+what that argument was really protecting, that focus must not look like a
+resting boundary. The third read a literal hex and failed while the rule was
+correct, which is corrections entry 6 for the third time.
+
+**Print still restates its own colours** rather than inheriting these. The two
+substrates are closer now, but "closer" is not "the same", and the print block
+that enumerates its values is the one that survived a substrate change without
+being touched.
 
 **Review provenance, single model.** The perceptual finding in the Color section
 (that the HSL equality claim was false, and the CIELAB measurements behind it) was
@@ -60,7 +89,7 @@ for exactly this kind of decision. This is a reference tool, not a scoring tool.
 
 ## Aesthetic Direction [PARTIAL]
 
-> [PARTIAL] Dark, minimal and motionless ship today. The shift in register from monitoring console to instrument record is a target.
+> [PARTIAL] Light, minimal and motionless ship today. The shift in register from monitoring console to instrument record is a target. The substrate moved from dark to light on 2026-08-07; every ratio was re-derived rather than inverted.
 
 - **Direction:** industrial / utilitarian, in the register of an instrument record rather than a monitoring console.
 - **Decoration level:** minimal. Typography and alignment do all the work. No texture, no gradient, no glow, no shadow.
@@ -178,13 +207,13 @@ WCAG AA, several above 12:1.
 
 | Token | Hex | Use |
 |-------|-----|-----|
-| `bg` | `#14171A` | page |
-| `surface` | `#191D21` | bordered panel |
-| `surface-head` | `#1E242A` | panel header strip |
-| `surface-sidebar` | `#101315` | sidebar |
-| `border-hairline` | `#262B30` | dividers, table rules |
-| `border-panel` | `#272D33` | panel edge |
-| `border-ui` | `#6B7278` | anything whose boundary must be identifiable (3.47:1 on surface, 3.69:1 on bg) |
+| `bg` | `#F7F8FA` | page |
+| `surface` | `#FFFFFF` | bordered panel |
+| `surface-head` | `#F0F2F5` | panel header strip |
+| `surface-sidebar` | `#EFF1F4` | sidebar |
+| `border-hairline` | `#E2E6EB` | dividers, table rules |
+| `border-panel` | `#D9DEE4` | panel edge |
+| `border-ui` | `#6A7178` | anything whose boundary must be identifiable (4.95:1 on surface, 4.65:1 on bg, 4.21:1 on a chip) |
 
 ### Text ramp, with the semantic mapping [SHIPPED]
 
@@ -242,7 +271,7 @@ page was wrong. Found by measuring `getComputedStyle` on the running app.
 ### The category chip: one neutral chip, form carries taxonomy [SHIPPED]
 
 > [SHIPPED] Implemented in `282657a` and `9e3c25a`. Verified in a browser: every
-> chip renders `#242A30` with `#D5DADE` text at 12px, no inline styles, and the
+> chip renders `#EAEDF1` with `#2C2E31` text at 12px, no inline styles, and the
 > absent variant differs from a plain chip only on `border-style`.
 
 Hue is retired from the category palette. `CLAUDE.md` already required this and
@@ -262,9 +291,9 @@ here it costs more than it returns.
 
 | Variant | Spec | Means |
 |---------|------|-------|
-| solid | fill `#242A30`, 1px `#6B7278`, text `#D5DADE` at **10.29:1** | an asserted category |
+| solid | fill `#EAEDF1`, 1px `#C7CED6`, text `#2C2E31` at **11.60:1** | an asserted category |
 | outlined | transparent fill, 1px `accent`, text `accent` at **7.48:1** on surface | this row has a control (redundant with the control, see below) |
-| dashed | fill `#242A30`, 1px dashed `#6B7278`, text `#D5DADE` | an absence, see below |
+| dashed | fill `#EAEDF1`, 1px dashed `#6A7178`, text `#2C2E31` | an absence, see below |
 
 - **Chip fill never carries identification.** Fill sits at 1.08:1 to 1.29:1 against the surfaces behind it. The border and the label do the work.
 - Chip label: 12px Plex Sans 500, **sentence case**, 0.02em tracking. Not uppercase, not mono, not below 12px.
@@ -532,7 +561,7 @@ What it draws, and the one line each respects:
 | Element | Encoding | The care taken |
 |---|---|---|
 | Figure tiles | number | Every tile carries its denominator. A count with no denominator invites reading 21 as large or small when neither is knowable. No `delta`: there is no previous run, and an arrow pointing at a number that does not exist is worse than no arrow |
-| Region choropleth | sequential fill | The data has four regions and no coordinates. Countries are a **drawing convention**, and the surface says so above the map, because a map is the most believable thing on a page. See the defects below |
+| Region choropleth | sequential fill | The data has four regions and no coordinates. Countries are a **drawing convention**, and the surface says so above the map, because a map is the most believable thing on a page. India is drawn from vendored geometry; see below. See also the defects below |
 | Five small multiples | length | **Identical geometry, five separate axes.** Retiring the encoding rule allowed the charts; it did not make days and finished-good units the same quantity. Rows are padded to three columns so a row of two does not draw wider boxes |
 | Incidence grid | presence | Binary. The shade carries nothing |
 
@@ -551,6 +580,34 @@ layout helper, so nothing said which was quoted and which was p95; the
 choropleth captured the mouse wheel, so scrolling the page over the map zoomed
 the map and the page stayed put; and the tile denominators were captions, which
 the caption contract correctly rejected as data.
+
+### India is drawn from vendored geometry [SHIPPED]
+
+Plotly's built-in country shapes come from Natural Earth, whose `IND` polygon
+follows a different convention and stops around 35.5°N. **That geometry ships
+inside plotly.js and no option reaches it**, so the only way to draw India
+complete is to supply the shape.
+
+`assets/india-claimed.geojson` is India including Jammu & Kashmir, Ladakh, Aksai
+Chin, the Shaksgam Valley, Pakistan-administered Kashmir and Arunachal Pradesh,
+per the official boundary published by the Survey of India. Source
+[datameet/maps](https://github.com/datameet/maps) under **CC BY 4.0**, simplified
+by `tools/simplify_boundary.py` from 10.5MB and 252,604 coordinate pairs to 45KB
+and 2,598, at a 0.02° tolerance derived from the pixel size the map is drawn at.
+
+**It is drawn last, so it is drawn on top.** India is excluded from the ISO-3
+trace and added as its own, which means the claimed areas Natural Earth assigns
+to neighbours are covered by India's fill rather than left showing a border
+through them. It shares the figure's colour axis, so it takes the same fill the
+scale gives every other region rather than a second palette nobody declared.
+
+`tests/test_map_geometry.py` asserts the **extent**, not the file: north of 36°N,
+east of 96°E, west of 68.5°E. A resimplification that quietly clipped a claimed
+region would otherwise render as a smaller India rather than as an error, and on
+a map that is a different claim rather than a rendering artefact. The attribution
+CC BY 4.0 requires is rendered beneath the map, not only filed in
+`assets/README.md`, because a licence satisfied only in a repository is satisfied
+only for people who read repositories.
 
 ### What was wrong with the first map [FIXED]
 
@@ -685,7 +742,7 @@ selectors are the testid it emits and the ARIA role, not an emotion class.
 
 > [TARGET] **Focus indicators are not implemented.** Streamlit defaults are whatever they are and have not been measured. The reviewer-name persistence bullet is the exception: that one shipped in `6d1a8ae`.
 
-- Every interactive element has a visible focus indicator at **3:1 or better** against both the element and the surface behind it (WCAG 2.4.7, 2.4.11). `border-ui` `#6B7278` satisfies this.
+- Every interactive element has a visible focus indicator at **3:1 or better** against both the element and the surface behind it (WCAG 2.4.7, 2.4.11). `border-ui` `#6A7178` satisfies it on every surface, and the accent carries the ring itself.
 - Focus is never indicated by colour alone.
 - Tab order follows reading order.
 - The reviewer name field must not lose its value on navigation. It sits in the sidebar but is created inside the confirm surface, so Streamlit discards its state on any surface change; hold it in a plain `session_state` slot that no widget owns.
@@ -709,7 +766,7 @@ decision, the artifact of a review should be a document a reviewer can staple,
 initial, and file.
 
 - `@media print` emits the surface as a light document: dark chrome prints as a black slab or inverts unpredictably.
-- **Every contrast and equality guarantee in this file is measured on the dark substrate and does not transfer to white paper.** The print variant re-measures, or the guarantee is explicitly declared not to hold there.
+- **Every contrast and equality guarantee in this file is measured on the light substrate and still does not transfer to white paper.** Closer is not the same: paper has no `#F7F8FA` and no panel fill. The print variant re-measures, or the guarantee is explicitly declared not to hold there.
 - Evidence flattens into numbered references rather than collapsing.
 - Absence states must remain visible in greyscale, which the dashed border already guarantees.
 
@@ -787,3 +844,6 @@ with numbers:
 | 2026-08-07 | World map fixed: whole world drawn, white slab removed, ISO-3 codes | Three plotly defaults that are right on a white page and wrong on this one, none of which raised an error. The suite passed throughout |
 | 2026-08-07 | The map got a palette of its own, floor 25.7 ΔE from unmapped land | Absence and the lowest count are different claims, and the map is the one place they are separated by fill alone because a country carries no label |
 | 2026-08-07 | Form fields given the `border-ui` boundary they were always specified to have | Every field drew a border in its own fill colour, so the name box on Confirm was invisible at 1.04:1. The token was declared and correct and had never been referenced by anything |
+| 2026-08-07 | **Substrate changed from dark to light** | Owner's call. Every ratio re-derived against the floor its dark counterpart held, never inverted by eye, because this document said a substrate change voids its own guarantees until they are measured again |
+| 2026-08-07 | Two colour tests restated: they were pinning the dark palette, not the design | One required the sidebar to sit below the JND from the page; one required `border-ui` to be too weak for a focus ring. Both were findings about one set of greys, and both failed on a correct design |
+| 2026-08-07 | India drawn from vendored geometry including its full claimed territory | Plotly's built-in `IND` follows Natural Earth and stops near 35.5°N, and that shape ships inside plotly.js where no option reaches it. The claimed boundary is drawn on top, so areas Natural Earth assigns to neighbours are covered rather than split by a line |
