@@ -25,12 +25,29 @@ from .. import scoring
 # four regions and no coordinates; these countries are a drawing convention, not
 # a claim that a supplier is in Poland. Every caller renders the caption that
 # says this, because a map is the single most believable thing on a page.
+#
+# ISO 3166-1 ALPHA-3, NOT COUNTRY NAMES. Names all resolved when checked, but
+# they resolve by string match against a vendored gazetteer, so a country that
+# gets renamed upstream (Czechia, Türkiye, Eswatini have all moved) stops
+# matching and its fill DISAPPEARS WITH NO ERROR. A missing country on a map
+# reads as "no suppliers there", which is a different claim from "this label
+# stopped matching". Codes are stable by standard.
 REGION_COUNTRIES = {
-    "north_america": ("United States", "Canada", "Mexico"),
-    "europe": ("Germany", "France", "Italy", "Spain", "Poland",
-               "United Kingdom", "Netherlands", "Czechia"),
-    "east_asia": ("China", "Japan", "South Korea", "Taiwan"),
-    "south_asia": ("India", "Pakistan", "Bangladesh", "Sri Lanka"),
+    "north_america": ("USA", "CAN", "MEX"),
+    "europe": ("DEU", "FRA", "ITA", "ESP", "POL", "GBR", "NLD", "CZE"),
+    "east_asia": ("CHN", "JPN", "KOR", "TWN"),
+    "south_asia": ("IND", "PAK", "BGD", "LKA"),
+}
+
+# For the table and the hover, where a code is unreadable.
+COUNTRY_NAME = {
+    "USA": "United States", "CAN": "Canada", "MEX": "Mexico",
+    "DEU": "Germany", "FRA": "France", "ITA": "Italy", "ESP": "Spain",
+    "POL": "Poland", "GBR": "United Kingdom", "NLD": "Netherlands",
+    "CZE": "Czechia",
+    "CHN": "China", "JPN": "Japan", "KOR": "South Korea", "TWN": "Taiwan",
+    "IND": "India", "PAK": "Pakistan", "BGD": "Bangladesh",
+    "LKA": "Sri Lanka",
 }
 
 REGION_LABEL = {
@@ -149,15 +166,22 @@ def supplier_rows(result):
 
 
 def regions(result):
+    """One row per region, INCLUDING ANY THE MAP CANNOT DRAW.
+
+    The first version iterated the country mapping, so a region present in the
+    data but missing from that dict vanished from the table and the map with
+    nothing said. A region with no countries is drawn nowhere, and the surface
+    has to be able to say so rather than simply omit it.
+    """
     rows = supplier_rows(result)
     exposed = set(exposed_parts(result))
     out = []
-    for region in sorted(REGION_COUNTRIES):
+    for region in sorted(set(REGION_COUNTRIES) | {row[2] for row in rows}):
         here = [row for row in rows if row[2] == region]
         out.append(RegionRow(
             region=region,
             label=REGION_LABEL.get(region, region),
-            countries=REGION_COUNTRIES[region],
+            countries=REGION_COUNTRIES.get(region, ()),
             suppliers=len({supplier for _p, supplier, _r in here}),
             parts=len({part for part, _s, _r in here}),
             exposed_parts=len({part for part, _s, _r in here

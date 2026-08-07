@@ -532,7 +532,7 @@ What it draws, and the one line each respects:
 | Element | Encoding | The care taken |
 |---|---|---|
 | Figure tiles | number | Every tile carries its denominator. A count with no denominator invites reading 21 as large or small when neither is knowable. No `delta`: there is no previous run, and an arrow pointing at a number that does not exist is worse than no arrow |
-| Region choropleth | sequential fill | The data has four regions and no coordinates. Countries are a **drawing convention**, and the surface says so above the map, because a map is the most believable thing on a page |
+| Region choropleth | sequential fill | The data has four regions and no coordinates. Countries are a **drawing convention**, and the surface says so above the map, because a map is the most believable thing on a page. See the defects below |
 | Five small multiples | length | **Identical geometry, five separate axes.** Retiring the encoding rule allowed the charts; it did not make days and finished-good units the same quantity. Rows are padded to three columns so a row of two does not draw wider boxes |
 | Incidence grid | presence | Binary. The shade carries nothing |
 
@@ -551,6 +551,47 @@ layout helper, so nothing said which was quoted and which was p95; the
 choropleth captured the mouse wheel, so scrolling the page over the map zoomed
 the map and the page stayed put; and the tile denominators were captions, which
 the caption contract correctly rejected as data.
+
+### What was wrong with the first map [FIXED]
+
+Three defects shipped in the first version, and the shape of all three is the
+same: **a plotly default that is correct on a white page and wrong on this one**,
+none of which raised an error.
+
+**The rest of the world was not drawn.** `landcolor` and `countrycolor` were set
+without `showland` or `showcountries`, and both default to off under a
+choropleth, so nineteen filled countries floated in an empty rectangle: no
+Africa, no South America, no Australia, no Russia. A map missing four continents
+is not a stylistic choice. It says the world ends at the edge of the dataset.
+
+**The map sat on a white slab.** `geo.bgcolor` defaults to `#fff` and is covered
+by neither `paper_bgcolor` nor `plot_bgcolor`, so the one element on the page
+with a light background was the largest one.
+
+**Absence and a low count were the same colour.** The shared chart palette
+starts at `#1E2933`, within a step of unmapped land, so the least-exposed region
+and "not a supplier region at all" would have rendered alike. Those are
+different claims — one is a count, the other is a question the data does not
+answer — and the map is the one place they are told apart by fill alone, since
+a country carries no label. The map now has a palette of its own starting at
+`#3A6076`, **25.7 ΔE** from the land, and a test holds it above the
+just-noticeable difference.
+
+**Countries are cited by ISO 3166-1 alpha-3, not by name.** Every name resolved
+when checked, but names resolve by string match against a vendored gazetteer, so
+a country renamed upstream stops matching and its fill disappears with no error.
+Czechia, Türkiye and Eswatini have all moved. A missing country reads as "no
+suppliers there", which is a different claim from "this label stopped matching",
+and the map cannot tell a reader which happened.
+
+**A region absent from the mapping used to vanish silently.** `regions()`
+iterated the country dict, so a supplier region the map could not draw
+disappeared from the table as well. It now iterates the union and the table says
+`not on the map`.
+
+**None of this was visible to the test suite**, which passed throughout. It was
+found by reading `getComputedStyle` and the plotly layout off the running page —
+the same method that found the link colour and the two unpainted ramp steps.
 
 ### Charts on the three decision surfaces [SHIPPED]
 
@@ -721,3 +762,5 @@ with numbers:
 | 2026-08-07 | Group sizes drawn in lattice order, never by count | The chart sits under a layout that says these groups are incomparable, and a bar chart is a stronger cue than a caption |
 | 2026-08-07 | Cluster sizes coloured by grouping basis rather than merged | Supplier and region concentration are a complementary disagreement. One ranking would assert that a supplier cluster of six loses to a region cluster of twenty-eight |
 | 2026-08-07 | No radar or parallel-coordinates plot of the five dimensions | The one chart the retired encoding rule and the surviving composite rule agree about: five units on one axis is the composite drawn rather than computed |
+| 2026-08-07 | World map fixed: whole world drawn, white slab removed, ISO-3 codes | Three plotly defaults that are right on a white page and wrong on this one, none of which raised an error. The suite passed throughout |
+| 2026-08-07 | The map got a palette of its own, floor 25.7 ΔE from unmapped land | Absence and the lowest count are different claims, and the map is the one place they are separated by fill alone because a country carries no label |

@@ -293,3 +293,74 @@ class TestTheChartsOnTheDecisionSurfaces(unittest.TestCase):
         for forbidden in ("total", "weight", "composite", "normalis"):
             with self.subTest(token=forbidden):
                 self.assertNotIn(forbidden, body)
+
+
+class TestTheRegionMapIsComplete(unittest.TestCase):
+    """A country missing from a map reads as "no suppliers there".
+
+    That is a different claim from "this label stopped matching the gazetteer",
+    and the map cannot tell a reader which of the two happened. So the things
+    that would cause a silent gap are asserted here rather than noticed later.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        from src.interface import dashboard
+        cls.dash = dashboard
+        cls.codes = [code for codes in dashboard.REGION_COUNTRIES.values()
+                     for code in codes]
+
+    def test_every_country_is_an_iso_3166_alpha_3_code(self):
+        """Codes, not names. Names resolve by string match against a vendored
+        gazetteer, so a country that gets renamed upstream stops matching and
+        its fill disappears with no error. Czechia, Türkiye and Eswatini have
+        all moved."""
+        for code in self.codes:
+            with self.subTest(code=code):
+                self.assertRegex(code, r"^[A-Z]{3}$")
+
+    def test_every_code_has_a_readable_name(self):
+        # The table and the hover show names; a code with no name would render
+        # as the code and read as a defect.
+        for code in self.codes:
+            with self.subTest(code=code):
+                self.assertIn(code, self.dash.COUNTRY_NAME)
+
+    def test_no_country_belongs_to_two_regions(self):
+        # A country in two regions gets one arbitrary fill, and which one wins
+        # depends on frame order.
+        self.assertEqual(len(self.codes), len(set(self.codes)))
+
+    def test_every_region_the_generator_can_emit_is_on_the_map(self):
+        """The mapping is a hand-written dict beside a generated enum.
+
+        A region added to the generator and not here would be a supplier region
+        the map silently declines to draw.
+        """
+        from src.synthetic.config import REGIONS
+        self.assertEqual(set(REGIONS), set(self.dash.REGION_COUNTRIES),
+                         "the generator and the map disagree about which "
+                         "regions exist")
+
+    def test_a_region_with_no_countries_still_reaches_the_table(self):
+        """The first version iterated the country mapping, so a region present
+        in the data but missing from that dict vanished from the map AND the
+        table, with nothing said."""
+        from src import archetypes as A
+
+        class Supplier:
+            supplier_name, region = "Somebody Ltd", "antarctica"
+
+        class Evidence:
+            supplier_rows = (Supplier(),)
+
+        class Result:
+            evidence = {"AA-P-01": Evidence()}
+            profiles, verdicts = {}, {}
+            catalogue = A.catalogue(None)
+
+        rows = self.dash.regions(Result())
+        unmapped = [row for row in rows if row.region == "antarctica"]
+        self.assertEqual(len(unmapped), 1)
+        self.assertEqual(unmapped[0].countries, ())
+        self.assertEqual(unmapped[0].suppliers, 1)
