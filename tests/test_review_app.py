@@ -29,27 +29,25 @@ def setUpModule():
     DATA.mkdir(parents=True, exist_ok=True)
     generate(GeneratorConfig(), DATA, DATA.parent / "truth" / "answer_key.json")
 
-# WIDGETS THAT ENCODE MAGNITUDE AS LENGTH OR FRACTION. Each is a normalised
-# scale by construction, which is the composite arriving through a widget rather
-# than through arithmetic. `st.progress(0.8)` is literally a 0-to-1 bar; a
-# progress column is the same thing inside a table; a colour ramp is an ordinal
-# encoding of a heterogeneous set, which is the objection that killed the radar
-# chart.
+# THE ENCODING DENY-LIST WAS RETIRED BY THE OWNER ON 2026-08-06.
+#
+# It banned st.progress, the chart column configs, the four chart widgets,
+# background_gradient and st.metric(delta=), on the grounds that each is a
+# normalised scale by construction and therefore the composite arriving through
+# a widget rather than through arithmetic. That reasoning was not refuted; it
+# was overruled, deliberately and with the cost stated. CLAUDE.md and DESIGN.md
+# both record the decision and what it gave up.
+#
+# ONE ENTRY SURVIVES, and it is not an encoding rule. st.slider is a threshold
+# with no owner and no version, and thresholds live in config/archetypes.yaml
+# where somebody owns the number. That has nothing to do with how a value is
+# drawn, so retiring the encoding rule left it standing.
+#
+# The arithmetic composite is enforced elsewhere and did not move:
+# tests/test_scoring.py refuses a total, a weight, an __add__ on a profile and
+# any measure without a physical unit.
 BANNED_WIDGETS = (
-    "st.progress",
-    "ProgressColumn",
-    "BarChartColumn",
-    "LineChartColumn",
-    "AreaChartColumn",
-    "st.bar_chart",
-    "st.line_chart",
-    "st.area_chart",
-    "st.scatter_chart",
-    "st.pyplot",
-    "st.altair_chart",
-    "background_gradient",
-    "color_gradient",
-    "st.slider",          # a threshold with no owner and no version
+    "st.slider",
 )
 
 
@@ -77,9 +75,22 @@ def resolved_font_px(block):
     return float(literal.group(1)) * 16 if literal else None
 
 
-def run_app(timeout=90):
+def run_raw(timeout=90):
+    """The app as a visitor first meets it, on whatever surface it lands on."""
     app = AppTest.from_file(str(APP), default_timeout=timeout)
     return app.run()
+
+
+def run_app(timeout=90):
+    """Runs, then SELECTS EXPOSURE.
+
+    The landing surface became the dashboard when that surface was added, and
+    almost everything in this file is about one of the three decision surfaces.
+    Selecting it here rather than in every test keeps the change to the landing
+    page from rewriting eighteen assertions that were never about it. Tests
+    about the landing surface itself use `run_raw`.
+    """
+    return run_raw(timeout).sidebar.radio[0].set_value("exposure").run()
 
 
 def text_of(app):
@@ -88,6 +99,16 @@ def text_of(app):
                        app.caption, app.info, app.warning, app.success):
         parts.extend(element.value for element in collection)
     return "\n".join(str(part) for part in parts)
+
+
+def code_of(app):
+    """The st.code blocks, which text_of does not collect.
+
+    The evidence export lives in one, so a test that only read the prose would
+    report the citations missing while they were on the page, or worse, report
+    them present because a nearby caption mentioned them.
+    """
+    return [str(element.value) for element in app.code]
 
 
 class TestWidgetDenyList(unittest.TestCase):
@@ -99,10 +120,20 @@ class TestWidgetDenyList(unittest.TestCase):
                 # the constant above, so match a CALL rather than a mention.
                 self.assertNotIn(f"{widget}(", SOURCE)
 
-    def test_no_normalised_zero_to_one_value_is_passed_to_a_widget(self):
-        # A fraction handed to a display widget is a normalised scale whatever
-        # it is called.
-        self.assertIsNone(re.search(r"st\.\w+\(\s*0\.\d+", SOURCE))
+    def test_a_threshold_still_has_an_owner_and_a_version(self):
+        """The surviving entry, and why it is not an encoding rule.
+
+        A slider lets a reviewer move a threshold with nothing recording who
+        moved it or to what. The magnitude thresholds live in
+        config/archetypes.yaml precisely so that the number is owned and
+        versioned, and the coverage panel says so when they are unset.
+
+        Asserted against the renderer rather than against this file, because
+        the app assembles no prose of its own: the sentence naming the config
+        comes from `src/governance/render.py` and is golden-pinned there.
+        """
+        renderer = (APP.parent / "src" / "governance" / "render.py").read_text()
+        self.assertIn("config/archetypes.yaml", renderer)
 
     def test_the_app_states_that_it_paints_and_does_not_decide(self):
         self.assertIn("paints the view model and decides nothing", SOURCE)
@@ -249,8 +280,20 @@ class TestPrintIsItsOwnSubstrate(unittest.TestCase):
                         "produce something a reviewer can file")
 
     def test_print_inverts_rather_than_filtering_the_dark_theme(self):
+        """Asserted on the colour, not on the notation.
+
+        This assertion used to read the literal `color: #000000`, and when text
+        colour moved behind the ramp tokens it failed while the stylesheet was
+        still correct. That is the shape of failure the corrections log records
+        at entry 6: a test that checks how a value is spelled passes and fails
+        for reasons that have nothing to do with what it claims to protect.
+        """
         self.assertIn("background: #FFFFFF !important", self.printed)
-        self.assertIn("color: #000000 !important", self.printed)
+        token = re.search(r"(?<![-\w])color:\s*var\((--[a-z-]+)\)\s*!important",
+                          self.printed).group(1)
+        declared = re.search(rf"{token}:\s*(#[0-9A-Fa-f]{{6}})",
+                             self.screen).group(1)
+        self.assertEqual(declared.upper(), "#000000")
 
     def test_controls_do_not_print(self):
         # A button on paper is an instruction nobody can follow.
@@ -317,7 +360,7 @@ class TestExposureSurface(unittest.TestCase):
     def test_the_app_runs_without_exception(self):
         self.assertFalse(self.app.exception)
 
-    def test_the_default_surface_asks_what_is_worst(self):
+    def test_the_exposure_surface_asks_what_is_worst(self):
         self.assertIn("What is worst?", text_of(self.app))
 
     def test_executed_findings_render_no_button(self):
@@ -372,6 +415,125 @@ class TestExposureSurface(unittest.TestCase):
         rendered = text_of(self.app)
         self.assertGreater(len(rendered), 2000)
         self.assertIn("days", rendered)
+
+
+class TestEveryPartIsExplainedOnce(unittest.TestCase):
+    """QA ISSUE-005: 36 findings and 36 evidence panels for 21 exposed parts.
+
+    Two archetypes hold identical membership, and the findings were emitted
+    inside the layer loop, so fourteen parts were explained twice in full and
+    `SEA-P-0258` three times. The lattice above still carries the membership,
+    which is what encodes the dominance partial order; only the explanation
+    moved out from under it.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.app = run_app()
+        from src.pipeline import default_data_dir, run, surfaces
+        from src.interface import model as view
+        cls.surface = surfaces(run(data_dir=default_data_dir()))[view.EXPOSURE]
+        cls.view = view
+
+    def part_rows(self):
+        return [row for row in self.surface.all_rows()
+                if row.entity == self.view.PART]
+
+    def test_a_part_really_does_belong_to_more_than_one_group(self):
+        # Without this the de-duplication test passes vacuously, and would keep
+        # passing if the layout stopped producing the overlap it was written for.
+        keys = [row.key for row in self.part_rows()]
+        self.assertGreater(len(keys), len(set(keys)),
+                           "no part sits in two groups, so nothing is being "
+                           "de-duplicated and this suite is not checking it")
+
+    def test_the_copies_of_a_part_carry_the_same_sentence(self):
+        """WHY KEEPING ONE IS LOSSLESS. `_part_row` builds the sentence from
+        ALL of a part's archetype labels, so the copies are identical by
+        construction rather than by luck. If that ever stopped holding,
+        rendering one copy would silently drop a finding."""
+        by_key = {}
+        for row in self.part_rows():
+            by_key.setdefault(row.key, set()).add(row.sentence)
+        for key, sentences in by_key.items():
+            with self.subTest(part=key):
+                self.assertEqual(len(sentences), 1)
+
+    def test_one_finding_and_one_evidence_panel_per_exposed_part(self):
+        # Counted on a heading INSIDE the panel rather than on the expander
+        # label, because AppTest does not expose expander labels as text and a
+        # count of zero would have passed against a count of zero.
+        distinct = {row.key for row in self.part_rows()}
+        rendered = text_of(self.app)
+        self.assertEqual(rendered.count("Sources read, and when they were "
+                                        "pulled"), len(distinct))
+        self.assertEqual(len(code_of(self.app)), len(distinct))
+
+    def test_the_findings_order_is_explicit_and_declared_meaningless(self):
+        # CLAUDE.md: any default ordering must be arbitrary AND stable, sorted
+        # by an explicit key and labelled, because a plausible default is read
+        # as a ranking.
+        rendered = text_of(self.app)
+        self.assertIn("ordered by part number", rendered)
+        self.assertIn("reading order is not priority", rendered.lower())
+
+    def test_no_finding_is_emitted_inside_the_layer_loop(self):
+        """The defect was structural, not a wrong count.
+
+        Comment spans are stripped first: this file's own explanation of the
+        bug names the loop it describes, and the corrections log records that
+        hazard twice already, a system that refuses a construct by name
+        containing that name in its refusals.
+        """
+        body = re.sub(r"#[^\n]*", "", SOURCE)
+        loop = body.split("for layer in surface.layers:", 1)[1]
+        loop = loop.split("\ndef ", 1)[0]
+        self.assertNotIn("render_evidence(", loop)
+        self.assertNotIn("finding(", loop)
+
+
+class TestEvidenceCitesItsSources(unittest.TestCase):
+    """The six fields, at the surface rather than in the model.
+
+    A citation a reviewer cannot follow is the failure this panel exists
+    against, so what is checked is that the locator and the retrieval time
+    reach the page, not that the record was built correctly.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.app = run_app()
+        # The export is an st.code block and the tables are canvas, so the
+        # prose collection alone would miss every locator on the page.
+        cls.rendered = text_of(cls.app) + "\n" + "\n".join(code_of(cls.app))
+
+    def test_the_panel_names_each_source_and_when_it_was_pulled(self):
+        self.assertIn("Sources read, and when they were pulled", self.rendered)
+        self.assertIn("approved vendor list", self.rendered)
+        self.assertIn("supplier quote history", self.rendered)
+
+    def test_a_locator_reaches_the_page(self):
+        self.assertRegex(self.rendered, r"suppliers\.csv:\d+")
+
+    def test_the_source_count_is_never_rendered_on_its_own(self):
+        """DESIGN.md forbids a bare count of sources: "3 sources" invites
+        reading count as strength, and three weak records do not outrank one
+        authoritative one."""
+        self.assertNotRegex(self.rendered, r"\b\d+ sources\b")
+
+    def test_a_merge_is_visible_before_anything_is_opened(self):
+        # It was buried inside the expander, which put the one inference a
+        # reviewer is most likely to disagree with behind a click.
+        self.assertIn("‡", self.rendered)
+        self.assertIn("spell one supplier differently", self.rendered)
+
+    def test_the_record_is_exportable_as_plain_text(self):
+        self.assertIn("This record as plain text", self.rendered)
+        self.assertIn("evidence for SEA-P-", self.rendered)
+
+    def test_a_recorded_absence_says_which_source_and_when(self):
+        self.assertIn("no record", self.rendered)
+        self.assertIn("has no row for", self.rendered)
 
 
 class TestFindOutSurface(unittest.TestCase):

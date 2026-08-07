@@ -15,6 +15,11 @@ dependencies = [
     # The review interface. Pinned with a floor like the rest; the headless
     # AppTest harness that gates it lives in streamlit.testing.v1.
     "streamlit>=1.40",
+    # Charts and the region choropleth on the Dashboard surface. Added when the
+    # nominal-only encoding rule was retired on 2026-08-06; before that there
+    # was nothing for a chart library to do. plotly.js carries its own world
+    # geometry, so the map needs no network call at render time.
+    "plotly>=5.20",
 ]
 
 [project.optional-dependencies]

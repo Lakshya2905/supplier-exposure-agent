@@ -7,25 +7,36 @@ denormalised. That is not a preference; flattening clusters to parts would make
 a reviewer confirm one judgment once per member and would empty `member_count`
 of meaning.
 
-WIDGETS THAT ENCODE MAGNITUDE AS LENGTH OR FRACTION ARE BANNED. `st.progress`,
-progress and bar-chart column configs, multi-series charts and colour ramps are
-all normalised scales by construction, which is the composite arriving through a
-widget rather than through arithmetic. `tests/test_review_app.py` enforces the
-list by scanning this file.
+WIDGETS THAT ENCODE MAGNITUDE WERE BANNED UNTIL 2026-08-06, when the owner
+retired the encoding rule deliberately and with the cost stated. Charts, a
+choropleth and red/amber/green are permitted, and the Dashboard surface uses
+them. CLAUDE.md and DESIGN.md carry the decision; this file does not re-argue it.
+
+THE ARITHMETIC RULE DID NOT MOVE, and it is the one that made the encoding rule
+worth having. No chart here puts two dimensions on one axis, because days and
+finished-good units are not the same quantity and no picture makes them one.
+`src/scoring.py` still refuses a total, a weight and an `__add__`, and
+`tests/test_scoring.py` still checks it.
 
 AUTONOMY IS AN AFFORDANCE. Rows that execute get no button. That is checked in
 the model, which refuses to construct such a row, and again here.
 """
 from datetime import datetime, timezone
 
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
 from src import governance as gov
 from src.governance import render as govrender
 from src import ranking
 from src.interface import actions
+from src.interface import dashboard as dash
 from src.interface import model as view
 from src.pipeline import default_data_dir, run, surfaces
+from src.synthetic.model import (ANNUAL_UNITS, QUOTED_LEAD_TIME_DAYS,
+                                 SUPPLIER_NAME)
 
 st.set_page_config(page_title="Supplier exposure review", layout="wide")
 
@@ -33,12 +44,13 @@ st.set_page_config(page_title="Supplier exposure review", layout="wide")
 # rows, aligned columns, monospace identifiers, high information per screen.
 # Bordered panels and surface fills carry structure; badges carry category.
 #
-# NOTHING HERE ENCODES A MAGNITUDE, and that is a correctness constraint rather
-# than a stylistic one. Every badge is one colour and one weight, because a set
-# where one chip is red and another green has an order, and an ordered encoding
-# across incommensurable states is the composite this system refuses to compute
-# arriving through the palette instead of the arithmetic. The accent appears
-# only on things a reviewer can act on.
+# THE CHIP VOCABULARY IS STILL NOMINAL, and that is now a choice rather than a
+# rule. Every badge is one colour and one weight: a set where one chip is red and
+# another green has an order, and the three decision surfaces are where a reader
+# is deciding, so nothing there should suggest an order the arithmetic will not
+# defend. The Dashboard surface, added when the encoding rule was retired, uses
+# colour and length freely. The accent still appears only on what can be acted
+# on, and every accent element still carries a second, non-colour cue.
 CONSOLE_CSS = """
 <style>
   /* THE TYPE SCALE, DECLARED ONCE. Ten sizes shipped before this, with step
@@ -69,6 +81,31 @@ CONSOLE_CSS = """
       --space-xl: 1.5rem;   /* 24px */
       --space-2xl: 2rem;    /* 32px */
       --space-3xl: 3rem;    /* 48px */
+
+      /* THE TEXT RAMP, AND WHAT EACH STEP MEANS. Six tokens shipped in
+         DESIGN.md and twelve distinct text colours shipped in this file, which
+         is the same failure as the ten font sizes: a list, chosen by feel, one
+         rule at a time. The six off-ramp greys are gone and every one of them
+         mapped onto a step that already existed, which is the evidence that
+         none of them was carrying a distinction.
+
+         The mapping is the part that matters. Five greys with no usage rule
+         will drift within a week, so the rule is part of the system and a test
+         asserts no rule below invents a seventh. */
+      --text-title: #F0F2F4;    /* 16.03:1  h1 only */
+      --text-primary: #E3E6E8;  /* 14.35:1  a finding, and any value read from
+                                             a source: identifiers, figures */
+      --text-body: #D5DADE;     /* 12.78:1  prose, chip labels, absence states */
+      --text-note: #9BA3AA;     /*  7.04:1  a qualification attached to a finding */
+      --text-caption: #838C94;  /*  5.26:1  instructions about the interface,
+                                             never about the data */
+      --text-section: #8FA0AD;  /*  6.68:1  a section label, at any heading level
+                                             below h1. Level is carried by size,
+                                             weight and position, never by hue */
+      --accent: #7FB2D9;        /*  7.94:1  ONLY what a reviewer can act on */
+      /* The print substrate, declared here so no rule anywhere states a text
+         colour as a literal. See the print block for why it is not a filter. */
+      --text-print: #000000;
   }
   /* Middle density. The earlier revision read as an essay and the one after it
      read as congested; this sits between them. Where a region felt crowded the
@@ -84,17 +121,29 @@ CONSOLE_CSS = """
       font-size: var(--title) !important; font-weight: 600 !important;
       letter-spacing: -0.01em;
       margin: var(--space-sm) 0 var(--space-md) 0 !important;
-      padding: 0 !important; color: #F0F2F4; line-height: 1.35;
+      padding: 0 !important; color: var(--text-title) !important;
+      line-height: 1.35;
   }
   h2 {
       font-size: var(--ui-base) !important; font-weight: 600 !important;
-      text-transform: uppercase; letter-spacing: 0.08em; color: #8FA0AD;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--text-section) !important;
       margin: var(--space-xl) 0 var(--space-sm) 0 !important; padding: 0 !important;
       line-height: 1.45;
   }
+  /* THE HEADING COLOURS NEEDED !important AND NOBODY HAD NOTICED. Streamlit's
+     theme sets textColor in config.toml and paints headings with it at a
+     specificity these element rules lose to, so h1 and every h2 through h6
+     rendered at the theme colour. Two of the six ramp steps, title and section,
+     never reached the screen at all: measured, every heading on the page was
+     rgb(227, 230, 232), which is text-primary.
+
+     This was true before the ramp existed, when the same declarations were
+     literals. Tokenising did not cause it; measuring the rendered page is what
+     found it, and no scan of this file could have. */
   h3, h4, h5, h6 {
       font-size: var(--ui-base) !important; font-weight: 600 !important;
-      color: #C7CDD3;
+      color: var(--text-section) !important;
       margin: var(--space-lg) 0 var(--space-xs) 0 !important; padding: 0 !important;
       line-height: 1.45;
   }
@@ -103,28 +152,59 @@ CONSOLE_CSS = """
       margin: var(--space-xl) 0 var(--space-lg) 0;
   }
   [data-testid="stVerticalBlock"] { gap: var(--space-md); }
-  p, li { line-height: 1.5; color: #D5DADE; }
+  p, li { line-height: 1.5; color: var(--text-body); }
 
   p.finding {
       font-size: var(--doc); line-height: 1.58; max-width: 104ch;
-      margin: var(--space-md) 0 var(--space-xs) 0; color: #E3E6E8;
+      margin: var(--space-md) 0 var(--space-xs) 0; color: var(--text-primary);
   }
   p.note {
       font-size: var(--ui-sm); line-height: 1.5; max-width: 104ch;
-      color: #9BA3AA; margin: 0 0 var(--space-sm) 0;
+      color: var(--text-note); margin: 0 0 var(--space-sm) 0;
   }
   .stCaption, [data-testid="stCaptionContainer"] p {
-      font-size: var(--ui-xs) !important; color: #838C94 !important;
+      font-size: var(--ui-xs) !important; color: var(--text-caption) !important;
       line-height: 1.5; max-width: 104ch;
       margin-bottom: var(--space-sm) !important;
   }
-  a, a:visited { color: #7FB2D9; }
+  /* COLOUR IS NEVER THE ONLY CUE FOR ACTIONABILITY (WCAG 1.4.1). Every accent
+     element carries a second, non-colour affordance, so a reader with any form
+     of colour vision deficiency, a greyscale screenshot, or the print
+     stylesheet still knows what can be acted on. Links and expander summaries
+     get an underline; buttons and the outlined chip already carry a border; the
+     selected nav item carries a left rule; focus carries an outline.
+
+     A test asserts the pairing rather than trusting it: any rule that sets
+     `color: var(--accent)` must set an affordance in the same block. */
+  /* `!important` because the bare declaration LOST, and losing is invisible in
+     a source scan. Streamlit styles its own anchors from a hashed emotion class,
+     which is class specificity against this rule's element specificity, so every
+     link on the page rendered in Streamlit's blue while the stylesheet said
+     accent and a test agreed with the stylesheet. Measured in the browser at
+     rgb(61, 157, 243) rather than the accent's rgb(127, 178, 217).
+
+     The underline had been winning the whole time, because Streamlit sets no
+     text-decoration there. That is what made the defect quiet: the affordance
+     was right and only the colour was wrong. */
+  a, a:visited {
+      color: var(--accent) !important;
+      text-decoration: underline; text-underline-offset: 0.15em;
+      text-decoration-thickness: 1px;
+  }
 
   code, .identifier, .ids span {
       font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
                    monospace;
       font-size: var(--ui-sm); background: transparent !important;
-      color: #C9D2D9 !important; padding: 0 !important;
+      color: var(--text-primary) !important; padding: 0 !important;
+  }
+  /* THE MERGE SIGIL. A data qualification, so it takes note weight and NOT the
+     accent: the accent means "you can act on this", and a reader cannot act on
+     a merge. One mark whatever the number of merges, because repeated marks are
+     a tally, and a tally is a magnitude drawn as punctuation. */
+  .sigil {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: var(--text-note);
   }
   .ids {
       display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-lg);
@@ -136,13 +216,13 @@ CONSOLE_CSS = """
   table.tight td {
       border-top: 1px solid #262B30;
       padding: var(--space-xs) var(--space-md) var(--space-xs) 0;
-      font-size: var(--ui-sm); line-height: 1.5; color: #B6BEC5; vertical-align: top;
+      font-size: var(--ui-sm); line-height: 1.5; color: var(--text-body); vertical-align: top;
   }
   table.tight tr:first-child td { border-top: none; }
   table.tight td.num {
       text-align: right; width: 4rem; font-variant-numeric: tabular-nums;
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      color: #E3E6E8; white-space: nowrap;
+      color: var(--text-primary); white-space: nowrap;
   }
 
   [data-testid="stExpander"],
@@ -152,9 +232,15 @@ CONSOLE_CSS = """
       box-shadow: none !important; background: transparent !important;
   }
   [data-testid="stExpander"] { margin: 0 0 var(--space-md) 0; }
+  /* The summary carries an underline of its own rather than relying on
+     Streamlit's chevron. The chevron is a real affordance and it is there, but
+     it is Streamlit's element and not a contract, so the one thing standing
+     between this control and a colour-only cue would be a vendor's markup. */
   [data-testid="stExpander"] summary {
-      font-size: var(--ui-sm) !important; color: #7FB2D9 !important;
+      font-size: var(--ui-sm) !important; color: var(--accent) !important;
       padding: 0 !important; width: max-content;
+      text-decoration: underline; text-underline-offset: 0.15em;
+      text-decoration-thickness: 1px;
   }
   [data-testid="stExpander"] summary p { font-size: var(--ui-sm) !important; }
   [data-testid="stExpanderDetails"] {
@@ -175,11 +261,11 @@ CONSOLE_CSS = """
 
   .stButton > button {
       border-radius: 3px; border: 1px solid #3E5C74; background: #1E2933;
-      color: #9CC6E3; font-size: var(--ui-sm); font-weight: 500;
+      color: var(--accent); font-size: var(--ui-sm); font-weight: 500;
       padding: var(--space-xs) var(--space-md); box-shadow: none;
   }
   .stButton > button:hover {
-      background: #2A3B49; color: #D6E8F5; border-color: #7FB2D9;
+      background: #2A3B49; color: var(--accent); border-color: #7FB2D9;
   }
 
   section[data-testid="stSidebar"] {
@@ -205,10 +291,10 @@ CONSOLE_CSS = """
       transform: scale(0.8); opacity: 0.75;
   }
   section[data-testid="stSidebar"] [role="radiogroup"] p {
-      font-size: var(--ui-sm) !important; line-height: 1.45; color: #8B949C;
+      font-size: var(--ui-sm) !important; line-height: 1.45; color: var(--text-caption);
   }
   section[data-testid="stSidebar"] [role="radiogroup"] strong {
-      color: #DDE3E8; font-weight: 600;
+      color: var(--text-body); font-weight: 600;
   }
 
   /* ------------------------------------------------- panels and badges --
@@ -231,11 +317,11 @@ CONSOLE_CSS = """
       display: inline-block; font-size: var(--ui-xs); font-weight: 500;
       letter-spacing: 0.02em; padding: var(--space-xs) var(--space-sm);
       border-radius: 3px;
-      background: #242A30; color: #D5DADE; border: 1px solid #333B42;
+      background: #242A30; color: var(--text-body); border: 1px solid #333B42;
       margin-right: var(--space-xs); vertical-align: 0.06rem;
   }
   .badge.open {
-      background: transparent; color: #7FB2D9; border-color: #3E5C74;
+      background: transparent; color: var(--accent); border-color: #3E5C74;
   }
   /* Absence is the same footprint and the same text weight as presence. The
      dashed rule is the only difference, and it is a form cue, so it survives
@@ -267,7 +353,7 @@ CONSOLE_CSS = """
       padding: var(--space-sm) var(--space-md); background: #1E242A;
       border-radius: 4px 4px 0 0;
   }
-  .panelhead .title { font-size: var(--ui-base); font-weight: 600; color: #E3E6E8; }
+  .panelhead .title { font-size: var(--ui-base); font-weight: 600; color: var(--text-primary); }
 
   [data-testid="stMetric"], [data-testid="stAlert"] {
       border-radius: 3px !important; box-shadow: none !important;
@@ -321,7 +407,7 @@ CONSOLE_CSS = """
       :root { --doc: 10.5pt; --ui-sm: 9.5pt; --ui-xs: 8.5pt; --ui-base: 10pt;
               --title: 15pt; }
       html, body, .block-container, [data-testid="stMain"] {
-          background: #FFFFFF !important; color: #000000 !important;
+          background: #FFFFFF !important; color: var(--text-print) !important;
       }
       /* EVERYTHING, not a list of selectors. The first version of this block
          enumerated the elements to blacken, which is a whitelist: anything not
@@ -336,7 +422,7 @@ CONSOLE_CSS = """
          it wins. Rendering to PDF is what showed this: the first version left 13
          fills at #E3E6E8, #C9D2D9 and #838C94, all invisible on white. */
       :root *, :root *::before, :root *::after {
-          color: #000000 !important;
+          color: var(--text-print) !important;
           background-color: transparent !important;
           box-shadow: none !important;
       }
@@ -357,7 +443,7 @@ CONSOLE_CSS = """
       .panelhead { background: transparent !important;
                    border-bottom: 1pt solid #000000 !important; }
       .badge { border: 1pt solid #000000 !important; background: transparent !important;
-               color: #000000 !important; }
+               color: var(--text-print) !important; }
       .badge.absent { border-style: dashed !important; }
 
       /* Evidence is the point of the document, so it prints open rather than
@@ -449,6 +535,48 @@ def load():
     return result, surfaces(result)
 
 
+MERGE_SIGIL = "‡"
+
+
+def merge_marker(evidence):
+    """The sigil, and the merge stated BEFORE anybody opens anything.
+
+    DESIGN.md: "A fuzzy merge is always visible before it is asked about." It
+    was buried inside the expander, which means the one inference a reviewer is
+    most likely to disagree with was the one they had to go looking for.
+
+    ONE SIGIL, WHATEVER THE COUNT. Repeating it per merge would be a tally drawn
+    as marks, which is a magnitude encoding wearing punctuation.
+    """
+    if not evidence or not evidence.transformations:
+        return ""
+    return f" <span class='sigil'>{MERGE_SIGIL}</span>"
+
+
+def render_merges(evidence):
+    """The merge lines, outside the expander, at note weight.
+
+    A merge is a fact about the data, so it is a note rather than a caption.
+    """
+    for transformation in evidence.transformations:
+        note(f"{MERGE_SIGIL} {transformation.rule}: "
+             f"{identifier(transformation.original)} &rarr; "
+             f"{identifier(transformation.resolved)}.")
+
+
+def citation_column(citations, field):
+    """The locator for one field, or the empty string.
+
+    Rendered as `file:row` because that is what a reviewer opens, and it is
+    what the plain-text export carries, which is what makes the chain walkable
+    from a raw line back to the claims that used it.
+    """
+    for citation in citations:
+        if citation.field == field:
+            return citation.locator
+    return ""
+
+
 def render_evidence(row):
     """Read-only workings, one click away. There is no control in here.
 
@@ -459,6 +587,20 @@ def render_evidence(row):
     with st.expander("How this was worked out"):
         st.caption("Read only. Nothing on this panel changes any value.")
 
+        # IDENTITY AND TYPE, NEVER A TALLY. DESIGN.md forbids a bare count of
+        # sources: "3 sources" invites reading count as strength, and three
+        # weak records do not outrank one authoritative one. So each line names
+        # the file, the system it came out of, when it was pulled, and exactly
+        # which rows were read.
+        st.markdown("###### Sources read, and when they were pulled")
+        st.markdown(tight_table([
+            ("", f"{identifier(entry['source_file'])} &mdash; "
+                 f"{entry['system_of_record']}, retrieved "
+                 f"{entry['retrieved_at']}, "
+                 f"row{'s' if len(entry['rows']) > 1 else ''} "
+                 f"{', '.join(str(r) for r in entry['rows'])}")
+            for entry in evidence.sources_used()]), unsafe_allow_html=True)
+
         st.markdown("###### Supplier rows read for this part")
         if evidence.supplier_rows:
             st.dataframe(
@@ -466,7 +608,8 @@ def render_evidence(row):
                   "region": r.region,
                   "lead time on file": "yes" if r.has_lead_time else "no",
                   "quoted days": r.quoted_lead_time_days,
-                  "p95 days": r.p95_lead_time_days}
+                  "p95 days": r.p95_lead_time_days,
+                  "source": citation_column(r.citations, SUPPLIER_NAME)}
                  for r in evidence.supplier_rows],
                 hide_index=True, width="stretch",
                 column_config={
@@ -481,21 +624,65 @@ def render_evidence(row):
               "qty per finished good": r.qty_per_finished_good,
               "annual units": ("absent from the demand plan"
                                if r.annual_units is None else r.annual_units),
-              "contribution": r.contribution or "not counted"}
+              "contribution": r.contribution or "not counted",
+              "source": citation_column(r.citations, ANNUAL_UNITS)}
              for r in evidence.demand_rows],
             hide_index=True, width="stretch")
+        st.caption("A contribution appears in no file. It is this pipeline's "
+                   "arithmetic on the two figures beside it, so it cites no "
+                   "row: a locator pointing at a line that does not hold the "
+                   "number is worse than none.")
 
         st.markdown("###### Lead time record used")
         used = evidence.lead_time_used
-        note(
-            f"{identifier(used.supplier_name)}, "
-            f"{used.quoted_lead_time_days} days quoted, "
-            f"{used.p95_lead_time_days} at p95."
-            if used else
-            "None. No supplier on this part has a lead time record.")
+        if used:
+            note(f"{identifier(used.supplier_name)}, "
+                 f"{used.quoted_lead_time_days} days quoted, "
+                 f"{used.p95_lead_time_days} at p95, from "
+                 f"{identifier(citation_column(evidence.lead_time_citations, QUOTED_LEAD_TIME_DAYS))}.")
+        else:
+            note("None. No supplier on this part has a lead time record.")
+
+        if evidence.transformations:
+            st.markdown("###### Transformations applied")
+            # BOTH STRINGS, ALWAYS. The point of showing a transformation is
+            # that a reviewer can disagree with it, and nobody can disagree
+            # with a result whose input has been discarded.
+            st.markdown(tight_table([
+                ("", f"{identifier(t.original)} &rarr; "
+                     f"{identifier(t.resolved)}<br>{t.rule}")
+                for t in evidence.transformations]), unsafe_allow_html=True)
+
+        if evidence.contradictions:
+            # SHOWN, NEVER RESOLVED. The tool does not pick, because picking
+            # would settle a question it has no basis to settle, silently.
+            st.markdown("###### Sources that disagree")
+            for contradiction in evidence.contradictions:
+                note(f"{identifier(contradiction.subject)}: "
+                     f"{contradiction.field} is given as " +
+                     ", ".join(f"{c.value} at {identifier(c.locator)}"
+                               for c in contradiction.citations) +
+                     ". Both are shown. This tool does not choose between them.")
+
+        if evidence.absences:
+            # ABSENCE IS NOT AN EMPTY PANEL. Same chip vocabulary, same weight
+            # and footprint as an asserted value, because dimming an unknown
+            # says it matters less.
+            st.markdown("###### What the sources do not contain")
+            st.markdown(tight_table([
+                ("", absence_chip(kind) + sentence)
+                for kind, sentence in evidence.absences]),
+                unsafe_allow_html=True)
 
         for line in evidence.notes:
             note(line)
+
+        st.markdown("###### This record as plain text")
+        st.caption("Carries the file, the retrieval time, every row id and "
+                   "every transformation, so a citation pastes into a review "
+                   "memo intact and a raw line can be traced back to the "
+                   "claims that used it.")
+        st.code(evidence.as_text(), language=None)
 
         st.caption(
             "To change any value above, correct it in the system of record and "
@@ -515,6 +702,12 @@ ABSENCE_LABEL = {
     "unplaceable": "unresolved",
     "not_applicable": "not applicable",
     "no_thresholds": "not configured",
+    # `no record` was RESERVED, not implemented, and the reason it could not be
+    # implemented was that the model could not tell "the source has no row for
+    # this" apart from "nobody has looked". The extract manifest is what settled
+    # it: a file with a system of record and a retrieval time was pulled, so an
+    # absence in it is a recorded absence rather than an unexamined one.
+    "no_record": "no record",
 }
 
 
@@ -579,8 +772,13 @@ def render_exposure(surface, find_out):
     # are incomparable. The findings themselves run full width underneath,
     # because a sentence squeezed into a quarter-width column wraps into a
     # ribbon and stops being readable prose, and the sentence is the deliverable.
+    # ONE WIDTH FOR EVERY GROUP, whatever its layer holds. Sizing each layer to
+    # its own group count gave a solo group the full page and a group with two
+    # siblings a third of it, and the only thing that differed between them was
+    # how many siblings they happened to have.
+    width = view.lattice_width(surface.layers)
     for layer in surface.layers:
-        columns = st.columns(len(layer)) if len(layer) > 1 else [st.container()]
+        columns = st.columns(width)
         for column, group in zip(columns, layer):
             with column:
                 with st.container(border=True):
@@ -597,13 +795,49 @@ def render_exposure(surface, find_out):
                         identifier_block(row.key for row in group.rows),
                         unsafe_allow_html=True)
 
-        for group in layer:
-            for row in group.rows:
-                finding(row.sentence)
-                render_evidence(row)
-        st.divider()
-
+    st.divider()
+    render_findings(surface)
     render_blocking_matrix(surface)
+
+
+def render_findings(surface):
+    """Every exposed part once, whatever number of groups it belongs to.
+
+    QA ISSUE-005: 36 findings and 36 evidence panels rendered for 21 parts,
+    because the findings were emitted inside the layer loop and two archetypes
+    hold identical membership. `SEA-P-0258` was explained three times, verbatim.
+
+    THE LATTICE KEEPS THE MEMBERSHIP; THE FINDINGS MOVE OUT. The group panels
+    above still show which parts sit in which archetype, and that is what
+    encodes the dominance partial order, so nothing about the order is lost. A
+    part legitimately belongs to several groups. What was duplicated was the
+    explanation, and the explanation was never group-specific in the first
+    place: `_part_row` builds the sentence from ALL of a part's archetype
+    labels, so the two copies were identical by construction.
+
+    THE ALTERNATIVE WAS WORSE. Rendering each part under the first group it
+    appears in would have deduplicated just as well and made placement depend on
+    iteration order, which CLAUDE.md rules out: a plausible default is read as a
+    ranking, and "this part is filed under that archetype" is exactly the
+    reading a reviewer would take.
+    """
+    rows = {}
+    for row in surface.all_rows():
+        if row.entity != view.PART:
+            continue
+        rows.setdefault(row.key, row)
+    if not rows:
+        return
+
+    st.subheader("Findings")
+    st.caption(f"One per exposed part, whatever number of groups it sits in. "
+               f"Parts are {ranking.DEFAULT_ORDER_LABEL}, which carries no "
+               f"meaning: reading order is not priority.")
+    for key in ranking.in_default_order(rows):
+        row = rows[key]
+        finding(row.sentence + merge_marker(row.evidence))
+        render_merges(row.evidence)
+        render_evidence(row)
 
 
 def render_blocking_matrix(surface):
@@ -620,12 +854,204 @@ def render_blocking_matrix(surface):
         return
     goods, matrix = view.blocking_matrix(parts, surface.evidence_by_part)
     st.subheader("What each part blocks")
-    st.caption(f"A mark means the part appears in that finished good. "
-               f"{len(parts)} exposed parts, {len(goods)} finished goods. "
-               f"Marks are identical: this is which, never how much.")
+    st.caption("A mark means the part appears in that finished good. Marks "
+               "are identical: this is which, never how much.")
+    note(f"{len(parts)} exposed parts, {len(goods)} finished goods.")
     st.dataframe(
         list(matrix), hide_index=True, width="stretch",
         column_config={"part": st.column_config.TextColumn("part", width=110)})
+
+
+CHART_BG = "rgba(0,0,0,0)"
+CHART_GRID = "#262B30"
+CHART_INK = "#9BA3AA"
+CHART_SEQUENTIAL = ("#1E2933", "#2F4A5E", "#417089", "#5C93B4", "#7FB2D9")
+# One hue per dimension. NOMINAL: the dimensions have no order, so neither does
+# this list, and no hue here is darker or stronger than another by intent.
+DIMENSION_HUE = {
+    "lead_time_to_recover": "#7FB2D9",
+    "blast_radius": "#C79BD9",
+    "buffer_cover": "#7FD9C0",
+    "portability": "#D9C27F",
+    "concentration": "#D99B9B",
+}
+
+
+def chart_layout(figure, height=240):
+    """One layout for every chart, so geometry never carries a difference."""
+    figure.update_layout(
+        height=height, margin=dict(l=8, r=8, t=8, b=8),
+        paper_bgcolor=CHART_BG, plot_bgcolor=CHART_BG,
+        font=dict(color=CHART_INK, size=12),
+        showlegend=False, bargap=0.08)
+    figure.update_xaxes(gridcolor=CHART_GRID, zeroline=False)
+    figure.update_yaxes(gridcolor=CHART_GRID, zeroline=False)
+    return figure
+
+
+def render_dashboard(result):
+    """The overview surface.
+
+    A FOURTH SURFACE, NOT A MERGER OF THE OTHER THREE. Each of those has one row
+    entity and answers one question; this one has no row entity and answers none
+    of them. It is an overview, and it links to the surfaces that decide.
+
+    The encoding rule that would have forbidden every chart below was retired by
+    the owner on 2026-08-06. CLAUDE.md and DESIGN.md record the decision and what
+    it cost; this function does not re-argue it. What it does keep is the one
+    rule that did not move: every chart draws ONE dimension in ONE unit, and
+    nothing here puts two dimensions on one axis.
+    """
+    st.title("Dashboard")
+    st.caption("An overview. Every decision is made on the other three "
+               "surfaces, which this page links to and does not replace.")
+
+    for column, tile in zip(st.columns(len(dash.tiles(result))),
+                            dash.tiles(result)):
+        # No delta. There is no previous run to compare against, and a delta
+        # against nothing is an arrow pointing at a number that does not exist.
+        column.metric(tile.label, f"{tile.value:,}", help=tile.of or None)
+        if tile.of:
+            # A NOTE, NOT A CAPTION. The denominator is a fact about the data,
+            # and it changes with the dataset, so it is in the wrong register as
+            # a caption. The contract test caught this on its first run against
+            # this surface, which is the first thing it has caught that was not
+            # already there.
+            column.markdown(f"<p class='note'>{tile.of}</p>",
+                            unsafe_allow_html=True)
+
+    st.divider()
+    render_region_map(result)
+    st.divider()
+    render_dimension_multiples(result)
+    st.divider()
+    render_incidence(result)
+
+
+def render_region_map(result):
+    st.subheader("Where the suppliers are")
+    # THE MAP IS THE MOST BELIEVABLE THING ON THE PAGE, so it says what it is
+    # before it says anything else. Four synthetic regions, no coordinates in
+    # the data, and countries chosen as a drawing convention.
+    note("The dataset has four regions and no coordinates. Countries are a "
+         "drawing convention for those regions, not a claim that any supplier "
+         "is in a particular country.")
+    rows = dash.regions(result)
+    frame = pd.DataFrame([
+        {"country": country, "region": row.label,
+         "suppliers": row.suppliers, "parts": row.parts,
+         "exposed parts": row.exposed_parts}
+        for row in rows for country in row.countries])
+    figure = px.choropleth(
+        frame, locations="country", locationmode="country names",
+        color="exposed parts", hover_name="region",
+        hover_data=["suppliers", "parts"],
+        color_continuous_scale=list(CHART_SEQUENTIAL))
+    figure.update_geos(bgcolor=CHART_BG, showframe=False, showcoastlines=False,
+                       landcolor="#1B1F23", lakecolor=CHART_BG,
+                       countrycolor=CHART_GRID, projection_type="natural earth")
+    chart_layout(figure, height=380)
+    figure.update_layout(coloraxis_colorbar=dict(title="exposed<br>parts"))
+    # scrollZoom off: a geo plot captures the wheel, so scrolling the page over
+    # the map zoomed the map instead and the page stayed put. Found by trying to
+    # scroll past it.
+    st.plotly_chart(figure, use_container_width=True,
+                    config={"scrollZoom": False, "displayModeBar": False})
+
+    st.dataframe(
+        [{"region": row.label, "suppliers": row.suppliers,
+          "parts with a supplier here": row.parts,
+          "exposed parts": row.exposed_parts} for row in rows],
+        hide_index=True, width="stretch")
+
+
+def render_dimension_multiples(result):
+    """Five charts, identical geometry, each in its own unit.
+
+    IDENTICAL GEOMETRY IS STILL THE RULE HERE, and it is not a leftover. The
+    dimensions do not commensurate, so a taller box or a wider axis would be a
+    comparison the units do not support. Retiring the encoding rule allowed the
+    charts; it did not make days and finished-good units the same thing.
+    """
+    st.subheader("The five dimensions, each in its own unit")
+    st.caption("Five separate axes on purpose. No chart here puts two "
+               "dimensions together, because there is no unit in which days "
+               "and finished-good units are the same quantity.")
+
+    series = dash.dimension_series(result)
+    for chunk_start in range(0, len(series), 3):
+        chunk = series[chunk_start:chunk_start + 3]
+        # Padded to three so a row of two does not draw wider boxes than a row
+        # of three, which would make width mean something again.
+        for column, item in zip(st.columns(3), chunk):
+            with column:
+                st.markdown(f"###### {item.dimension.replace('_', ' ')}")
+                st.plotly_chart(dimension_figure(item),
+                                use_container_width=True,
+                                key=f"dim-{item.dimension}")
+                note(f"unit: {item.unit}. {item.assessed} assessed, "
+                     f"{item.unknown} not established.")
+
+
+def dimension_figure(item):
+    hue = DIMENSION_HUE.get(item.dimension, "#7FB2D9")
+    if item.is_categorical:
+        figure = go.Figure(go.Bar(
+            x=list(item.categories), y=list(item.categories.values()),
+            marker_color=hue))
+    elif item.values and isinstance(item.values[0], tuple):
+        # A PAIRED MEASURE. Lead time carries (quoted, p95): both are days, so
+        # both belong on this axis. Drawing only one would be the tool choosing
+        # which half of the measure counts.
+        figure = go.Figure()
+        for index, (label, shade) in enumerate((("quoted", hue),
+                                                ("p95", CHART_SEQUENTIAL[1]))):
+            figure.add_trace(go.Histogram(
+                x=[value[index] for value in item.values],
+                name=label, marker_color=shade, opacity=0.75, nbinsx=24))
+        # AFTER chart_layout, not before. chart_layout sets showlegend=False for
+        # the single-series charts, so setting it here first meant the paired
+        # chart drew two overlapping histograms with nothing saying which was
+        # quoted and which was p95.
+        chart_layout(figure)
+        figure.update_layout(barmode="overlay", showlegend=True,
+                             legend=dict(orientation="h", y=1.15,
+                                         font=dict(size=11)))
+        return figure
+    else:
+        figure = go.Figure(go.Histogram(x=list(item.values),
+                                        marker_color=hue, nbinsx=24))
+    return chart_layout(figure)
+
+
+def render_incidence(result):
+    parts, suppliers, grid = dash.incidence(result)
+    st.subheader("Which supplier touches which exposed part")
+    total_exposed = len(dash.exposed_parts(result))
+    st.caption("A filled cell means that supplier appears on that part. The "
+               "cell is present or absent; the shade carries nothing.")
+    # NO SILENT CAP, AND THE TWO REASONS FOR A MISSING PART ARE NOT THE SAME
+    # FACT. A part can be absent because the matrix is capped, or because it has
+    # no supplier row at all, and the second is a finding rather than a display
+    # limit: those are the parts with nobody to call. Reporting one count for
+    # both would bury it.
+    without_supplier = total_exposed - len(no_supplier_excluded := [
+        part for part in dash.exposed_parts(result)
+        if any(row[0] == part for row in dash.supplier_rows(result))])
+    capped = len(no_supplier_excluded) - len(parts)
+    note(f"{len(parts)} exposed parts drawn against {len(suppliers)} suppliers.")
+    if without_supplier:
+        note(f"{without_supplier} exposed parts have no supplier row at all, so "
+             f"they are absent from this grid rather than drawn empty. That is "
+             f"the finding, not a gap in the picture.")
+    if capped > 0:
+        note(f"{capped} further parts are not drawn: this grid is capped.")
+    figure = go.Figure(go.Heatmap(
+        z=grid, x=list(parts), y=list(suppliers),
+        colorscale=[[0, "#1B1F23"], [1, "#7FB2D9"]], showscale=False,
+        xgap=1, ygap=1))
+    chart_layout(figure, height=max(320, 18 * len(suppliers)))
+    st.plotly_chart(figure, use_container_width=True)
 
 
 def render_find_out(surface):
@@ -637,7 +1063,7 @@ def render_find_out(surface):
     for row in surface.rows:
         st.markdown(f"## `{row.key}`")
         finding(row.sentence)
-        st.caption(row.detail["order_label"])
+        st.caption(ranking.DEFAULT_ORDER_LABEL)
         st.markdown(
             "<p class='note'>" +
             "  ".join(identifier(part) for part in row.detail["parts"]) +
@@ -652,9 +1078,9 @@ def render_confirm(surface, result):
     grid = view.cluster_membership(result.report)
     if grid:
         st.subheader("Who sits with whom")
-        st.caption(f"{len(grid)} exposed parts, with the supplier and the "
-                   f"region each one is grouped under. Identifiers only: "
-                   f"nothing here is ordered or scored.")
+        st.caption("Identifiers only: nothing here is ordered or scored.")
+        note(f"{len(grid)} exposed parts, with the supplier and the region "
+             f"each one is grouped under.")
         st.dataframe(list(grid), hide_index=True, width="stretch")
     # Held outside the widget. This input exists only on this surface, so
     # Streamlit discards its state the moment a reviewer navigates away, and
@@ -671,8 +1097,8 @@ def render_confirm(surface, result):
             # The rendered sentence already names every member, so the list is
             # not repeated here. Saying it twice is the interface disagreeing
             # with itself about which one is the record.
-            st.caption(f"{row.detail['member_count']} members, confirmed as "
-                       f"one act")
+            note(f"{row.detail['member_count']} members, confirmed as "
+                 f"one act")
         control_columns = st.columns(len(row.controls) + 1)
         reason = control_columns[-1].selectbox(
             "Reason", row.controls[0].reason_codes, index=None,
@@ -724,7 +1150,7 @@ def render_decision_panel(log, total_rows):
     st.subheader(govrender.DECISION_PANEL_HEADING)
     # The denominator first, which is how the exposure surface already works:
     # what is outstanding is the unknown, and it leads.
-    st.caption(govrender.decision_panel_count(
+    note(govrender.decision_panel_count(
         len(events), max(total_rows - len(events), 0)))
     note(govrender.DECISION_PANEL_SCOPE)
 
@@ -742,9 +1168,11 @@ def render_decision_panel(log, total_rows):
 # Short names for navigation, with the question beneath. The questions stay as
 # page headings where they carry the surface's purpose; in a sidebar a full
 # sentence per item reads as prose rather than as navigation.
-NAV_NAME = {view.EXPOSURE: "Exposure", view.FIND_OUT: "Find out",
-            view.CONFIRM: "Confirm"}
-NAV_SUBTITLE = {view.EXPOSURE: "what is worst",
+DASHBOARD = "dashboard"
+NAV_NAME = {DASHBOARD: "Dashboard", view.EXPOSURE: "Exposure",
+            view.FIND_OUT: "Find out", view.CONFIRM: "Confirm"}
+NAV_SUBTITLE = {DASHBOARD: "the shape of the whole set",
+                view.EXPOSURE: "what is worst",
                 view.FIND_OUT: "what should I go and get",
                 view.CONFIRM: "do I agree with your model"}
 
@@ -784,11 +1212,16 @@ def main():
     st.sidebar.title("Supplier exposure")
     choice = st.sidebar.radio(
         "Surface",
-        (view.EXPOSURE, view.FIND_OUT, view.CONFIRM),
+        (DASHBOARD, view.EXPOSURE, view.FIND_OUT, view.CONFIRM),
         format_func=lambda name: f"**{NAV_NAME[name]}**  \n"
                                  f"{NAV_SUBTITLE[name]}")
-    st.sidebar.caption("Three surfaces, deliberately separate. Their rows are "
-                       "different things: a part, a field, a cluster.")
+    st.sidebar.caption("Three decision surfaces, deliberately separate. Their "
+                       "rows are different things: a part, a field, a cluster. "
+                       "The dashboard is an overview and decides nothing.")
+
+    if choice == DASHBOARD:
+        render_dashboard(result)
+        return
 
     surface = built[choice]
     if choice == view.EXPOSURE:

@@ -8,5 +8,6 @@
 # tests/test_deploy_requirements.py asserts the two agree. The dev extras are
 # deliberately absent: a deployed container runs the app and never the suite.
 pandas>=2.0
+plotly>=5.20
 pyyaml>=6.0
 streamlit>=1.40

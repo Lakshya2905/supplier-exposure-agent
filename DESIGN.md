@@ -186,34 +186,57 @@ WCAG AA, several above 12:1.
 | `border-panel` | `#272D33` | panel edge |
 | `border-ui` | `#6B7278` | anything whose boundary must be identifiable (3.47:1 on surface, 3.69:1 on bg) |
 
-### Text ramp, with the semantic mapping [PARTIAL]
+### Text ramp, with the semantic mapping [SHIPPED]
 
-> [PARTIAL] The six colours and their ratios ship and are verified. The semantic mapping (when a note applies versus a caption) exists only here; nothing enforces it.
+> [SHIPPED] The tokens are declared once in `:root` and every text colour in the stylesheet names one. `tests/test_design_contracts.py` refuses a seventh step, and refuses a caption whose text varies with the data.
 
 Five greys with no usage rule will be chosen by feel and drift within a week, so
-the rule is part of the system.
+the rule is part of the system. Twelve distinct text colours shipped against
+these six, which is the same failure the type scale had: a list, decided one
+rule at a time. Every one of the six extras folded onto a step that already
+existed, which is the evidence that none of them was carrying a distinction.
 
 | Token | Hex | On bg | Means |
 |-------|-----|------:|-------|
 | `text-title` | `#F0F2F4` | 16.03:1 | h1 only |
-| `text-primary` | `#E3E6E8` | 14.35:1 | a finding, the thing you came to read |
+| `text-primary` | `#E3E6E8` | 14.35:1 | a finding, and any value read from a source: identifiers, figures |
 | `text-body` | `#D5DADE` | 12.78:1 | prose, chip labels, absence states |
 | `text-note` | `#9BA3AA` | 7.04:1 | a qualification attached to a finding |
 | `text-caption` | `#838C94` | 5.26:1 | instructions about the interface, never about the data |
-| `text-section` | `#8FA0AD` | 6.68:1 | h2 section labels |
+| `text-section` | `#8FA0AD` | 6.68:1 | a section label, at any heading level below h1 |
+
+**Heading level is carried by size, weight and position, never by hue.** `h3`
+through `h6` used to have a colour of their own, which made "how deep is this
+heading" a thing the palette answered twice and the type scale answered once.
 
 `text-note` and `text-caption` are not interchangeable. A note is about the data.
 A caption is about the interface. If it would still be true with different data,
 it is a caption.
 
-### The accent contract [PARTIAL]
+**Only one direction of that is mechanisable, and it is enforced.** A caption
+that interpolates a computed value is provably about the data, so it is provably
+in the wrong register; the converse is a judgment about meaning and is left to
+review. Five captions were carrying counts and are now notes. A caption may still
+name a module-level constant: "ordered by part number" reads the same against any
+dataset.
 
-> [PARTIAL] Accent usage and every ratio below ship and are verified. The requirement that colour never be the only cue for actionability (WCAG 1.4.1) is a target.
+**Two steps were not reaching the screen at all.** Streamlit's theme sets
+`textColor` in `config.toml` and paints headings with it at a specificity these
+element rules lose to, so every heading on the page measured `text-primary` and
+`text-title` and `text-section` were never painted. That was equally true when
+the declarations were literals — tokenising did not cause it. **No scan of the
+stylesheet could have found it**, because the stylesheet was right; the rendered
+page was wrong. Found by measuring `getComputedStyle` on the running app.
+
+### The accent contract [SHIPPED]
+
+> [SHIPPED] Accent usage and every ratio below ship and are verified, and every accent element now carries a second, non-colour cue. `tests/test_design_contracts.py` refuses an accent rule with no affordance in the same block.
 
 - **`accent` `#7FB2D9`**, 7.94:1 on bg, 7.48:1 on surface, 6.91:1 on panel head.
 - The accent marks **only** what a reviewer can act on or navigate to: links, expander summaries, the active nav rule, button borders, and the outlined autonomy chip (which is exactly the `recommends` state, the one that gets a Confirm and Reject button).
 - The accent is **never** applied to a finding, a part, a dimension, or a category.
-- **Colour is never the only cue for actionability** (WCAG 1.4.1). Every actionable element also carries a non colour affordance: an underline, a caret, a bracket, or a border.
+- **Colour is never the only cue for actionability** (WCAG 1.4.1). Every actionable element also carries a non colour affordance: links and expander summaries an underline, buttons and the outlined chip a border, the selected nav item a left rule, focus an outline. The expander summary carries its own underline rather than relying on Streamlit's chevron: the chevron is a real affordance and it is there, but it is a vendor's markup and not a contract, so the only thing standing between that control and a colour-only cue would be somebody else's release note.
+- **The link colour was losing, and the source said otherwise.** Streamlit styles its own anchors from a hashed emotion class, which beats an element rule, so every link rendered in Streamlit's blue — measured `rgb(61, 157, 243)` against the accent's `rgb(127, 178, 217)` — while the stylesheet and a test both said accent. The underline had been winning the whole time, because Streamlit sets no `text-decoration` there, which is what made it quiet: the affordance was right and only the colour was wrong.
 - Nothing in the chip vocabulary may land near the accent's hue, `oklch(0.742 0.078 242)`. This is why the category palette does not use hue at all.
 
 ### The category chip: one neutral chip, form carries taxonomy [SHIPPED]
@@ -274,6 +297,17 @@ collapse them into one shrug. Each is a dashed chip with distinct label text.
 | `not_applicable` | `not applicable` | the question does not attach to this part |
 | `no_thresholds` | `not configured` | a threshold nobody has set, and the system will not choose one |
 
+**`no record` has since shipped, and what unblocked it is worth recording.** It
+was reserved because the model could not tell "the source has no row for this"
+apart from "nobody has looked". The extract manifest settles exactly that: a file
+with a system of record and a retrieval time *was* pulled, so an absence in it is
+a recorded absence. The evidence panel now says which source was pulled, when,
+and that it holds no row for this part.
+
+| Kind | Label | Means |
+|------|-------|-------|
+| `no_record` | `no record` | the source was retrieved on a stated date and has no row for this |
+
 **Reserved, not implemented.** The model cannot currently distinguish these, and
 an earlier draft of this document specified them as though it could. Inventing a
 label for a state the data cannot tell apart is the interface claiming a precision
@@ -282,10 +316,15 @@ distinction:
 
 | State | Label when it exists | Means |
 |-------|----------------------|-------|
-| not collected | `no record` | the source has no row for this |
 | stale | `as of <date>` | a record exists but predates the as-of horizon |
 | conflicting | `sources disagree` | two sources answer differently and neither wins |
 | structurally unknowable | `cannot be established` | no source could answer this even in principle |
+
+`sources disagree` is closer than it was: the evidence panel renders
+contradictory lead time records side by side without choosing. What is missing
+is the *chip*, because nothing in seed 42 produces a contradiction, and a label
+whose only exercise is a unit test would be a claim about data this system has
+never seen.
 
 **An unrecognised kind gets no chip rather than a guessed one**, for the same
 reason the palette refuses to invent a colour: a wrong label on an absence is
@@ -309,34 +348,52 @@ as zero; a recorded zero is real.
 findings, not after. The count of unknowns is set at least as prominently as any
 finding.
 
-## Evidence [TARGET]
+## Evidence [SHIPPED]
 
-> [TARGET] **Not implemented.** Evidence today is a collapsed expander with supplier rows, demand rows and a lead time record. None of the anatomy below is a structured contract, and the fuzzy-merge sigil does not exist.
+> [SHIPPED] The anatomy is a structured contract in `src/interface/model.py` and every field resolves to something in the data. `tests/test_evidence_anatomy.py` checks that a citation can be **followed**, not that the panel contains the right words.
 
 The memorable thing is "every claim shows its work," so evidence is specified in
 more detail than the palette.
 
-### Anatomy [TARGET]
-
-> [TARGET] None of these six fields is currently a specified, enforced part of an evidence record.
+### Anatomy [SHIPPED]
 
 Every claim resolves to one or more evidence records, and each record carries:
 
-1. **source id** (mono): the file and row that produced the value.
-2. **source type**: which system of record, and whether it is authoritative or derived.
-3. **field cited**: the exact column, spelled as the source spells it.
-4. **as of**: when the record was retrieved.
+1. **source id** (mono): the file and row that produced the value. Carried by the reader from the line the value came off, before the sort reorders anything.
+2. **system of record**: which system the extract came out of, and whether the value is `recorded` (it appears verbatim in a file) or `derived` (this pipeline computed it).
+3. **field cited**: the exact column, spelled as the source spells it. The constants come from the same module the readers use, so a rename moves both together.
+4. **as of**: when the record was retrieved, from `sources.csv`.
 5. **transformation applied**: any normalisation, unit conversion, or fuzzy name merge, stated with both the original and the resolved string.
-6. **inverse link**: from evidence back to the raw record, so the chain is walkable in both directions.
+6. **inverse link**: the locator, `file:row`, which the plain-text export also carries, so a raw line can be traced back to the claims that used it.
 
-### Rules [TARGET]
+**Field 2 was called "source type" and that name was already taken.**
+`source_type` is a `part_master.csv` column meaning make or buy, and it is
+load-bearing in the verdict table. A panel showing "source type: buy" beside
+"source type: ERP part master" puts two unrelated facts under one word, so the
+anatomy was renamed rather than the column.
 
-> [TARGET] The read-only rule and the no-write-path rule ship. The rest are targets.
+**Two of these six had no source until the generator grew one.** System of
+record and as-of could not be answered from seed 42's data at all, and the
+alternative was to render them from constants in the interface. That would have
+been the panel whose entire job is proving nothing was invented inventing a
+provenance at render time. `sources.csv` is the fix: the generator emits the
+extract manifest and the pipeline reads it like any other input. See
+`docs/DATA_DICTIONARY.md`.
+
+**A derived value cites no line, deliberately.** A contribution figure appears in
+no file, so a locator beside it would point at a row holding a different number,
+and a reviewer who followed it could not tell which of the two was wrong.
+`Citation.__post_init__` refuses to construct either mistake.
+
+### Rules [PARTIAL]
+
+> [PARTIAL] Every rule below ships except the sigil being its own target: the sigil renders and the merge is stated beside it, but there is nothing to open.
 
 - **The evidence view shows the source as the source spells it.** Original column headers, original casing, original whitespace. No relabeling, no realignment to the pretty grid, no unit prettification. If it looked designed, a reviewer would suspect it had been processed.
-- **A fuzzy merge is always visible before it is asked about.** A value that survived a name merge carries an inline mono sigil, and the sigil is itself a target: opening it shows both strings and the rule that fired. This is currently buried inside an expander and should not be.
-- **Absent evidence is a specified state, not an empty panel.** A claim with no evidence says so in the same vocabulary as the Absence section.
-- **Contradictory evidence is shown, never resolved.** Both records render. The tool does not pick.
+- **A merge is always visible before it is asked about.** It was buried inside the expander, which put the one inference a reviewer is most likely to disagree with behind a click. The finding now carries an inline mono sigil at `text-note` — never the accent, because a reader cannot act on a merge — and the merge, with both strings, sits beside it outside the panel. **One sigil whatever the count**: repeated marks are a tally, and a tally is a magnitude drawn as punctuation.
+- **The two merges are not the same claim.** A cross-file merge reconciles two spellings across two files and changes no count. A duplicate vendor merge collapses two rows of *one* file into one supplier and therefore **changes the supplier count**, which is the number the verdict turns on. A reviewer counting rows in the panel gets two where the sentence says one, so the collapse is stated rather than left to be inferred.
+- **Absent evidence is a specified state, not an empty panel.** A claim with no evidence says so in the same vocabulary as the Absence section, and names the source and its retrieval date.
+- **Contradictory evidence is shown, never resolved.** Both records render. The tool does not pick. The previous join was a dict comprehension keyed by canonical name, so two rows that canonicalised together silently kept the last one — a latent trap rather than a live defect, since nothing in seed 42 triggers it.
 - **Never render a bare count of sources.** "3 sources" invites reading count as strength, and three weak records do not outrank one authoritative one. Show source identity and type. Never render a tally as repeated marks.
 - **Evidence is exportable as plain text**, carrying file, retrieval time, row ids, and every transformation applied, so a citation can be pasted into a review memo intact.
 
@@ -402,7 +459,19 @@ call site, not at the binding.
 
 ## The Anti-Ranking Contract [PARTIAL]
 
-> [PARTIAL] Dimensions stay separate, no sort control exists, and the order label now declares the order meaningless as of `f4130e0`. The equal-area rule and the written no-default-sort rule are still targets, enforced by nothing.
+> [PARTIAL] Dimensions stay separate, no sort control exists, the order label declares the order meaningless as of `f4130e0`, and equal area now holds and is tested. The written no-default-sort rule is still enforced by nothing.
+
+**Equal area was being violated by the lattice itself.** Each layer sized its
+columns to its own group count, so a layer holding one group filled the page and
+a group sharing a layer with two others got a third of it. Nothing about a group
+differed between those two states except how many siblings it happened to have,
+and a reader has no way to know that: a full-width panel simply reads as the
+important one. Vertical position carries dominance and is meant to; width
+carried nothing and looked like it carried something, which is the objection
+that retired the category hue. `lattice_width()` now returns one column count
+for the whole lattice. Measured at 1440px: every group panel is 332px across
+layers of three different sizes, and the coverage panel stays full width because
+it is a page-level panel rather than a group.
 
 The five scoring dimensions stay separate forever. That is a correctness
 constraint, and layout can violate it as easily as arithmetic can.
@@ -414,28 +483,74 @@ constraint, and layout can violate it as easily as arithmetic can.
 - **Reading order is not priority.** If a set must be laid out linearly, say so.
 - **The order label stays; the promise of a control goes.** `CLAUDE.md` requires that any default ordering be arbitrary, stable, and labelled in the output, "because a plausible default is read as a ranking." `DEFAULT_ORDER_LABEL` in `src/ranking.py:40` reads "ordered by part number; choose a dimension to rank by". The first clause satisfies that rule and must stay. The second promises a control that does not exist anywhere in the app (0 sort controls, 0 sliders, 0 radios outside navigation) and that this contract says should never exist. Drop the second clause only.
 
-### Banned widgets, and what to use instead [PARTIAL]
+### Banned widgets [RETIRED 2026-08-06]
 
-> [PARTIAL] The first five rows are enforced by a source scan in `tests/test_review_app.py`. The `st.metric(delta=)`, dataframe-sort and red/amber/green rows are additions here and are not yet enforced.
+> [RETIRED] The owner retired the nominal-only encoding rule on 2026-08-06, after being told what it costs. Charts, a choropleth and red/amber/green are permitted. The source scan that enforced this list is gone; `tests/test_scoring.py` still forbids the arithmetic composite and did not change.
 
-Every one of these is a normalised scale by construction, which is the composite
-arriving through a widget rather than through arithmetic. `tests/test_review_app.py`
-scans the source to enforce the list.
+The list is kept because the reasoning is still true, and because a reader who
+finds a bar chart here should be able to see that it was a decision rather than
+an oversight. **These are arguments that were overruled, not arguments that were
+refuted.**
 
-| Banned | Why | Instead |
+| Was banned | The objection, which still stands | Status |
 |--------|-----|---------|
-| `st.progress`, `ProgressColumn` | a literal 0 to 1 bar | the figure, in mono, with its unit |
-| `BarChartColumn`, `LineChartColumn`, `AreaChartColumn` | magnitude as length inside a table | a column of tabular figures |
-| `st.bar_chart`, `st.line_chart`, `st.area_chart`, `st.scatter_chart` | shared axis across incommensurable dimensions | small multiples with identical geometry, or a table |
-| `background_gradient`, `color_gradient` | ordinal encoding of a heterogeneous set | one neutral chip |
-| `st.slider` | a threshold with no owner and no version | a value in `config/archetypes.yaml`, owned and versioned |
-| `st.metric(delta=...)` | ships red and green delta arrows, which is RAG plus magnitude | state the two figures and their dates |
-| `st.dataframe` column sort | free per column sort supplies a ranking silently | pass explicitly ordered data; disable or ignore column sort |
-| red / amber / green anywhere | three stops on one ordered axis wearing a costume | the label, in words |
+| `st.progress`, `ProgressColumn` | a literal 0 to 1 bar | permitted |
+| `BarChartColumn`, `LineChartColumn`, `AreaChartColumn` | magnitude as length inside a table | permitted |
+| `st.bar_chart`, `st.line_chart`, `st.area_chart`, `st.scatter_chart` | shared axis across incommensurable dimensions | permitted for ONE dimension in its own units |
+| `background_gradient`, `color_gradient` | ordinal encoding of a heterogeneous set | permitted |
+| `st.slider` | a threshold with no owner and no version | **still banned**: this is about threshold ownership, not encoding, and `config/archetypes.yaml` remains where a threshold lives |
+| `st.metric(delta=...)` | ships red and green delta arrows | permitted |
+| `st.dataframe` column sort | free per column sort supplies a ranking silently | permitted |
+| red / amber / green anywhere | three stops on one ordered axis wearing a costume | permitted |
 
-Green is unavailable even where it looks harmless. No dimension here has a "good":
-a part with one qualified supplier is not good, it is concentrated, which may be
-fine or fatal depending on the other four dimensions.
+**The one line that did not move.** Nothing may put two dimensions on a single
+axis. That is not the encoding rule, it is the composite rule, and it is
+enforced in `src/scoring.py` at construction: a profile has no `total`, no
+`weight` and no `__add__`, and every measure keeps a physical unit. A chart may
+draw lead time in days; no chart may draw lead time against blast radius as
+though the two commensurate.
+
+Green is still worth thinking about before using it. No dimension here has a
+"good": a part with one qualified supplier is not good, it is concentrated,
+which may be fine or fatal depending on the other four.
+
+## The Dashboard Surface [SHIPPED]
+
+> [SHIPPED] Added 2026-08-06, when the owner retired the nominal-only encoding rule. Four figure tiles, a region choropleth, five small multiples and a supplier-to-part incidence grid.
+
+**A fourth surface, not a merger of the other three.** Each of those has one row
+entity and answers one question. This one has no row entity and answers none of
+them: it is an overview, and every decision is still made elsewhere. That is why
+adding it does not breach "three surfaces, never one table" — it is not a table
+of parts, fields and clusters flattened together.
+
+**It is the landing surface.** A visitor meets the shape of the set before the
+findings.
+
+What it draws, and the one line each respects:
+
+| Element | Encoding | The care taken |
+|---|---|---|
+| Figure tiles | number | Every tile carries its denominator. A count with no denominator invites reading 21 as large or small when neither is knowable. No `delta`: there is no previous run, and an arrow pointing at a number that does not exist is worse than no arrow |
+| Region choropleth | sequential fill | The data has four regions and no coordinates. Countries are a **drawing convention**, and the surface says so above the map, because a map is the most believable thing on a page |
+| Five small multiples | length | **Identical geometry, five separate axes.** Retiring the encoding rule allowed the charts; it did not make days and finished-good units the same quantity. Rows are padded to three columns so a row of two does not draw wider boxes |
+| Incidence grid | presence | Binary. The shade carries nothing |
+
+**Absence keeps its own count in every series.** A histogram built by filtering
+out the unknowns is a picture of the answerable parts presented as a picture of
+the parts, so each chart states how many were not established beneath it.
+
+**The two reasons a part is missing from the incidence grid are not one fact.**
+A part can be absent because the grid is capped, or because it has no supplier
+row at all — and the second is the finding, the parts with nobody to call.
+Reporting one count for both would bury it.
+
+Three defects that only using the page found: the paired lead-time chart drew
+two overlapping histograms with its legend switched back off by the shared
+layout helper, so nothing said which was quoted and which was p95; the
+choropleth captured the mouse wheel, so scrolling the page over the map zoomed
+the map and the page stayed put; and the tile denominators were captions, which
+the caption contract correctly rejected as data.
 
 ## Spacing [TARGET]
 
@@ -558,3 +673,13 @@ with numbers:
 | 2026-08-05 | Category hue retired in code (`282657a`) | Nine of eleven hues never reached a badge, so this was a latent trap rather than a live defect. The first caller to write `badge(row.completeness)` would have shipped an ordered ramp with three guards saying it could not rank |
 | 2026-08-05 | Absence kinds named in the coverage panel (`9e3c25a`) | Three kinds shipped, four reserved. Labels exist only for distinctions the model can actually make |
 | 2026-08-05 | Order label stopped promising a rank-by control (`f4130e0`) | Resolved QA ISSUE-007 under the anti-ranking contract rather than by building the control, because sorting by one dimension declares it the ranking |
+| 2026-08-06 | Provenance emitted by the generator, not assembled in the interface | Two of the six anatomy fields had no source in the data. Rendering them from constants would have made the panel that proves nothing was invented invent a provenance at render time |
+| 2026-08-06 | Anatomy field 2 renamed from "source type" to "system of record" | `source_type` is a `part_master.csv` column meaning make or buy and is load-bearing in the verdict table. One word cannot carry both, and the CSV name is the older one |
+| 2026-08-06 | `no record` promoted from reserved to shipped | The extract manifest is what made the distinction available: a file with a retrieval time was pulled, so an absence in it is recorded rather than unexamined |
+| 2026-08-06 | Findings moved out of the layer loop into one list (QA ISSUE-005) | 36 findings for 21 parts, 14 of them verbatim duplicates. Rendering each part under its first group would have deduplicated equally and made placement depend on iteration order, which reads as a ranking |
+| 2026-08-06 | Text ramp declared once in `:root`, twelve colours folded to six | Every extra folded onto a step that already existed, which is the evidence none was carrying a distinction. The caption rule is enforced in the direction that is mechanisable |
+| 2026-08-06 | Heading and link colours given `!important` | Both were losing to Streamlit's own rules while the stylesheet and its tests agreed they were right. Two of the six ramp steps were never painted. Only measuring the rendered page could have found it |
+| 2026-08-06 | One column count for the whole dominance lattice | A group's width varied with how many siblings its layer held, so a solo group filled the page and read as the important one. Width carried nothing and looked like it carried something |
+| 2026-08-06 | **Nominal-only encoding rule retired, by the owner, on the record** | Asked for a dashboard with charts and a world map; told what it costs before deciding. The objection was overruled, not refuted: an ordinal encoding across incommensurable dimensions is a composite a reader assembles by eye. A greyscale screenshot no longer recovers everything the screen carries |
+| 2026-08-06 | The arithmetic composite rule kept, explicitly | Separate from the encoding rule and about what the agent computes rather than how it looks. No total, no weight, no `__add__`, every stored measure keeps its unit, and `tests/test_scoring.py` is unchanged |
+| 2026-08-06 | Dashboard added as a fourth surface, and as the landing page | It has no row entity and decides nothing, so it does not flatten the three decision surfaces into one table |
