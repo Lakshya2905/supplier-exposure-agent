@@ -29,27 +29,25 @@ def setUpModule():
     DATA.mkdir(parents=True, exist_ok=True)
     generate(GeneratorConfig(), DATA, DATA.parent / "truth" / "answer_key.json")
 
-# WIDGETS THAT ENCODE MAGNITUDE AS LENGTH OR FRACTION. Each is a normalised
-# scale by construction, which is the composite arriving through a widget rather
-# than through arithmetic. `st.progress(0.8)` is literally a 0-to-1 bar; a
-# progress column is the same thing inside a table; a colour ramp is an ordinal
-# encoding of a heterogeneous set, which is the objection that killed the radar
-# chart.
+# THE ENCODING DENY-LIST WAS RETIRED BY THE OWNER ON 2026-08-06.
+#
+# It banned st.progress, the chart column configs, the four chart widgets,
+# background_gradient and st.metric(delta=), on the grounds that each is a
+# normalised scale by construction and therefore the composite arriving through
+# a widget rather than through arithmetic. That reasoning was not refuted; it
+# was overruled, deliberately and with the cost stated. CLAUDE.md and DESIGN.md
+# both record the decision and what it gave up.
+#
+# ONE ENTRY SURVIVES, and it is not an encoding rule. st.slider is a threshold
+# with no owner and no version, and thresholds live in config/archetypes.yaml
+# where somebody owns the number. That has nothing to do with how a value is
+# drawn, so retiring the encoding rule left it standing.
+#
+# The arithmetic composite is enforced elsewhere and did not move:
+# tests/test_scoring.py refuses a total, a weight, an __add__ on a profile and
+# any measure without a physical unit.
 BANNED_WIDGETS = (
-    "st.progress",
-    "ProgressColumn",
-    "BarChartColumn",
-    "LineChartColumn",
-    "AreaChartColumn",
-    "st.bar_chart",
-    "st.line_chart",
-    "st.area_chart",
-    "st.scatter_chart",
-    "st.pyplot",
-    "st.altair_chart",
-    "background_gradient",
-    "color_gradient",
-    "st.slider",          # a threshold with no owner and no version
+    "st.slider",
 )
 
 
@@ -77,9 +75,22 @@ def resolved_font_px(block):
     return float(literal.group(1)) * 16 if literal else None
 
 
-def run_app(timeout=90):
+def run_raw(timeout=90):
+    """The app as a visitor first meets it, on whatever surface it lands on."""
     app = AppTest.from_file(str(APP), default_timeout=timeout)
     return app.run()
+
+
+def run_app(timeout=90):
+    """Runs, then SELECTS EXPOSURE.
+
+    The landing surface became the dashboard when that surface was added, and
+    almost everything in this file is about one of the three decision surfaces.
+    Selecting it here rather than in every test keeps the change to the landing
+    page from rewriting eighteen assertions that were never about it. Tests
+    about the landing surface itself use `run_raw`.
+    """
+    return run_raw(timeout).sidebar.radio[0].set_value("exposure").run()
 
 
 def text_of(app):
@@ -109,10 +120,20 @@ class TestWidgetDenyList(unittest.TestCase):
                 # the constant above, so match a CALL rather than a mention.
                 self.assertNotIn(f"{widget}(", SOURCE)
 
-    def test_no_normalised_zero_to_one_value_is_passed_to_a_widget(self):
-        # A fraction handed to a display widget is a normalised scale whatever
-        # it is called.
-        self.assertIsNone(re.search(r"st\.\w+\(\s*0\.\d+", SOURCE))
+    def test_a_threshold_still_has_an_owner_and_a_version(self):
+        """The surviving entry, and why it is not an encoding rule.
+
+        A slider lets a reviewer move a threshold with nothing recording who
+        moved it or to what. The magnitude thresholds live in
+        config/archetypes.yaml precisely so that the number is owned and
+        versioned, and the coverage panel says so when they are unset.
+
+        Asserted against the renderer rather than against this file, because
+        the app assembles no prose of its own: the sentence naming the config
+        comes from `src/governance/render.py` and is golden-pinned there.
+        """
+        renderer = (APP.parent / "src" / "governance" / "render.py").read_text()
+        self.assertIn("config/archetypes.yaml", renderer)
 
     def test_the_app_states_that_it_paints_and_does_not_decide(self):
         self.assertIn("paints the view model and decides nothing", SOURCE)
@@ -339,7 +360,7 @@ class TestExposureSurface(unittest.TestCase):
     def test_the_app_runs_without_exception(self):
         self.assertFalse(self.app.exception)
 
-    def test_the_default_surface_asks_what_is_worst(self):
+    def test_the_exposure_surface_asks_what_is_worst(self):
         self.assertIn("What is worst?", text_of(self.app))
 
     def test_executed_findings_render_no_button(self):
