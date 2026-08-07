@@ -659,6 +659,28 @@ sections is `xl`; panel padding is `md`.
 - The only permitted state change is instantaneous.
 - If a load is slow enough to need feedback, state it in words.
 
+### Fields had no boundary at all [FIXED]
+
+Every text input and select painted a 1px border in **the same colour as its own
+fill**, so there was no boundary: the only thing separating a field from its
+surroundings was the fill difference, **1.04:1** in the sidebar and **1.09:1** on
+the page. Both sit around a single just-noticeable difference. WCAG 1.4.11 asks
+3:1 for the boundary of a UI component, and before that, a reviewer simply could
+not see the box.
+
+The worst case was the name field on Confirm, which is the one control a decision
+cannot be recorded without.
+
+**`border-ui` had been specified in the Surfaces table from the start and no form
+control ever referenced it.** That is the part worth remembering: a token can be
+declared, correct, and unused, and nothing about the declaration reveals it. The
+fields now carry it at **3.82:1** in the sidebar, **3.69:1** on the page and
+**3.40:1** against their own fill, and a test asserts both the ratio and that
+the rule references the token.
+
+Streamlit 1.61 renders these through react-aria rather than baseweb, so the
+selectors are the testid it emits and the ARIA role, not an emotion class.
+
 ## Focus and Keyboard [TARGET]
 
 > [TARGET] **Focus indicators are not implemented.** Streamlit defaults are whatever they are and have not been measured. The reviewer-name persistence bullet is the exception: that one shipped in `6d1a8ae`.
@@ -764,3 +786,4 @@ with numbers:
 | 2026-08-07 | No radar or parallel-coordinates plot of the five dimensions | The one chart the retired encoding rule and the surviving composite rule agree about: five units on one axis is the composite drawn rather than computed |
 | 2026-08-07 | World map fixed: whole world drawn, white slab removed, ISO-3 codes | Three plotly defaults that are right on a white page and wrong on this one, none of which raised an error. The suite passed throughout |
 | 2026-08-07 | The map got a palette of its own, floor 25.7 ΔE from unmapped land | Absence and the lowest count are different claims, and the map is the one place they are separated by fill alone because a country carries no label |
+| 2026-08-07 | Form fields given the `border-ui` boundary they were always specified to have | Every field drew a border in its own fill colour, so the name box on Confirm was invisible at 1.04:1. The token was declared and correct and had never been referenced by anything |

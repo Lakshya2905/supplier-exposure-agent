@@ -106,6 +106,11 @@ CONSOLE_CSS = """
       /* The print substrate, declared here so no rule anywhere states a text
          colour as a literal. See the print block for why it is not a filter. */
       --text-print: #000000;
+
+      /* THE BOUNDARY COLOUR FOR ANYTHING A REVIEWER TYPES INTO. DESIGN.md has
+         specified this token since the Surfaces section was written, at 3.47:1
+         on a panel and 3.69:1 on the page, and no form control ever used it. */
+      --border-ui: #6B7278;
   }
   /* Middle density. The earlier revision read as an essay and the one after it
      read as congested; this sits between them. Where a region felt crowded the
@@ -357,6 +362,23 @@ CONSOLE_CSS = """
 
   [data-testid="stMetric"], [data-testid="stAlert"] {
       border-radius: 3px !important; box-shadow: none !important;
+  }
+
+  /* THE FIELDS HAD NO BOUNDARY AT ALL, which is WCAG 1.4.11 (3:1 for the
+     boundary of a UI component) and, before that, is simply a box a reviewer
+     cannot see. Every text input and select painted a 1px border in the SAME
+     COLOUR AS ITS OWN FILL, so the only thing separating a field from the page
+     was the fill difference: #14171A on the #101315 sidebar, and #1B1F23 on the
+     #14171A page. Both are around a single just-noticeable difference, and the
+     name field is the one control on the Confirm surface a decision cannot be
+     recorded without.
+
+     Streamlit 1.61 renders these through react-aria rather than baseweb, so the
+     hooks are the testid it emits and the ARIA role, not an emotion class. */
+  [data-testid="stTextInputRootElement"],
+  [data-testid="stSelectbox"] [role="group"] {
+      border: 1px solid var(--border-ui) !important;
+      border-radius: 3px !important;
   }
 
   /* ------------------------------------------------------------- focus --

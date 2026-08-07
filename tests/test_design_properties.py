@@ -311,3 +311,70 @@ class TestTheMapSeparatesAbsenceFromALowCount(unittest.TestCase):
         # collapses the two lists back into one, this fails and says why.
         self.assertNotEqual(python_scale("MAP_SCALE"),
                             python_scale("CHART_SEQUENTIAL"))
+
+
+class TestEveryFieldHasAVisibleBoundary(unittest.TestCase):
+    """WCAG 1.4.11 asks 3:1 for the boundary of a UI component.
+
+    Every text input and select painted a 1px border in THE SAME COLOUR AS ITS
+    OWN FILL, so there was no boundary at all: the only thing separating a field
+    from its surroundings was the fill difference, 1.04:1 in the sidebar and
+    1.09:1 on the page. Both are around a single just-noticeable difference. The
+    name field is the one control on the Confirm surface a decision cannot be
+    recorded without, and a reviewer could not see it.
+
+    `border-ui` was specified in DESIGN.md's Surfaces table from the start and
+    no form control ever referenced it. THAT is the failure this class exists
+    to catch: a token can be declared, correct, and unused, and nothing about
+    the declaration reveals it.
+    """
+
+    #: WCAG 2.1 Success Criterion 1.4.11 Non-text Contrast. Cited, not chosen.
+    NON_TEXT_CONTRAST = 3.0
+
+    def theme(self, key):
+        config = (Path(__file__).resolve().parent.parent
+                  / ".streamlit" / "config.toml").read_text()
+        return re.search(rf'{key}\s*=\s*"(#[0-9A-Fa-f]{{6}})"', config).group(1)
+
+    def border(self):
+        root = CSS.split(":root {")[1].split("}")[0]
+        match = re.search(r"--border-ui:\s*(#[0-9A-Fa-f]{6})", root)
+        self.assertIsNotNone(match, "--border-ui is not declared")
+        return match.group(1)
+
+    def test_the_boundary_clears_non_text_contrast_on_every_surface(self):
+        border = self.border()
+        surfaces = {
+            "sidebar": declared("section[data-testid=\"stSidebar\"] {",
+                                "background") or "#101315",
+            "page": self.theme("backgroundColor"),
+            "field fill in the main area": self.theme("secondaryBackgroundColor"),
+        }
+        for name, behind in surfaces.items():
+            with self.subTest(surface=name):
+                measured = contrast(border, behind)
+                self.assertGreaterEqual(
+                    measured, self.NON_TEXT_CONTRAST,
+                    f"the field boundary is {measured:.2f}:1 against {name}, "
+                    f"below the {self.NON_TEXT_CONTRAST}:1 that WCAG 1.4.11 "
+                    f"asks of a UI component boundary")
+
+    def test_the_token_is_actually_applied_to_the_fields(self):
+        """Declared is not applied, and that distinction is the whole bug.
+
+        Asserted on the rule rather than on the rendered page because a headless
+        suite cannot resolve the cascade, and the rendered check that found this
+        is recorded in DESIGN.md.
+        """
+        body = re.sub(r"/\*.*?\*/", "", CSS, flags=re.S)
+        rule = re.search(
+            r"\[data-testid=\"stTextInputRootElement\"\][^{]*\{([^}]*)\}", body)
+        self.assertIsNotNone(rule, "no rule targets the text input's box")
+        self.assertIn("var(--border-ui)", rule.group(1))
+
+    def test_the_select_gets_the_same_boundary_as_the_text_input(self):
+        # Two controls a reviewer uses in one act. A boundary on one and not the
+        # other would read as one of them being disabled.
+        body = re.sub(r"/\*.*?\*/", "", CSS, flags=re.S)
+        self.assertIn('[data-testid="stSelectbox"] [role="group"]', body)
