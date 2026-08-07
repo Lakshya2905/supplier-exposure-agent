@@ -16,7 +16,7 @@ from src.synthetic.config import GeneratorConfig
 
 ROOT = Path(__file__).resolve().parent.parent
 EXPECTED_FILES = ("bom.csv", "part_master.csv", "suppliers.csv",
-                  "lead_times.csv", "demand_plan.csv")
+                  "lead_times.csv", "demand_plan.csv", "sources.csv")
 
 
 def run_cli(*args):

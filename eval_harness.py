@@ -155,8 +155,8 @@ def measure(report):
         for f in identify_all(
             {p: (r["source_type"], r["sourcing_list_status"])
              for p, r in parts.items()},
-            {p: [n for n, _ in rows] for p, rows in suppliers.items()},
-            {p: [n for n, _, _ in rows] for p, rows in lead_times.items()})
+            {p: [n for n, _, _ in rows] for p, rows in suppliers.items()},
+            {p: [n for n, _, _, _ in rows] for p, rows in lead_times.items()})
         if f.verdict == "readings_disagree" and f.autonomy == gov.EXECUTES]
     violations += [
         f"{p}: concentration executed"
@@ -177,7 +177,7 @@ def measure(report):
                               f"finished good")
     except Exception as failure:                      # noqa: BLE001
         structural.append(f"explosion refused the BOM: {failure}")
-    for _, region in [pair for rows in suppliers.values() for pair in rows]:
+    for _, region, _row in [r for rows in suppliers.values() for r in rows]:
         if region != region.strip() or region.lower() == "nan":
             structural.append(f"region read as a null: {region!r}")
     report.floor(floors.STRUCTURAL_GUARANTEES,

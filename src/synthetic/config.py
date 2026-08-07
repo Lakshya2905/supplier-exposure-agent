@@ -113,6 +113,35 @@ class GeneratorConfig:
     min_parts_under_two_finished_goods: int = 3
     min_parts_at_two_depths: int = 1
 
+    # ---- extract provenance ----
+    # WHEN EACH FILE WAS PULLED. Declared rather than drawn from the RNG, and
+    # read from here rather than from a clock, because `retrieved_at` has to be
+    # byte-identical across runs like every other cell: a generator that stamped
+    # the wall clock would make the frozen eval set unreproducible on its second
+    # build.
+    #
+    # THE LAGS ARE STAGGERED ON PURPOSE. Five files pulled at the same instant
+    # make `as of` a constant, and a constant printed on every evidence record is
+    # decoration. Real extracts run on different cadences, and which file is
+    # stalest is a thing a reviewer should be able to see: a supplier list pulled
+    # a fortnight ago is a different basis for a single-source claim than one
+    # pulled last night.
+    extract_anchor: str = "2026-07-31T18:00:00+00:00"
+    extract_lag_hours: dict = field(default_factory=lambda: {
+        "demand_plan.csv": 6,       # planning runs nightly
+        "bom.csv": 24,              # engineering release, daily
+        "suppliers.csv": 72,        # approved vendor list, twice weekly
+        "part_master.csv": 168,     # ERP extract, weekly
+        "lead_times.csv": 336,      # quote history, fortnightly
+    })
+    system_of_record: dict = field(default_factory=lambda: {
+        "bom.csv": "engineering bill of materials",
+        "part_master.csv": "ERP part master",
+        "suppliers.csv": "approved vendor list",
+        "lead_times.csv": "supplier quote history",
+        "demand_plan.csv": "production plan",
+    })
+
     def zeroed(self):
         """A copy with every messiness rate and every guaranteed damage case
         at zero. Produces a clean world with an empty answer key, which is the

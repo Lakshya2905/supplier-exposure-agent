@@ -72,8 +72,8 @@ def _dependencies(verdicts, suppliers, lead_times):
     dependencies = collections.defaultdict(list)
     for part, rows in suppliers.items():
         quotable = {canonical_key(name)
-                    for name, _, _ in lead_times.get(part, ())}
-        for name, region in rows:
+                    for name, _, _, _ in lead_times.get(part, ())}
+        for name, region, _row in rows:
             if (verdicts.get(part) == V.HIDDEN_SINGLE_SOURCE
                     and canonical_key(name) not in quotable):
                 continue
@@ -95,9 +95,9 @@ def run(data_dir=None, config_path="config/archetypes.yaml"):
     part_master = {part: (record["source_type"],
                           record["sourcing_list_status"])
                    for part, record in parts.items()}
-    supplier_names = {part: [name for name, _ in entries]
+    supplier_names = {part: [name for name, _, _ in entries]
                       for part, entries in suppliers.items()}
-    lead_time_names = {part: [name for name, _, _ in entries]
+    lead_time_names = {part: [name for name, _, _, _ in entries]
                        for part, entries in lead_times.items()}
     findings = identify_all(part_master, supplier_names, lead_time_names)
     verdicts = {finding.subject: finding.verdict for finding in findings}
@@ -113,7 +113,7 @@ def run(data_dir=None, config_path="config/archetypes.yaml"):
             usage=usage[part], on_hand_units=record["on_hand_units"],
             tooling_owner=record["tooling_owner"],
             lead_times=[(quoted, p95)
-                        for _, quoted, p95 in lead_times.get(part, ())])
+                        for _, quoted, p95, _ in lead_times.get(part, ())])
     profiles = fill_profiles(profiles, report)
 
     evidence = {

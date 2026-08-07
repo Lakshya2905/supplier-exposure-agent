@@ -17,15 +17,17 @@ from .model import (ANNUAL_SPEND_USD, ANNUAL_UNITS, BOM_COLUMNS, CHILD_PART,
                     LEAD_TIME_COLUMNS, LEAD_TIME_P95_DAYS, ON_HAND_UNITS,
                     PARENT_PART, PART_MASTER_COLUMNS, PART_NUMBER,
                     QTY_PER_PARENT, QUALIFICATION_DATE,
-                    QUOTED_LEAD_TIME_DAYS, SOURCE_TYPE, SOURCING_LIST_STATUS,
+                    QUOTED_LEAD_TIME_DAYS, RETRIEVED_AT, SOURCE_FILE,
+                    SOURCE_TYPE, SOURCES_COLUMNS, SOURCING_LIST_STATUS,
                     SUPPLIER_COLUMNS, SUPPLIER_NAME, SUPPLIER_REGION,
-                    TOOLING_OWNER)
+                    SYSTEM_OF_RECORD, TOOLING_OWNER)
 
 BOM_FILE = "bom.csv"
 PART_MASTER_FILE = "part_master.csv"
 SUPPLIERS_FILE = "suppliers.csv"
 LEAD_TIMES_FILE = "lead_times.csv"
 DEMAND_FILE = "demand_plan.csv"
+SOURCES_FILE = "sources.csv"
 
 
 def _blank_if_none(value):
@@ -95,4 +97,13 @@ def write_world(world, out_dir):
     _write(out_dir / DEMAND_FILE, DEMAND_COLUMNS, [
         {FINISHED_GOOD_PART: fg, ANNUAL_UNITS: units}
         for fg, units in sorted(world.demand.items())
+    ])
+
+    _write(out_dir / SOURCES_FILE, SOURCES_COLUMNS, [
+        {
+            SOURCE_FILE: extract.source_file,
+            SYSTEM_OF_RECORD: extract.system_of_record,
+            RETRIEVED_AT: extract.retrieved_at,
+        }
+        for extract in sorted(world.sources, key=lambda e: e.source_file)
     ])

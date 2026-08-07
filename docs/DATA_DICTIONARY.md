@@ -97,6 +97,37 @@ different situations, and they are not the same answer:
   bound**: unrecorded demand can only reduce cover, never increase it.
 - a part fed **only** by the absent finished good is a full "cannot tell".
 
+## sources.csv
+
+The extract manifest: one row per input file, and the only file that describes
+the others.
+
+| column | type | notes |
+|---|---|---|
+| `source_file` | str | one of the five files above. Never `sources.csv` itself |
+| `system_of_record` | str | which system the extract came out of |
+| `retrieved_at` | str | ISO 8601 with offset. When that file was pulled |
+
+**`system_of_record`, not `source_type`.** `source_type` is already a
+`part_master.csv` column meaning make or buy, and an evidence panel showing
+"source type: buy" beside "source type: ERP part master" would put two
+unrelated facts under one word.
+
+`retrieved_at` comes from `extract_anchor` and `extract_lag_hours` in
+`src/synthetic/config.py`, never from a clock: `evals/` is frozen under a
+manifest of hashes, and a wall-clock stamp would produce a different byte on
+every build.
+
+**The lags are staggered on purpose.** Five files pulled at one instant would
+make `as of` a constant, and a constant printed on every evidence record is
+decoration. The spread is what makes "the supplier list is a fortnight older
+than the plan" a thing a reviewer can see.
+
+Row locators are *not* in this file. A supplier or lead time record carries the
+1-based data row it was read from, attached during the read, because a part has
+many rows under a name that repeats and recovering the row afterwards would be
+a lookup that can return the wrong one.
+
 ## truth/answer_key.json
 
 Not an input. The generator's own record of what it decided, for grading later

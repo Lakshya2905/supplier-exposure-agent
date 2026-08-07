@@ -1,0 +1,6 @@
+source_file,system_of_record,retrieved_at
+bom.csv,engineering bill of materials,2026-07-30T18:00:00+00:00
+demand_plan.csv,production plan,2026-07-31T12:00:00+00:00
+lead_times.csv,supplier quote history,2026-07-17T18:00:00+00:00
+part_master.csv,ERP part master,2026-07-24T18:00:00+00:00
+suppliers.csv,approved vendor list,2026-07-28T18:00:00+00:00

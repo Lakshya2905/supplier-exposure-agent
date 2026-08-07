@@ -9,10 +9,12 @@ Acyclicity is by construction, not by check: parts are assigned a level and
 edges only ever run from level n to level n-1. A cycle would make stage 2's
 traversal hang rather than fail, which is the worst way for it to break.
 """
+from datetime import datetime, timedelta
+
 from .config import FINISHED_GOOD_VOLUMES, REGIONS
 from .model import (FG_PREFIX, PART_PREFIX, SUPPLIER_PREFIX, TOOLING_COMPANY,
-                    TOOLING_SUPPLIER, LeadTime, Part, Supplier, SupplierLink,
-                    World)
+                    TOOLING_SUPPLIER, LeadTime, Part, SourceExtract, Supplier,
+                    SupplierLink, World)
 from .verdicts import BUY, MAKE, VERIFIED
 
 ADJECTIVES = ("Axial", "Beveled", "Cast", "Damped", "Etched", "Forged",
@@ -193,10 +195,31 @@ def build_demand(rng, config, world):
     return world
 
 
+def build_extracts(config, world):
+    """The extract manifest: which system each file came out of, and when.
+
+    Derived from the config's anchor and per-file lags rather than from a clock,
+    so a second build at the same seed produces the same bytes. Sorted by file
+    name because a manifest ordered by lag would put the freshest extract first
+    and read as a ranking of the sources.
+    """
+    anchor = datetime.fromisoformat(config.extract_anchor)
+    world.sources = [
+        SourceExtract(
+            source_file=name,
+            system_of_record=config.system_of_record[name],
+            retrieved_at=(anchor - timedelta(
+                hours=config.extract_lag_hours[name])).isoformat())
+        for name in sorted(config.system_of_record)
+    ]
+    return world
+
+
 def build_clean_world(rng, config):
     world = build_bom(rng, config)
     world.suppliers = build_suppliers(rng, config)
     build_sourcing(rng, config, world)
     build_part_attributes(rng, config, world)
     build_demand(rng, config, world)
+    build_extracts(config, world)
     return world

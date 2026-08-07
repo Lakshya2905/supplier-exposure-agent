@@ -44,11 +44,14 @@ class Row:
 def evidence(part="AA-P-01"):
     return view.evidence_for(
         part,
-        supplier_records=(("Braxton Industries", "south_asia"),
-                          ("Oakhaven Mfg", "emea")),
+        # The trailing integer on each record is the 1-based data row it was
+        # read from, which is what lets an evidence record cite a locator
+        # instead of asking a reviewer to find the row themselves.
+        supplier_records=(("Braxton Industries", "south_asia", 1),
+                          ("Oakhaven Mfg", "emea", 2)),
         exploded_rows=(Row("FG-01", 4), Row("FG-99", 2)),
         demand_plan={"FG-01": 12000},
-        lead_time_records=(("Braxton Inds", 41, 53),))
+        lead_time_records=(("Braxton Inds", 41, 53, 1),))
 
 
 class TestAutonomyIsAnAffordance(unittest.TestCase):

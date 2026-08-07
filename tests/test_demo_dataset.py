@@ -31,7 +31,7 @@ class TestDemoDatasetShape(unittest.TestCase):
         # Community Cloud sleeps idle apps, so without this a visitor arriving
         # at a sleeping app finds a blank screen.
         for name in ("bom.csv", "part_master.csv", "suppliers.csv",
-                     "lead_times.csv", "demand_plan.csv"):
+                     "lead_times.csv", "demand_plan.csv", "sources.csv"):
             with self.subTest(file=name):
                 self.assertTrue((DEMO / name).exists())
 

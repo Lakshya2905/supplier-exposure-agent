@@ -21,9 +21,9 @@ import pandas as pd
 from .synthetic.model import (ANNUAL_UNITS, CHILD_PART, FINISHED_GOOD_PART,
                               LEAD_TIME_P95_DAYS, ON_HAND_UNITS, PARENT_PART,
                               PART_NUMBER, QTY_PER_PARENT,
-                              QUOTED_LEAD_TIME_DAYS, SOURCE_TYPE,
-                              SOURCING_LIST_STATUS, SUPPLIER_NAME,
-                              SUPPLIER_REGION, TOOLING_OWNER)
+                              QUOTED_LEAD_TIME_DAYS, RETRIEVED_AT, SOURCE_FILE,
+                              SOURCE_TYPE, SOURCING_LIST_STATUS, SUPPLIER_NAME,
+                              SUPPLIER_REGION, SYSTEM_OF_RECORD, TOOLING_OWNER)
 
 
 def _frame(path):
@@ -69,28 +69,67 @@ def read_demand_plan(path):
 
 
 def read_suppliers(path):
-    """part_number -> ((supplier_name, supplier_region), ...), as spelled."""
+    """part_number -> ((supplier_name, supplier_region, row), ...), as spelled.
+
+    `row` is the 1-based data row, counting from the first line after the
+    header. IT IS CARRIED, NOT JOINED BACK TO LATER. A part has many supplier
+    rows and the name is not unique across them, so recovering "which row said
+    this" from a name would be a lookup that can quietly return the wrong one.
+    Attaching it here, before the sort below reorders everything, makes the
+    locator an identity.
+    """
     frame = _frame(path)
     rows = {}
-    for _, row in frame.iterrows():
+    for position, (_, row) in enumerate(frame.iterrows(), start=1):
         rows.setdefault(row[PART_NUMBER], []).append(
-            (row[SUPPLIER_NAME], row[SUPPLIER_REGION]))
+            (row[SUPPLIER_NAME], row[SUPPLIER_REGION], position))
     return {part: tuple(sorted(entries)) for part, entries in rows.items()}
 
 
 def read_lead_times(path):
-    """part_number -> ((supplier_name, quoted, p95), ...), as spelled.
+    """part_number -> ((supplier_name, quoted, p95, row), ...), as spelled.
 
     Keyed by the name in THIS file, which may differ from the spelling in
     suppliers.csv. Reconciling them is the normaliser's job, not the reader's.
+    `row` as in `read_suppliers`, and carried for the same reason.
     """
     frame = _frame(path)
     rows = {}
-    for _, row in frame.iterrows():
+    for position, (_, row) in enumerate(frame.iterrows(), start=1):
         rows.setdefault(row[PART_NUMBER], []).append(
             (row[SUPPLIER_NAME], int(row[QUOTED_LEAD_TIME_DAYS]),
-             int(row[LEAD_TIME_P95_DAYS])))
+             int(row[LEAD_TIME_P95_DAYS]), position))
     return {part: tuple(sorted(entries)) for part, entries in rows.items()}
+
+
+def read_demand_rows(path):
+    """finished_good -> the 1-based data row it was read from.
+
+    A SECOND READ RATHER THAN A WIDER RETURN, and the difference from the two
+    readers above is not laziness. The key here is the dict key both this
+    function and `read_demand_plan` build, so a duplicated finished good
+    collapses the same way in both and they cannot disagree about which row
+    won. Suppliers and lead times have many rows per part keyed by a name that
+    repeats, so no such argument is available there and the row rides on the
+    record instead.
+    """
+    frame = _frame(path)
+    return {row[FINISHED_GOOD_PART]: position
+            for position, (_, row) in enumerate(frame.iterrows(), start=1)}
+
+
+def read_sources(path):
+    """source_file -> (system_of_record, retrieved_at).
+
+    The extract manifest. It is the only input that describes the others, and
+    it is what lets an evidence record say WHEN the value it cites was pulled
+    and out of what, instead of the interface inventing a provenance for a
+    number at render time.
+    """
+    frame = _frame(path)
+    return {row[SOURCE_FILE]: (row[SYSTEM_OF_RECORD].strip(),
+                               row[RETRIEVED_AT].strip())
+            for _, row in frame.iterrows()}
 
 
 def read_bom(path):
