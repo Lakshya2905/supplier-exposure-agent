@@ -1,4 +1,9 @@
-# Dark. Colour distinguishes categories and never ranks them.
+# Light, since 2026-08-07. Colour distinguishes categories and never ranks them.
+#
+# THE SUBSTRATE CHANGED, SO EVERY RATIO WAS RE-DERIVED RATHER THAN INVERTED.
+# DESIGN.md said a light variant voids every guarantee in it until the numbers
+# are measured again on that substrate, so each step of the text ramp was solved
+# for the contrast its dark counterpart had, and none of them was picked by eye.
 #
 # The accent is used on interactive elements, and only on those.
 #
@@ -14,11 +19,11 @@
 # with !important.
 
 [theme]
-base = "dark"
-primaryColor = "#7FB2D9"
-backgroundColor = "#14171A"
-secondaryBackgroundColor = "#1B1F23"
-textColor = "#E3E6E8"
+base = "light"
+primaryColor = "#194F7D"
+backgroundColor = "#F7F8FA"
+secondaryBackgroundColor = "#EAEDF1"
+textColor = "#222527"
 font = "sans serif"
 
 [client]

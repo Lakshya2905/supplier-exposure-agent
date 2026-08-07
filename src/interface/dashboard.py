@@ -15,10 +15,32 @@ Absence keeps its own count in every series rather than being dropped. A
 histogram built by filtering out the unknowns is a picture of the parts that
 happened to be answerable, presented as a picture of the parts.
 """
+import functools
+import json
 from dataclasses import dataclass, field
 from fractions import Fraction
+from pathlib import Path
 
 from .. import scoring
+
+ASSETS = Path(__file__).resolve().parent.parent.parent / "assets"
+
+# India is drawn from vendored geometry rather than from plotly's built-in
+# country shapes. Natural Earth's `IND` polygon follows a different convention
+# and stops around 35.5N, so the built-in map cannot show the claimed territory
+# at all, and that geometry ships inside plotly.js where nothing can reach it.
+# See assets/README.md for the source, the licence and the derivation.
+INDIA = "IND"
+
+
+@functools.lru_cache(maxsize=1)
+def claimed_india():
+    """India including Jammu & Kashmir, Ladakh, Aksai Chin and Arunachal.
+
+    Cached: the file is 45KB of JSON and the Dashboard re-renders on every
+    interaction.
+    """
+    return json.loads((ASSETS / "india-claimed.geojson").read_text())
 
 # Synthetic regions mapped to real countries so a choropleth has something to
 # fill. THE GEOGRAPHY IS ILLUSTRATIVE AND THE SURFACE SAYS SO. The dataset has

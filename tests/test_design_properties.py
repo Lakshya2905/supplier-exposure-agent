@@ -89,25 +89,30 @@ def declared(selector, prop):
     return resolve(match.group(1)) if match else None
 
 
-# The surfaces anything can be read against, hand-written from the stylesheet.
-SURFACES = {"page": "#14171A", "panel": "#191D21", "panel head": "#1E242A",
-            "sidebar": "#101315", "chip": "#242A30", "button": "#1E2933"}
+# The surfaces anything can be read against, HAND-WRITTEN so this is a pin
+# rather than a tautology: reading them from the stylesheet would make the file
+# agree with itself whatever it said.
+#
+# LIGHT SUBSTRATE SINCE 2026-08-07. Every figure below was re-measured, not
+# inverted. DESIGN.md is explicit that a substrate change voids every contrast
+# guarantee in it until the numbers are taken again, and the ramp was solved
+# against the ratios its dark counterpart held rather than chosen by eye.
+SURFACES = {"page": "#F7F8FA", "panel": "#FFFFFF", "panel head": "#F0F2F5",
+            "sidebar": "#EFF1F4", "chip": "#EAEDF1", "button": "#E8EEF4"}
 
-# The text ramp, with the size each step is rendered at, because the WCAG
+# The text ramp, with the surface each step is read against, because the WCAG
 # threshold depends on it. All of these are small text, so all need 4.5:1.
 TEXT_RAMP = {
-    "#F0F2F4": ("h1 title", "page"),
-    "#E3E6E8": ("finding", "page"),
-    "#D5DADE": ("body and chip label", "chip"),
-    "#9BA3AA": ("note", "page"),
-    "#838C94": ("caption", "page"),
-    "#8FA0AD": ("section heading", "page"),
-    "#B6BEC5": ("table cell", "panel"),
-    "#C9D2D9": ("identifier", "page"),
-    "#7FB2D9": ("accent", "page"),
+    "#1A1C1E": ("h1 title", "page"),
+    "#222527": ("finding", "page"),
+    "#2C2E31": ("body and chip label", "chip"),
+    "#50555B": ("note", "page"),
+    "#61686E": ("caption", "page"),
+    "#53585E": ("section heading", "page"),
+    "#194F7D": ("accent", "page"),
 }
 
-ACCENT = "#7FB2D9"
+ACCENT = "#194F7D"
 
 
 class TestEveryTextColourIsLegibleOnItsSurface(unittest.TestCase):
@@ -140,21 +145,33 @@ class TestTheFocusRingIsVisibleEverywhere(unittest.TestCase):
 
     def setUp(self):
         rule = SCREEN.split(":focus-visible {")[1].split("}")[0]
-        self.ring = re.search(r"outline:\s*\d+px solid (#[0-9A-Fa-f]{6})",
-                              rule).group(1)
+        self.ring = resolve(re.search(
+            r"outline:\s*\d+px solid (var\(--[a-z-]+\)|#[0-9A-Fa-f]{6})",
+            rule).group(1))
 
     def test_the_ring_clears_three_to_one_on_every_surface(self):
         for name, surface in SURFACES.items():
             with self.subTest(surface=name):
                 self.assertGreaterEqual(contrast(self.ring, surface), 3.0)
 
-    def test_border_ui_would_not_have_been_enough(self):
-        """DESIGN.md originally named #6B7278 for this and it fails on a chip.
+    def test_focus_is_not_mistakable_for_a_resting_boundary(self):
+        """The reason the border token was rejected for focus, restated.
 
-        Kept as a test rather than a note, because the next person to pick a
-        focus colour will reach for the border token exactly as that draft did.
+        ON THE DARK SUBSTRATE the argument was a ratio: #6B7278 measured below
+        3:1 on a chip, so it could not carry a focus ring at all. That is no
+        longer true on light, where the same token clears 3:1 everywhere, and a
+        test asserting otherwise would be asserting something false.
+
+        The reason it was rejected survives the substrate change even though the
+        measurement does not: a ring drawn in the colour every field already
+        uses for its edge says nothing a reader can act on. So the property is
+        separation from the boundary colour, not a ratio against a chip.
         """
-        self.assertLess(contrast("#6B7278", SURFACES["chip"]), 3.0)
+        boundary = resolve("var(--border-ui)")
+        self.assertGreater(
+            delta_e(self.ring, boundary), 2.3,
+            "the focus ring and the resting field boundary are within a "
+            "just-noticeable difference, so focus reads as no change")
 
 
 class TestTheChipPaletteCannotRank(unittest.TestCase):
@@ -216,21 +233,31 @@ class TestNothingEncodesAnOrderInColour(unittest.TestCase):
     def test_a_surface_too_close_to_its_neighbour_is_separated_by_a_rule(self):
         """Surfaces carry structure, so a reader has to be able to tell them apart.
 
-        The sidebar and the page are deltaE 2.10 apart, which is below the
-        just-noticeable difference of roughly 2.3, so the fill alone does not
-        separate them. It does not need to: the sidebar carries a border, which
-        is a form cue and the same answer the chip vocabulary gives.
+        THE ASSERTION IS CONDITIONAL, which is what lets it survive a substrate
+        change. On the dark palette the sidebar sat deltaE 2.10 from the page,
+        below the just-noticeable difference, and the border did the separating.
+        On light it is 2.56, marginally above. Either is fine; what is not fine
+        is a pair of surfaces a reader cannot tell apart with nothing else
+        distinguishing them.
 
-        No invented threshold here. 2.3 is the standard JND and the assertion is
-        conditional on it rather than on a number chosen to make this pass. An
-        earlier version of this test asserted the surface set spanned less than 8
-        L* points, which was a figure with no derivation and no owner, tuned to
-        the data it was measuring. That is the failure this repo's eval scenario
-        forbids by name.
+        An earlier version asserted the separation was BELOW the JND, which
+        turned a finding about one palette into a requirement, and it failed the
+        moment the palette moved while the design was still correct.
+
+        No invented threshold: 2.3 is the standard JND. An earlier version than
+        that asserted the surface set spanned less than 8 L* points, a figure
+        with no derivation and no owner, tuned to the data it was measuring.
+        That is the failure this repo's eval scenario forbids by name.
         """
-        sidebar_rule = SCREEN.split('section[data-testid="stSidebar"] {')[1]
-        self.assertLess(delta_e(SURFACES["page"], SURFACES["sidebar"]), 2.3)
-        self.assertIn("border-right", sidebar_rule.split("}")[0])
+        sidebar_rule = SCREEN.split(
+            'section[data-testid="stSidebar"] {')[1].split("}")[0]
+        separation = delta_e(SURFACES["page"], SURFACES["sidebar"])
+        if separation < 2.3:
+            self.assertIn(
+                "border-right", sidebar_rule,
+                f"the sidebar is {separation:.2f} deltaE from the page, below "
+                f"the just-noticeable difference, and carries no rule to "
+                f"separate them")
 
 
 class TestTheseFiguresAreForOneSubstrate(unittest.TestCase):

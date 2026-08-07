@@ -92,17 +92,17 @@ CONSOLE_CSS = """
          The mapping is the part that matters. Five greys with no usage rule
          will drift within a week, so the rule is part of the system and a test
          asserts no rule below invents a seventh. */
-      --text-title: #F0F2F4;    /* 16.03:1  h1 only */
-      --text-primary: #E3E6E8;  /* 14.35:1  a finding, and any value read from
+      --text-title: #1A1C1E;    /* 16.03:1  h1 only */
+      --text-primary: #222527;  /* 14.35:1  a finding, and any value read from
                                              a source: identifiers, figures */
-      --text-body: #D5DADE;     /* 12.78:1  prose, chip labels, absence states */
-      --text-note: #9BA3AA;     /*  7.04:1  a qualification attached to a finding */
-      --text-caption: #838C94;  /*  5.26:1  instructions about the interface,
+      --text-body: #2C2E31;     /* 12.78:1  prose, chip labels, absence states */
+      --text-note: #50555B;     /*  7.04:1  a qualification attached to a finding */
+      --text-caption: #61686E;  /*  5.26:1  instructions about the interface,
                                              never about the data */
-      --text-section: #8FA0AD;  /*  6.68:1  a section label, at any heading level
+      --text-section: #53585E;  /*  6.68:1  a section label, at any heading level
                                              below h1. Level is carried by size,
                                              weight and position, never by hue */
-      --accent: #7FB2D9;        /*  7.94:1  ONLY what a reviewer can act on */
+      --accent: #194F7D;        /*  7.94:1  ONLY what a reviewer can act on */
       /* The print substrate, declared here so no rule anywhere states a text
          colour as a literal. See the print block for why it is not a filter. */
       --text-print: #000000;
@@ -110,7 +110,7 @@ CONSOLE_CSS = """
       /* THE BOUNDARY COLOUR FOR ANYTHING A REVIEWER TYPES INTO. DESIGN.md has
          specified this token since the Surfaces section was written, at 3.47:1
          on a panel and 3.69:1 on the page, and no form control ever used it. */
-      --border-ui: #6B7278;
+      --border-ui: #6A7178;
   }
   /* Middle density. The earlier revision read as an essay and the one after it
      read as congested; this sits between them. Where a region felt crowded the
@@ -153,7 +153,7 @@ CONSOLE_CSS = """
       line-height: 1.45;
   }
   hr, [data-testid="stDivider"] hr {
-      border: none; border-top: 1px solid #2C3237;
+      border: none; border-top: 1px solid #E2E6EB;
       margin: var(--space-xl) 0 var(--space-lg) 0;
   }
   [data-testid="stVerticalBlock"] { gap: var(--space-md); }
@@ -219,7 +219,7 @@ CONSOLE_CSS = """
 
   table.tight { border-collapse: collapse; width: 100%; }
   table.tight td {
-      border-top: 1px solid #262B30;
+      border-top: 1px solid #E2E6EB;
       padding: var(--space-xs) var(--space-md) var(--space-xs) 0;
       font-size: var(--ui-sm); line-height: 1.5; color: var(--text-body); vertical-align: top;
   }
@@ -249,7 +249,7 @@ CONSOLE_CSS = """
   }
   [data-testid="stExpander"] summary p { font-size: var(--ui-sm) !important; }
   [data-testid="stExpanderDetails"] {
-      border-left: 1px solid #2C3237 !important;
+      border-left: 1px solid #E2E6EB !important;
       padding: var(--space-sm) 0 var(--space-xs) var(--space-lg) !important;
       margin-top: var(--space-sm);
   }
@@ -265,16 +265,16 @@ CONSOLE_CSS = """
   }
 
   .stButton > button {
-      border-radius: 3px; border: 1px solid #3E5C74; background: #1E2933;
+      border-radius: 3px; border: 1px solid #7E9DBB; background: #E8EEF4;
       color: var(--accent); font-size: var(--ui-sm); font-weight: 500;
       padding: var(--space-xs) var(--space-md); box-shadow: none;
   }
   .stButton > button:hover {
-      background: #2A3B49; color: var(--accent); border-color: #7FB2D9;
+      background: #DCE6EF; color: var(--accent); border-color: var(--accent);
   }
 
   section[data-testid="stSidebar"] {
-      background: #101315; border-right: 1px solid #262B30;
+      background: #EFF1F4; border-right: 1px solid #E2E6EB;
       width: 16rem !important;
   }
   section[data-testid="stSidebar"] .block-container {
@@ -286,7 +286,7 @@ CONSOLE_CSS = """
       border-left: 2px solid transparent;
   }
   section[data-testid="stSidebar"] [role="radiogroup"] > label:has(input:checked) {
-      border-left-color: #7FB2D9; background: #171C21;
+      border-left-color: var(--accent); background: #E4E8ED;
   }
   /* The radio control stays visible. An earlier revision hid it by position
      and hid the label text instead, because Streamlit's internal element order
@@ -322,16 +322,16 @@ CONSOLE_CSS = """
       display: inline-block; font-size: var(--ui-xs); font-weight: 500;
       letter-spacing: 0.02em; padding: var(--space-xs) var(--space-sm);
       border-radius: 3px;
-      background: #242A30; color: var(--text-body); border: 1px solid #333B42;
+      background: #EAEDF1; color: var(--text-body); border: 1px solid #C7CED6;
       margin-right: var(--space-xs); vertical-align: 0.06rem;
   }
   .badge.open {
-      background: transparent; color: var(--accent); border-color: #3E5C74;
+      background: transparent; color: var(--accent); border-color: #7E9DBB;
   }
   /* Absence is the same footprint and the same text weight as presence. The
      dashed rule is the only difference, and it is a form cue, so it survives
      greyscale and print where a colour cue would not. */
-  .badge.absent { border-style: dashed; border-color: #6B7278; }
+  .badge.absent { border-style: dashed; border-color: var(--border-ui); }
   /* THE PANEL, SELECTED BY THE MARKER WE EMIT OURSELVES.
      These rules previously targeted [data-testid="stVerticalBlockBorderWrapper"],
      which does not exist in Streamlit 1.61: the bordered container is a
@@ -342,9 +342,9 @@ CONSOLE_CSS = """
      `:has()` on our own `.panelhead` is the one stable hook available, and this
      file already depends on `:has()` for the sidebar's selected state. */
   [data-testid="stVerticalBlock"]:has(> [data-testid="stElementContainer"] .panelhead) {
-      border: 1px solid #272D33 !important;
+      border: 1px solid #D9DEE4 !important;
       border-radius: 4px !important;
-      background: #191D21 !important;
+      background: #FFFFFF !important;
       padding: var(--space-md) !important;
   }
   /* The head bleeds to the panel edge, so its negative pull must cancel the
@@ -352,10 +352,10 @@ CONSOLE_CSS = """
      panel padding cannot leave the head inset by a few pixels. */
   .panelhead {
       display: flex; align-items: baseline; gap: var(--space-sm); flex-wrap: wrap;
-      border-bottom: 1px solid #272D33;
+      border-bottom: 1px solid #D9DEE4;
       margin: calc(var(--space-md) * -1) calc(var(--space-md) * -1)
               var(--space-md) calc(var(--space-md) * -1);
-      padding: var(--space-sm) var(--space-md); background: #1E242A;
+      padding: var(--space-sm) var(--space-md); background: #F0F2F5;
       border-radius: 4px 4px 0 0;
   }
   .panelhead .title { font-size: var(--ui-base); font-weight: 600; color: var(--text-primary); }
@@ -368,8 +368,10 @@ CONSOLE_CSS = """
      boundary of a UI component) and, before that, is simply a box a reviewer
      cannot see. Every text input and select painted a 1px border in the SAME
      COLOUR AS ITS OWN FILL, so the only thing separating a field from the page
-     was the fill difference: #14171A on the #101315 sidebar, and #1B1F23 on the
-     #14171A page. Both are around a single just-noticeable difference, and the
+     was the fill difference. Measured on the dark substrate this interface ran
+     on until 2026-08-07: #14171A on a #101315 sidebar, and #1B1F23 on a #14171A
+     page, 1.04:1 and 1.09:1. Both were around a single just-noticeable
+     difference, and the
      name field is the one control on the Confirm surface a decision cannot be
      recorded without.
 
@@ -398,7 +400,7 @@ CONSOLE_CSS = """
      and offsetting keeps the ring clear of the element's own border. */
   :is(button, a, input, select, textarea, summary, [role="radio"],
       [role="combobox"], [role="option"], [tabindex]):focus-visible {
-      outline: 2px solid #7FB2D9 !important;
+      outline: 2px solid var(--accent) !important;
       outline-offset: 2px !important;
       border-radius: 2px;
   }
@@ -762,7 +764,7 @@ def render_coverage(panel):
             # not-assessed each row is, and that distinction is the reason the
             # panel exists. The bar answers "which gap is biggest" and nothing
             # else, which is why it is sorted by count and says so.
-            st.plotly_chart(count_bar(counts, hue="#9BA3AA"),
+            st.plotly_chart(count_bar(counts, hue="#50555B"),
                             use_container_width=True, key="coverage-bar",
                             config={"displayModeBar": False})
             st.caption("Ordered by count. Every bar is a number of parts, and "
@@ -909,7 +911,7 @@ def render_blocking_matrix(surface):
             for good in goods]
     figure = go.Figure(go.Heatmap(
         z=grid, x=[row["part"] for row in matrix], y=list(goods),
-        colorscale=[[0, "#1B1F23"], [1, "#7FB2D9"]], showscale=False,
+        colorscale=[[0, "#EDF0F3"], [1, "#2F6E9E"]], showscale=False,
         xgap=1, ygap=1))
     chart_layout(figure, height=max(200, 40 * len(goods) + 120))
     st.plotly_chart(figure, use_container_width=True, key="blocking-matrix",
@@ -917,27 +919,27 @@ def render_blocking_matrix(surface):
 
 
 CHART_BG = "rgba(0,0,0,0)"
-CHART_GRID = "#262B30"
-CHART_INK = "#9BA3AA"
-CHART_SEQUENTIAL = ("#1E2933", "#2F4A5E", "#417089", "#5C93B4", "#7FB2D9")
+CHART_GRID = "#E2E6EB"
+CHART_INK = "#50555B"
+CHART_SEQUENTIAL = ("#D6E3EE", "#B3CCE1", "#8AB0D0", "#5C8FB8", "#2F6E9E")
 # THE MAP SCALE STARTS ABOVE THE LAND COLOUR, and that is a correctness point
-# rather than a taste one. CHART_SEQUENTIAL's first stop is #1E2933, which sits
-# within one step of unmapped land, so the least-exposed region and "not a
-# region at all" would have rendered as the same grey. Those are different
-# claims: one is a count, the other is a question the data does not answer.
-MAP_SCALE = ("#3A6076", "#477A96", "#5C93B4", "#6EA3C7", "#7FB2D9")
-MAP_LAND = "#232931"
-MAP_OCEAN = "#15181B"
-MAP_COAST = "#39424B"
-MAP_BORDER = "#2D343B"
+# rather than a taste one. The shared chart scale's first stop sits within a
+# step of unmapped land on either substrate, so the least-exposed region and
+# "not a region at all" would render alike. Those are different claims: one is a
+# count, the other is a question the data does not answer.
+MAP_SCALE = ("#A9C6DF", "#8AB0D0", "#6B99C0", "#4C7FA8", "#2F6E9E")
+MAP_LAND = "#E3E7EC"
+MAP_OCEAN = "#F4F6F9"
+MAP_COAST = "#94A0AC"
+MAP_BORDER = "#C7CED6"
 # One hue per dimension. NOMINAL: the dimensions have no order, so neither does
 # this list, and no hue here is darker or stronger than another by intent.
 DIMENSION_HUE = {
-    "lead_time_to_recover": "#7FB2D9",
-    "blast_radius": "#C79BD9",
-    "buffer_cover": "#7FD9C0",
-    "portability": "#D9C27F",
-    "concentration": "#D99B9B",
+    "lead_time_to_recover": "#2F6E9E",
+    "blast_radius": "#7A4E9E",
+    "buffer_cover": "#1F7A66",
+    "portability": "#8A6A1F",
+    "concentration": "#A34B4B",
 }
 
 
@@ -953,7 +955,7 @@ def chart_layout(figure, height=240):
     return figure
 
 
-def count_bar(pairs, hue="#7FB2D9", height=None):
+def count_bar(pairs, hue="#2F6E9E", height=None):
     """A horizontal bar of (label, count). ONE UNIT, ALWAYS.
 
     Horizontal because the labels are archetype names and column names, and a
@@ -972,7 +974,7 @@ def count_bar(pairs, hue="#7FB2D9", height=None):
     return figure
 
 
-BASIS_HUE = {"supplier": "#7FB2D9", "region": "#C79BD9"}
+BASIS_HUE = {"supplier": "#2F6E9E", "region": "#7A4E9E"}
 
 
 def cluster_size_bar(rows):
@@ -1059,14 +1061,37 @@ def render_region_map(result):
          "region": row.label, "suppliers": row.suppliers, "parts": row.parts,
          "exposed parts": row.exposed_parts}
         for row in rows for code in row.countries])
+    # INDIA IS DRAWN FROM VENDORED GEOMETRY, NOT FROM PLOTLY'S BUILT-IN SHAPES.
+    # Natural Earth's `IND` polygon follows a different convention and stops
+    # around 35.5N, so the built-in map cannot show the claimed territory and
+    # that geometry ships inside plotly.js where no option reaches it. India is
+    # excluded from the ISO-3 trace and drawn afterwards from its own boundary,
+    # which puts it ON TOP: the claimed areas that Natural Earth assigns to its
+    # neighbours are covered rather than left showing a border through them.
+    base = frame[frame["country"] != dash.INDIA]
     figure = px.choropleth(
-        frame, locations="country", locationmode="ISO-3",
+        base, locations="country", locationmode="ISO-3",
         color="exposed parts", hover_name="name",
         # `country` off: it is the ISO code, and repeating it under the country
         # name it stands for is two spellings of one fact.
         hover_data={"country": False, "region": True, "suppliers": True,
                     "parts": True},
         color_continuous_scale=list(MAP_SCALE))
+    india = frame[frame["country"] == dash.INDIA]
+    if not india.empty:
+        row = india.iloc[0]
+        figure.add_trace(go.Choropleth(
+            geojson=dash.claimed_india(), featureidkey="id",
+            locations=[dash.INDIA], z=[row["exposed parts"]],
+            # The shared colour axis, so India takes the same fill the scale
+            # gives every other region rather than a second palette nobody
+            # declared.
+            coloraxis="coloraxis",
+            marker_line_color=MAP_COAST, marker_line_width=0.4,
+            name="", hovertemplate=(
+                f"<b>{row['name']}</b><br>region={row['region']}"
+                f"<br>suppliers={row['suppliers']}<br>parts={row['parts']}"
+                f"<br>exposed parts={row['exposed parts']}<extra></extra>")))
     # THE REST OF THE WORLD HAS TO BE DRAWN. `landcolor` and `countrycolor`
     # were set before this without `showland` or `showcountries`, and both
     # default to off under a choropleth, so nineteen filled countries floated
@@ -1107,6 +1132,12 @@ def render_region_map(result):
                                 for code in row.countries) or "not on the map"}
          for row in rows],
         hide_index=True, width="stretch")
+    # CC BY 4.0 requires credit, so the credit is rendered rather than only
+    # filed in assets/README.md.
+    st.caption("India is drawn including its full claimed territory, from a "
+               "boundary published by Data{Meet} under CC BY 4.0 and simplified "
+               "for this map. Plotly's built-in country shapes follow a "
+               "different convention. See assets/README.md.")
 
 
 
@@ -1139,7 +1170,7 @@ def render_dimension_multiples(result):
 
 
 def dimension_figure(item):
-    hue = DIMENSION_HUE.get(item.dimension, "#7FB2D9")
+    hue = DIMENSION_HUE.get(item.dimension, "#2F6E9E")
     if item.is_categorical:
         figure = go.Figure(go.Bar(
             x=list(item.categories), y=list(item.categories.values()),
@@ -1193,7 +1224,7 @@ def render_incidence(result):
         note(f"{capped} further parts are not drawn: this grid is capped.")
     figure = go.Figure(go.Heatmap(
         z=grid, x=list(parts), y=list(suppliers),
-        colorscale=[[0, "#1B1F23"], [1, "#7FB2D9"]], showscale=False,
+        colorscale=[[0, "#EDF0F3"], [1, "#2F6E9E"]], showscale=False,
         xgap=1, ygap=1))
     chart_layout(figure, height=max(320, 18 * len(suppliers)))
     st.plotly_chart(figure, use_container_width=True)
@@ -1370,9 +1401,21 @@ STANDING = (f"Demonstration on synthetic data. Figures are illustrative at "
             f"seed 42. Source: <a href='{REPO}'>{REPO.split('//')[1]}</a>")
 
 
+def standing():
+    """The provenance line, at the FOOT of every surface.
+
+    It ran above the page title, which put the least urgent sentence on the page
+    in the position the eye lands on first and pushed the surface's own question
+    below it. A colophon belongs where a colophon belongs. It still renders on
+    every surface rather than once, because a reviewer who navigates straight to
+    Confirm has to meet it too.
+    """
+    st.divider()
+    st.markdown(f"<p class='note'>{STANDING}</p>", unsafe_allow_html=True)
+
+
 def main():
     result, built = load()
-    st.markdown(f"<p class='note'>{STANDING}</p>", unsafe_allow_html=True)
     st.sidebar.title("Supplier exposure")
     choice = st.sidebar.radio(
         "Surface",
@@ -1385,6 +1428,7 @@ def main():
 
     if choice == DASHBOARD:
         render_dashboard(result)
+        standing()
         return
 
     surface = built[choice]
@@ -1394,6 +1438,7 @@ def main():
         render_find_out(surface)
     else:
         render_confirm(surface, result)
+    standing()
 
 
 main()
