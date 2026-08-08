@@ -218,6 +218,17 @@ CONSOLE_CSS = """
   }
   .ids span { display: inline-block; min-width: 6.6rem; line-height: 1.75; }
 
+  /* The evidence export. Streamlit paints st.code on a background of its own,
+     #F8F9FB, which is in neither this stylesheet nor the theme: an undeclared
+     surface, found by measuring the rendered page rather than by reading either
+     file. Pointed at the chip fill, which is declared and gives the block a
+     plane a reader can see it sitting on. */
+  [data-testid="stCode"], [data-testid="stCode"] pre, .stCode pre {
+      background: #EAEDF1 !important;
+      border: 1px solid #D9DEE4 !important;
+      border-radius: 2px !important;
+  }
+
   table.tight { border-collapse: collapse; width: 100%; }
   table.tight td {
       border-top: 1px solid #E2E6EB;
