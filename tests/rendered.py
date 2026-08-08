@@ -40,7 +40,18 @@ APP = ROOT / "review_app.py"
 
 REQUIRED = os.environ.get("RENDER_CHECKS") == "required"
 BOOT_TIMEOUT = 120
-SURFACES = ("Dashboard", "Exposure", "Find out", "Confirm")
+
+# The h1 each surface renders, read from the model rather than retyped, so a
+# reworded question moves the wait with it instead of hanging on a title that no
+# longer exists.
+from src.interface.model import (CONFIRM, EXPOSURE, FIND_OUT,  # noqa: E402
+                                 SURFACE_QUESTION)
+
+TITLES = {"Dashboard": "Dashboard",
+          "Exposure": SURFACE_QUESTION[EXPOSURE],
+          "Find out": SURFACE_QUESTION[FIND_OUT],
+          "Confirm": SURFACE_QUESTION[CONFIRM]}
+SURFACES = tuple(TITLES)
 
 
 def playwright_or_skip():
@@ -116,17 +127,18 @@ def open_surface(page, url, name):
             if (!button) throw new Error('no surface named ' + name);
             button.click();
         }""", name)
+    # WAIT FOR THIS SURFACE'S OWN TITLE. The previous condition was "an h1
+    # exists and the page has some text", which the surface being navigated AWAY
+    # from satisfies, so it returned the instant the click landed and the only
+    # real wait was a fixed 1.5s. That is a flake with a slow runner's name on
+    # it: CI failed two assertions once and passed the same commit on a retry,
+    # which is precisely how a gate stops being believed.
     page.wait_for_function(
-        """(name) => {
+        """(expected) => {
             const h1 = document.querySelector('h1');
-            const caption = document.body.innerText;
-            return !!h1 && caption.length > 500;
-        }""", arg=name, timeout=60_000)
-    # Streamlit reruns the script on selection, so the previous surface is on
-    # screen for a moment after the radio flips. Waiting for the network to
-    # settle rather than for a fixed delay keeps this honest on a slow runner.
+            return !!h1 && h1.textContent.trim() === expected;
+        }""", arg=TITLES[name], timeout=60_000)
     page.wait_for_load_state("networkidle")
-    page.wait_for_timeout(1500)
     return page
 
 
