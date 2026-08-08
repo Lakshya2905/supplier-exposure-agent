@@ -25,6 +25,11 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
+    # Serves the app to a real browser so the rendered page can be measured.
+    # Four defects shipped that every source-reading test was happy with, which
+    # is one failure four times: a declaration is not a painted pixel. Dev only:
+    # a deployed container renders the app and never inspects it.
+    "playwright>=1.44",
 ]
 
 # Pinned deliberately. setuptools sees a `src/` directory and switches to

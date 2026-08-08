@@ -25,6 +25,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
+      - name: Install a browser
+        # The rendered-page checks measure getComputedStyle on the running app.
+        # They skip locally when no browser is present, which is why the next
+        # step makes them mandatory here: a check that can skip is a check that
+        # eventually only skips.
+        run: python -m playwright install --with-deps chromium
+
       - name: Generate the working dataset
         # data/ is gitignored and regenerated from a documented seed. The eval
         # set under evals/ is NOT regenerated here; it is read as committed.
@@ -33,4 +40,8 @@ jobs:
       - name: Ship gate
         # Blocks on a failing test, a PASSING xfail (xfail_strict), a manifest
         # mismatch, or a missed floor. Does not block on the snapshot moving.
+        env:
+          # Turns a missing browser from a skip into a failure. Locally the
+          # checks skip and the gate prints every skip reason; here they run.
+          RENDER_CHECKS: required
         run: python eval_harness.py

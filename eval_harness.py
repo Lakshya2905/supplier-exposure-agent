@@ -257,8 +257,12 @@ def not_covered(report):
 
 def run_tests(report):
     report.heading("TESTS")
+    # `-rs` reports skip REASONS. A control that quietly does not run is worse
+    # than no control, because the gate prints green either way, and the
+    # rendered-page checks skip when no browser is installed. Every skip in the
+    # suite now says so here, not only those.
     completed = subprocess.run(
-        [sys.executable, "-m", "pytest", "-q", "--no-header"],
+        [sys.executable, "-m", "pytest", "-q", "--no-header", "-rs"],
         capture_output=True, text=True)
     tail = [line for line in completed.stdout.strip().splitlines() if line][-1:]
     for line in tail:
@@ -270,6 +274,13 @@ def run_tests(report):
         for line in completed.stdout.strip().splitlines():
             if line.startswith(("FAILED", "ERROR", "SUBFAIL")):
                 report.say(f"    {line}")
+    skipped = [line for line in completed.stdout.splitlines()
+               if line.startswith("SKIPPED")]
+    if skipped:
+        report.say()
+        report.say("  DID NOT RUN, and the gate is green anyway:")
+        for line in skipped:
+            report.say(f"    {line}")
     report.say()
     report.say("  xfail_strict is on: a KNOWN GAP that gets fixed reports XPASS")
     report.say("  and FAILS this gate, so a gap cannot be closed silently.")

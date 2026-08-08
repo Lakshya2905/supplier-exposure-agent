@@ -801,6 +801,51 @@ initial, and file.
 - Evidence flattens into numbered references rather than collapsing.
 - Absence states must remain visible in greyscale, which the dashed border already guarantees.
 
+## The Rendered Page Is Measured, Not Only The Source [SHIPPED]
+
+> [SHIPPED] `tests/rendered.py` serves the real app to headless Chromium and reads `getComputedStyle` off it. Required in CI, skipped locally, loud either way.
+
+**Four defects shipped that every source-reading test was happy with, and they
+are one failure rather than four: a declaration is not a painted pixel.**
+
+| | what the source said | what the page did |
+|---|---|---|
+| link colour | accent | Streamlit's blue, `rgb(61, 157, 243)` |
+| `text-title`, `text-section` | declared and correct | never painted at all |
+| the map's background | nothing about it | a white slab, from `geo.bgcolor` |
+| every form field | a 1px border | that border was its own fill colour |
+
+Nothing that reads this repository can tell a declaration from a pixel, so each
+of these was found by hand, one at a time, after shipping.
+
+What is asserted, each named for the defect it would have caught:
+
+- **what was declared is what is painted** — every named element's computed colour equals the token it declares
+- **every painted text colour is a ramp step**, and both `text-title` and `text-section` reach the screen, which is the direction that catches a step declared and never used
+- **colour is never the only cue**, measured on the control rather than on every descendant
+- **every field boundary clears 3:1** against its own fill and against the surface behind it
+- **no large area is painted a colour nobody declared**
+- **the map draws the whole world**, paints no background of its own, and still carries India's own geometry as a second trace
+
+**Two of these were restated once already, and the reason is worth keeping.** The
+slab check first asked whether anything large was *light*, which was a defect
+only while the page was dark and would have had to be inverted when the substrate
+moved; it now asks whether a colour is declared, which travels. The affordance
+check first looked at every text-bearing element and flagged twenty-one copies of
+Streamlit's expander chevron — an icon inside a summary that already carries an
+underline. It was reporting the caret for not having a caret.
+
+**Skipping is not silent.** A browser is a 150MB dependency and a contributor
+without one should still be able to run the suite, but a check that skips quietly
+is worse than no check because the gate prints green either way. So
+`RENDER_CHECKS=required` turns a missing browser into a failure and the workflow
+sets it, while `eval_harness.py` now prints every skip reason in the suite under
+the heading **"DID NOT RUN, and the gate is green anyway"**.
+
+**It found something on its first proper run**: `st.code` paints `#F8F9FB`, a
+surface in neither the stylesheet nor the theme. Harmless to look at and still an
+undeclared colour, now pointed at the chip fill.
+
 ## Test Contract [SHIPPED]
 
 > [SHIPPED] `tests/test_design_properties.py`. Nothing there compares a hex
@@ -877,6 +922,8 @@ with numbers:
 | 2026-08-07 | Form fields given the `border-ui` boundary they were always specified to have | Every field drew a border in its own fill colour, so the name box on Confirm was invisible at 1.04:1. The token was declared and correct and had never been referenced by anything |
 | 2026-08-07 | **Substrate changed from dark to light** | Owner's call. Every ratio re-derived against the floor its dark counterpart held, never inverted by eye, because this document said a substrate change voids its own guarantees until they are measured again |
 | 2026-08-07 | Two colour tests restated: they were pinning the dark palette, not the design | One required the sidebar to sit below the JND from the page; one required `border-ui` to be too weak for a focus ring. Both were findings about one set of greys, and both failed on a correct design |
+| 2026-08-08 | Rendered-page checks added to the gate, required in CI | Four defects had shipped that every source-reading test passed. A declaration is not a painted pixel, and nothing that reads the repository can tell them apart |
+| 2026-08-08 | Skips are printed by the gate rather than absorbed into a pass | A control that quietly does not run is worse than no control, because the report is green either way |
 | 2026-08-07 | Decision log persisted to disk, and moved to the head of Confirm | It lived in session state and was gone on reload, so the audit trail survived as long as a browser tab. The panel also sat below twenty-two clusters, where a reviewer finds it only after deciding again |
 | 2026-08-07 | The suite writes decisions to a temporary directory, per test | Running the tests appended a decision by a fixture name to the operator's live record, which is a test forging an entry in the log the product exists to be trusted for |
 | 2026-08-07 | India drawn from vendored geometry including its full claimed territory | Plotly's built-in `IND` follows Natural Earth and stops near 35.5°N, and that shape ships inside plotly.js where no option reaches it. The claimed boundary is drawn on top, so areas Natural Earth assigns to neighbours are covered rather than split by a line |
