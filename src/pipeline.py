@@ -58,6 +58,10 @@ class Result:
     memberships: dict
     catalogue: tuple
     thresholds: object
+    # The extract manifest, so a surface can state which systems this run read
+    # and when they were pulled without reopening an evidence panel.
+    extracts: dict = None
+    data_dir: object = None
 
 
 def _dependencies(verdicts, suppliers, lead_times):
@@ -132,7 +136,8 @@ def run(data_dir=None, config_path="config/archetypes.yaml"):
 
     return Result(verdicts=verdicts, profiles=profiles, report=report,
                   evidence=evidence, memberships=memberships,
-                  catalogue=catalogue, thresholds=thresholds)
+                  catalogue=catalogue, thresholds=thresholds,
+                  extracts=extracts, data_dir=data_dir)
 
 
 def surfaces(result):

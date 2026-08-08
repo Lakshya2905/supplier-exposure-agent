@@ -285,34 +285,23 @@ CONSOLE_CSS = """
       background: #DCE6EF; color: var(--accent); border-color: var(--accent);
   }
 
-  section[data-testid="stSidebar"] {
-      background: #EFF1F4; border-right: 1px solid #E2E6EB;
-      width: 16rem !important;
+  /* THE SIDEBAR IS GONE. It cost a fixed 16rem of every screen to hold four
+     links and one text field, on a surface whose whole argument is information
+     per screen. Navigation is a row across the top and everything it carried
+     now appears on every surface rather than on one.
+
+     `--surface-sidebar` went with it: a token for a surface that does not exist
+     is a colour nobody can be wrong about, which is worse than no token. */
+  .topbar {
+      display: flex; align-items: baseline; gap: var(--space-md);
+      border-bottom: 1px solid #D9DEE4;
+      margin: 0 0 var(--space-md) 0; padding: 0 0 var(--space-sm) 0;
   }
-  section[data-testid="stSidebar"] .block-container {
-      padding: var(--space-xl) var(--space-lg);
+  .topbar .wordmark {
+      font-size: var(--ui-base); font-weight: 600; letter-spacing: 0.02em;
+      color: var(--text-primary);
   }
-  section[data-testid="stSidebar"] [role="radiogroup"] { gap: 0 !important; }
-  section[data-testid="stSidebar"] [role="radiogroup"] > label {
-      padding: var(--space-sm) 0 var(--space-sm) var(--space-md); margin: 0;
-      border-left: 2px solid transparent;
-  }
-  section[data-testid="stSidebar"] [role="radiogroup"] > label:has(input:checked) {
-      border-left-color: var(--accent); background: #E4E8ED;
-  }
-  /* The radio control stays visible. An earlier revision hid it by position
-     and hid the label text instead, because Streamlit's internal element order
-     is not a contract. The left rule and the surface fill carry the selected
-     state; the control is left alone. */
-  section[data-testid="stSidebar"] [role="radiogroup"] > label > div:first-child {
-      transform: scale(0.8); opacity: 0.75;
-  }
-  section[data-testid="stSidebar"] [role="radiogroup"] p {
-      font-size: var(--ui-sm) !important; line-height: 1.45; color: var(--text-caption);
-  }
-  section[data-testid="stSidebar"] [role="radiogroup"] strong {
-      color: var(--text-body); font-weight: 600;
-  }
+  [data-testid="stPopover"] button { width: 100%; }
 
   /* ------------------------------------------------- panels and badges --
      Surfaces and borders carry structure: where one group ends and the next
@@ -465,8 +454,16 @@ CONSOLE_CSS = """
       /* Links keep their identity through form, since colour is gone. */
       a, a:visited { text-decoration: underline !important; }
 
-      /* The record, not the machinery. */
-      section[data-testid="stSidebar"],
+      /* The record, not the machinery. The navigation and the strip go with
+         the buttons: a printed page is one surface, and a control that cannot
+         be clicked is an instruction nobody can follow.
+
+         `stButtonGroup`, NOT `stSegmentedControl`. The obvious name matched
+         nothing, so this rule was dead and the navigation would have printed
+         while a test asserting the selector was listed here passed. Confirmed
+         against the DOM, which is the only place the answer exists. */
+      .topbar, [data-testid="stButtonGroup"], [data-testid="stPopover"],
+      [data-testid="stMultiSelect"],
       .stButton, [data-testid="stTextInput"], [data-testid="stSelectbox"],
       [data-testid="stAlert"], [data-testid="stToolbar"] { display: none !important; }
 
@@ -760,7 +757,7 @@ ABSENCE_LABEL = {
 }
 
 
-def render_coverage(panel):
+def render_coverage(panel, chart=True, key="coverage-bar"):
     """Neutral by construction. Not a warning, and placed level with the groups.
 
     The counterpart to the work queue: that surface says what to go and get,
@@ -782,7 +779,7 @@ def render_coverage(panel):
             tight_table([(entry.count if entry.count else "",
                           absence_chip(entry.kind) + entry.sentence)
                          for entry in panel.notes]), unsafe_allow_html=True)
-        counts = dash.coverage_counts(panel)
+        counts = dash.coverage_counts(panel) if chart else ()
         if counts:
             # THE SENTENCES STAY AND THE BAR SITS UNDER THEM. A chart of what is
             # missing is a shape, not a statement: it cannot say WHICH KIND of
@@ -790,7 +787,7 @@ def render_coverage(panel):
             # panel exists. The bar answers "which gap is biggest" and nothing
             # else, which is why it is sorted by count and says so.
             st.plotly_chart(count_bar(counts, hue="#50555B"),
-                            use_container_width=True, key="coverage-bar",
+                            width="stretch", key=key,
                             config={"displayModeBar": False})
             st.caption("Ordered by count. Every bar is a number of parts, and "
                        "the sentences above say which kind of unassessed each "
@@ -808,7 +805,7 @@ def absence_chip(kind):
     return badge(label, absent=True) + " " if label else ""
 
 
-def render_exposure(surface, find_out):
+def render_exposure(surface, find_out, result):
     st.title(surface.question)
 
     # WHAT THE SYSTEM DOES NOT KNOW LEADS. It is the most distinctive property
@@ -859,7 +856,7 @@ def render_exposure(surface, find_out):
 
     sizes = dash.group_sizes(surface)
     if sizes:
-        st.plotly_chart(count_bar(sizes), use_container_width=True,
+        st.plotly_chart(count_bar(sizes), width="stretch",
                         key="group-sizes", config={"displayModeBar": False})
         st.caption("Members per group, in the order the lattice draws them and "
                    "NOT by size. Sorting this by count would contradict the "
@@ -868,11 +865,11 @@ def render_exposure(surface, find_out):
                    "overrule a caption.")
 
     st.divider()
-    render_findings(surface)
+    render_findings(surface, result)
     render_blocking_matrix(surface)
 
 
-def render_findings(surface):
+def render_findings(surface, result):
     """Every exposed part once, whatever number of groups it belongs to.
 
     QA ISSUE-005: 36 findings and 36 evidence panels rendered for 21 parts,
@@ -905,7 +902,11 @@ def render_findings(surface):
     st.caption(f"One per exposed part, whatever number of groups it sits in. "
                f"Parts are {ranking.DEFAULT_ORDER_LABEL}, which carries no "
                f"meaning: reading order is not priority.")
-    for key in ranking.in_default_order(rows):
+
+    keys, hidden = region_filter(result, ranking.in_default_order(rows))
+    if hidden:
+        note(hidden)
+    for key in keys:
         row = rows[key]
         finding(row.sentence + merge_marker(row.evidence))
         render_merges(row.evidence)
@@ -939,7 +940,7 @@ def render_blocking_matrix(surface):
         colorscale=[[0, "#EDF0F3"], [1, "#2F6E9E"]], showscale=False,
         xgap=1, ygap=1))
     chart_layout(figure, height=max(200, 40 * len(goods) + 120))
-    st.plotly_chart(figure, use_container_width=True, key="blocking-matrix",
+    st.plotly_chart(figure, width="stretch", key="blocking-matrix",
                     config={"displayModeBar": False})
 
 
@@ -1146,7 +1147,7 @@ def render_region_map(result):
     # scrollZoom off: a geo plot captures the wheel, so scrolling the page over
     # the map zoomed the map instead and the page stayed put. Found by trying to
     # scroll past it.
-    st.plotly_chart(figure, use_container_width=True,
+    st.plotly_chart(figure, width="stretch",
                     config={"scrollZoom": False, "displayModeBar": False})
 
     st.dataframe(
@@ -1188,7 +1189,7 @@ def render_dimension_multiples(result):
             with column:
                 st.markdown(f"###### {item.dimension.replace('_', ' ')}")
                 st.plotly_chart(dimension_figure(item),
-                                use_container_width=True,
+                                width="stretch",
                                 key=f"dim-{item.dimension}")
                 note(f"unit: {item.unit}. {item.assessed} assessed, "
                      f"{item.unknown} not established.")
@@ -1252,7 +1253,7 @@ def render_incidence(result):
         colorscale=[[0, "#EDF0F3"], [1, "#2F6E9E"]], showscale=False,
         xgap=1, ygap=1))
     chart_layout(figure, height=max(320, 18 * len(suppliers)))
-    st.plotly_chart(figure, use_container_width=True)
+    st.plotly_chart(figure, width="stretch")
 
 
 def render_find_out(surface):
@@ -1263,7 +1264,7 @@ def render_find_out(surface):
         st.write("Nothing is waiting on a missing field.")
     sizes = dash.field_sizes(surface)
     if sizes:
-        st.plotly_chart(count_bar(sizes), use_container_width=True,
+        st.plotly_chart(count_bar(sizes), width="stretch",
                         key="field-sizes", config={"displayModeBar": False})
         st.caption("Parts waiting on each field, largest first. This ordering "
                    "is a ranking and is meant to be: the page asks what to go "
@@ -1286,7 +1287,7 @@ def render_confirm(surface, result):
     sizes = dash.cluster_sizes(result.report)
     if sizes:
         st.subheader("How much one decision covers")
-        st.plotly_chart(cluster_size_bar(sizes), use_container_width=True,
+        st.plotly_chart(cluster_size_bar(sizes), width="stretch",
                         key="cluster-sizes", config={"displayModeBar": False})
         st.caption("Members per cluster, largest first. A cluster is confirmed "
                    "as ONE act, so this is the size of the decision rather "
@@ -1408,16 +1409,7 @@ def render_decision_panel(log, total_rows):
         finding(sentence)
 
 
-# Short names for navigation, with the question beneath. The questions stay as
-# page headings where they carry the surface's purpose; in a sidebar a full
-# sentence per item reads as prose rather than as navigation.
 DASHBOARD = "dashboard"
-NAV_NAME = {DASHBOARD: "Dashboard", view.EXPOSURE: "Exposure",
-            view.FIND_OUT: "Find out", view.CONFIRM: "Confirm"}
-NAV_SUBTITLE = {DASHBOARD: "the shape of the whole set",
-                view.EXPOSURE: "what is worst",
-                view.FIND_OUT: "what should I go and get",
-                view.CONFIRM: "do I agree with your model"}
 
 # THE CATEGORY PALETTE HAS NO HUE, AND THAT IS THE CORRECTION OF A REAL DEFECT.
 #
@@ -1462,42 +1454,144 @@ def standing():
     st.markdown(f"<p class='note'>{STANDING}</p>", unsafe_allow_html=True)
 
 
+def render_header():
+    """Title and navigation, ACROSS THE TOP rather than down the side.
+
+    The sidebar cost a fixed 16rem of every screen to hold four links and one
+    text field, on a surface whose whole argument is information per screen. A
+    horizontal control costs one row.
+
+    `st.segmented_control` rather than a radio: the options are exclusive and
+    the control looks like what it is. Its selection is a stated question, not
+    an ordering, so nothing about it touches the anti-ranking contract.
+    """
+    st.markdown("<div class='topbar'><span class='wordmark'>Supplier "
+                "exposure</span></div>", unsafe_allow_html=True)
+    choice = st.segmented_control(
+        "Surface", list(NAV_NAME), key="surface",
+        format_func=lambda name: NAV_NAME[name], default=DASHBOARD,
+        label_visibility="collapsed")
+    # A segmented control returns None when a click deselects the active
+    # segment, which would render a page with no surface at all.
+    choice = choice or st.session_state.get("last_surface", DASHBOARD)
+    st.session_state["last_surface"] = choice
+    st.caption(f"{NAV_SUBTITLE[choice]}. Three decision surfaces, deliberately "
+               f"separate: their rows are a part, a field and a cluster. The "
+               f"dashboard is an overview and decides nothing.")
+    return choice
+
+
+def render_strip(result, built):
+    """Everything a reviewer needs on EVERY surface, in one row.
+
+    Each of these was reachable from exactly one page before, which meant the
+    product's most distinctive claims were invisible from three quarters of it:
+    what it does not know lived on Exposure, what has been decided lived at the
+    foot of Confirm, and when the data was pulled lived inside an evidence panel.
+    """
+    who, decided, missing, source = st.columns([2, 1, 1, 1])
+
+    with who:
+        # `actions.apply` refuses an anonymous decision, so this is not
+        # decoration: without it the Confirm buttons fail rather than record.
+        st.session_state["reviewer"] = st.text_input(
+            "Your name (recorded on every decision)",
+            key="reviewer-input", value=st.session_state.get("reviewer", ""))
+
+    log = decision_log()
+    with decided:
+        with st.popover(f"Decisions recorded ({len(log)})",
+                        width="stretch"):
+            render_decision_panel(log, len(built[view.CONFIRM].rows))
+
+    coverage = built[view.EXPOSURE].coverage
+    with missing:
+        with st.popover(f"Not assessed ({len(coverage.notes)})",
+                        width="stretch"):
+            # THE SENTENCES, NOT THE PANEL. Exposure renders the full panel with
+            # its chart, and rendering the same thing twice on that surface is
+            # the duplication QA ISSUE-005 was about. This is the same content at
+            # a coarser grain, reachable from the three surfaces that had no
+            # access to it at all.
+            render_coverage(coverage, chart=False, key="coverage-strip")
+
+    with source:
+        with st.popover("Data and run", width="stretch"):
+            render_provenance(result)
+
+
+def render_provenance(result):
+    """Which systems this run read, and when each was pulled.
+
+    THE MANIFEST, NOT A CLAIM ABOUT FRESHNESS. It states retrieval times and
+    lets a reader judge; it does not compute an age, because "stale" is a
+    threshold nobody has set and this system does not invent those.
+    """
+    st.markdown(panel_head("Data and run"), unsafe_allow_html=True)
+    note(f"Reading {identifier(str(result.data_dir))}. Synthetic data at "
+         f"seed 42.")
+    st.markdown(tight_table([
+        ("", f"{identifier(name)} &mdash; {system}, retrieved {when}")
+        for name, (system, when) in sorted((result.extracts or {}).items())]),
+        unsafe_allow_html=True)
+    st.caption("Retrieval times as recorded in the extract manifest. No age is "
+               "computed: how old is too old is a threshold nobody has set.")
+
+
+def region_filter(result, parts):
+    """Filter the findings by supplier region. A STATED QUESTION.
+
+    DESIGN.md refuses sort controls and offers filtering freely: sorting by one
+    dimension declares it the ranking, while a filter narrows the set without
+    ordering it. What is hidden is COUNTED ON SCREEN, because a filtered list
+    that does not say so is a shorter list presented as the whole.
+    """
+    regions = sorted({row.region for part in parts
+                      for row in result.evidence[part].supplier_rows})
+    if not regions:
+        return parts, ""
+    chosen = st.multiselect("Supplier region", regions, default=[],
+                            placeholder="All regions",
+                            key="region-filter")
+    if not chosen:
+        return parts, ""
+    kept = tuple(part for part in parts
+                 if {row.region for row in result.evidence[part].supplier_rows}
+                 & set(chosen))
+    return kept, (f"Filtered to {', '.join(chosen)}. "
+                  f"{len(parts) - len(kept)} of {len(parts)} exposed parts are "
+                  f"hidden by this filter.")
+
+
+NAV_NAME = {DASHBOARD: "Dashboard", view.EXPOSURE: "Exposure",
+            view.FIND_OUT: "Find out", view.CONFIRM: "Confirm"}
+NAV_SUBTITLE = {DASHBOARD: "the shape of the whole set",
+                view.EXPOSURE: "what is worst",
+                view.FIND_OUT: "what should I go and get",
+                view.CONFIRM: "do I agree with your model"}
+
+
 def main():
     result, built = load()
-    st.sidebar.title("Supplier exposure")
-    choice = st.sidebar.radio(
-        "Surface",
-        (DASHBOARD, view.EXPOSURE, view.FIND_OUT, view.CONFIRM),
-        format_func=lambda name: f"**{NAV_NAME[name]}**  \n"
-                                 f"{NAV_SUBTITLE[name]}")
-    st.sidebar.caption("Three decision surfaces, deliberately separate. Their "
-                       "rows are different things: a part, a field, a cluster. "
-                       "The dashboard is an overview and decides nothing.")
-
-    # THE NAME BELONGS TO THE SESSION, NOT TO ONE PAGE. It lived on Confirm, so
-    # Streamlit discarded it the moment a reviewer navigated away and they came
-    # back anonymous with nothing on screen saying so. `actions.apply` refuses an
-    # anonymous decision, so the failure surfaced as a rejected click rather than
-    # as the missing field it was.
-    st.sidebar.divider()
-    st.session_state["reviewer"] = st.sidebar.text_input(
-        "Your name (recorded on every decision)",
-        key="reviewer-input", value=st.session_state.get("reviewer", ""))
-    if not st.session_state["reviewer"].strip():
-        st.sidebar.caption("Required before any decision can be recorded.")
+    choice = render_header()
+    # RESERVED HERE, FILLED LAST, for the same reason the decision panel is: the
+    # strip reports what has been decided, and a decision is applied further
+    # down this function. Rendered in place it would show the state from before
+    # the click that just happened.
+    strip = st.container()
+    st.divider()
 
     if choice == DASHBOARD:
         render_dashboard(result)
-        standing()
-        return
-
-    surface = built[choice]
-    if choice == view.EXPOSURE:
-        render_exposure(surface, built[view.FIND_OUT])
+    elif choice == view.EXPOSURE:
+        render_exposure(built[view.EXPOSURE], built[view.FIND_OUT], result)
     elif choice == view.FIND_OUT:
-        render_find_out(surface)
+        render_find_out(built[view.FIND_OUT])
     else:
-        render_confirm(surface, result)
+        render_confirm(built[view.CONFIRM], result)
+
+    with strip:
+        render_strip(result, built)
     standing()
 
 

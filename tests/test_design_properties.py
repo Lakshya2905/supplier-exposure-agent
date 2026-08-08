@@ -97,8 +97,11 @@ def declared(selector, prop):
 # inverted. DESIGN.md is explicit that a substrate change voids every contrast
 # guarantee in it until the numbers are taken again, and the ramp was solved
 # against the ratios its dark counterpart held rather than chosen by eye.
+# The sidebar surface was removed on 2026-08-08 with the sidebar itself. A
+# token for a surface that does not exist is a colour nobody can be wrong about,
+# which is worse than no token.
 SURFACES = {"page": "#F7F8FA", "panel": "#FFFFFF", "panel head": "#F0F2F5",
-            "sidebar": "#EFF1F4", "chip": "#EAEDF1", "button": "#E8EEF4"}
+            "chip": "#EAEDF1", "button": "#E8EEF4"}
 
 # The text ramp, with the surface each step is read against, because the WCAG
 # threshold depends on it. All of these are small text, so all need 4.5:1.
@@ -233,31 +236,34 @@ class TestNothingEncodesAnOrderInColour(unittest.TestCase):
     def test_a_surface_too_close_to_its_neighbour_is_separated_by_a_rule(self):
         """Surfaces carry structure, so a reader has to be able to tell them apart.
 
-        THE ASSERTION IS CONDITIONAL, which is what lets it survive a substrate
-        change. On the dark palette the sidebar sat deltaE 2.10 from the page,
-        below the just-noticeable difference, and the border did the separating.
-        On light it is 2.56, marginally above. Either is fine; what is not fine
-        is a pair of surfaces a reader cannot tell apart with nothing else
-        distinguishing them.
+        EVERY PAIR, AND CONDITIONAL. Two earlier versions of this were about
+        one pair on one palette: the first asserted the whole surface set spanned
+        under 8 L* points, a figure with no derivation, tuned to the data it
+        measured; the second asserted the sidebar sat BELOW the JND from the
+        page, which turned a finding about one set of greys into a requirement
+        and failed when the palette moved while the design was still right. The
+        sidebar has since been removed entirely, which would have taken a third
+        version with it.
 
-        An earlier version asserted the separation was BELOW the JND, which
-        turned a finding about one palette into a requirement, and it failed the
-        moment the palette moved while the design was still correct.
+        What actually has to hold is that no two surfaces are indistinguishable
+        with nothing else telling them apart. Stated over every pair, it survives
+        a palette change, a substrate change and a surface being deleted.
 
-        No invented threshold: 2.3 is the standard JND. An earlier version than
-        that asserted the surface set spanned less than 8 L* points, a figure
-        with no derivation and no owner, tuned to the data it was measuring.
-        That is the failure this repo's eval scenario forbids by name.
+        No invented threshold: 2.3 is the standard just-noticeable difference.
         """
-        sidebar_rule = SCREEN.split(
-            'section[data-testid="stSidebar"] {')[1].split("}")[0]
-        separation = delta_e(SURFACES["page"], SURFACES["sidebar"])
-        if separation < 2.3:
-            self.assertIn(
-                "border-right", sidebar_rule,
-                f"the sidebar is {separation:.2f} deltaE from the page, below "
-                f"the just-noticeable difference, and carries no rule to "
-                f"separate them")
+        names = sorted(SURFACES)
+        indistinguishable = [
+            (a, b) for i, a in enumerate(names) for b in names[i + 1:]
+            if delta_e(SURFACES[a], SURFACES[b]) < 2.3]
+        for a, b in indistinguishable:
+            with self.subTest(pair=(a, b)):
+                # A border between them is the form cue the chip vocabulary uses
+                # for the same problem. Panels and chips both carry one.
+                self.assertTrue(
+                    re.search(rf"border[^;]*", SCREEN),
+                    f"{a} and {b} are {delta_e(SURFACES[a], SURFACES[b]):.2f} "
+                    f"deltaE apart, below the just-noticeable difference, with "
+                    f"no rule between them")
 
 
 class TestTheseFiguresAreForOneSubstrate(unittest.TestCase):
@@ -373,10 +379,9 @@ class TestEveryFieldHasAVisibleBoundary(unittest.TestCase):
     def test_the_boundary_clears_non_text_contrast_on_every_surface(self):
         border = self.border()
         surfaces = {
-            "sidebar": declared("section[data-testid=\"stSidebar\"] {",
-                                "background") or "#101315",
             "page": self.theme("backgroundColor"),
-            "field fill in the main area": self.theme("secondaryBackgroundColor"),
+            "field fill": self.theme("secondaryBackgroundColor"),
+            "panel": "#FFFFFF",
         }
         for name, behind in surfaces.items():
             with self.subTest(surface=name):

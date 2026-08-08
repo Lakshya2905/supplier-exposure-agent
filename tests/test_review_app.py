@@ -81,16 +81,26 @@ def run_raw(timeout=90):
     return app.run()
 
 
+def surface(app, name):
+    """Select a surface from the top bar.
+
+    Navigation moved out of the sidebar into a segmented control across the top,
+    so this is the one place the widget is named. Twenty-odd tests used to reach
+    through `app.sidebar.radio[0]`, which made a layout change a rewrite of
+    assertions that were never about layout.
+    """
+    # AppTest exposes a segmented control as "button_group", not by the name of
+    # the function that created it.
+    return app.get("button_group")[0].set_value(name).run()
+
+
 def run_app(timeout=90):
     """Runs, then SELECTS EXPOSURE.
 
-    The landing surface became the dashboard when that surface was added, and
-    almost everything in this file is about one of the three decision surfaces.
-    Selecting it here rather than in every test keeps the change to the landing
-    page from rewriting eighteen assertions that were never about it. Tests
-    about the landing surface itself use `run_raw`.
+    The landing surface is the dashboard, and almost everything in this file is
+    about one of the three decision surfaces.
     """
-    return run_raw(timeout).sidebar.radio[0].set_value("exposure").run()
+    return surface(run_raw(timeout), "exposure")
 
 
 def text_of(app):
@@ -299,7 +309,8 @@ class TestPrintIsItsOwnSubstrate(unittest.TestCase):
         # A button on paper is an instruction nobody can follow.
         for control in (".stButton", '[data-testid="stTextInput"]',
                         '[data-testid="stSelectbox"]',
-                        'section[data-testid="stSidebar"]'):
+                        '[data-testid="stButtonGroup"]',
+                        '[data-testid="stPopover"]', ".topbar"):
             with self.subTest(control=control):
                 self.assertIn(control, self.printed.split("display: none")[0])
 
@@ -548,7 +559,7 @@ class TestFindOutSurface(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         app = run_app()
-        app.sidebar.radio[0].set_value("find_out").run()
+        surface(app, "find_out")
         cls.app = app
 
     def test_it_asks_what_to_go_and_find_out(self):
@@ -579,7 +590,7 @@ class TestConfirmSurface(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         app = run_app()
-        app.sidebar.radio[0].set_value("confirm").run()
+        surface(app, "confirm")
         cls.app = app
 
     def test_it_asks_whether_the_reviewer_agrees(self):
@@ -619,7 +630,7 @@ class TestConfirmSurface(unittest.TestCase):
 
     def test_a_decision_without_a_reviewer_name_is_refused(self):
         app = run_app()
-        app.sidebar.radio[0].set_value("confirm").run()
+        surface(app, "confirm")
         app.button[0].click().run()
         self.assertFalse(app.exception)
         warnings = "\n".join(str(w.value) for w in app.warning)
@@ -632,13 +643,13 @@ class TestConfirmSurface(unittest.TestCase):
     # Report: .gstack/qa-reports/qa-report-supplier-exposure-agent-2026-08-05.md
     def test_the_reviewer_name_survives_leaving_and_returning(self):
         app = run_app()
-        app.sidebar.radio[0].set_value("confirm").run()
-        app.sidebar.text_input[0].set_value("Ada Lovelace").run()
+        surface(app, "confirm")
+        app.text_input[0].set_value("Ada Lovelace").run()
 
-        app.sidebar.radio[0].set_value("exposure").run()
-        app.sidebar.radio[0].set_value("confirm").run()
+        surface(app, "exposure")
+        surface(app, "confirm")
 
-        self.assertEqual(app.sidebar.text_input[0].value, "Ada Lovelace",
+        self.assertEqual(app.text_input[0].value, "Ada Lovelace",
                          "a reviewer who navigates away must not silently "
                          "become anonymous on returning")
 
@@ -650,7 +661,7 @@ class TestConfirmSurface(unittest.TestCase):
         measurement.
         """
         app = run_app()
-        app.sidebar.radio[0].set_value("confirm").run()
+        surface(app, "confirm")
         self.assertIn("Decisions recorded",
                       [str(s.value) for s in app.subheader])
         self.assertIn("No decision has been recorded", text_of(app))
@@ -668,7 +679,7 @@ class TestConfirmSurface(unittest.TestCase):
         fresh session render identically unless the wording separates them.
         """
         app = run_app()
-        app.sidebar.radio[0].set_value("confirm").run()
+        surface(app, "confirm")
         rendered = text_of(app)
         self.assertIn("append-only", rendered)
         self.assertIn("survives a reload", rendered)
@@ -676,8 +687,8 @@ class TestConfirmSurface(unittest.TestCase):
 
     def test_a_recorded_decision_appears_in_the_panel(self):
         app = run_app()
-        app.sidebar.radio[0].set_value("confirm").run()
-        app.sidebar.text_input[0].set_value("Ada Lovelace").run()
+        surface(app, "confirm")
+        app.text_input[0].set_value("Ada Lovelace").run()
         app.button[0].click().run()
 
         rendered = text_of(app)
@@ -691,8 +702,8 @@ class TestConfirmSurface(unittest.TestCase):
         # outstanding is the unknown. The order is declared because a linear list
         # with no stated order reads as a ranking.
         app = run_app()
-        app.sidebar.radio[0].set_value("confirm").run()
-        app.sidebar.text_input[0].set_value("Ada Lovelace").run()
+        surface(app, "confirm")
+        app.text_input[0].set_value("Ada Lovelace").run()
         app.button[0].click().run()
 
         rendered = text_of(app)
@@ -707,9 +718,9 @@ class TestConfirmSurface(unittest.TestCase):
         positional indices that reach the cluster controls.
         """
         app = run_app()
-        app.sidebar.radio[0].set_value("confirm").run()
+        surface(app, "confirm")
         before = len(app.button)
-        app.sidebar.text_input[0].set_value("Ada Lovelace").run()
+        app.text_input[0].set_value("Ada Lovelace").run()
         app.button[0].click().run()
         self.assertEqual(len(app.button), before,
                          "the panel added a control, or shifted the indices "
@@ -765,8 +776,8 @@ class TestConfirmSurface(unittest.TestCase):
         which is the only layer allowed to be nondeterministic.
         """
         app = run_app()
-        app.sidebar.radio[0].set_value("confirm").run()
-        app.sidebar.text_input[0].set_value("Ada Lovelace").run()
+        surface(app, "confirm")
+        app.text_input[0].set_value("Ada Lovelace").run()
         app.button[0].click().run()
 
         log = app.session_state["log"]
@@ -794,10 +805,10 @@ class TestConfirmSurface(unittest.TestCase):
 
     def test_a_decision_after_navigating_away_and_back_is_recorded(self):
         app = run_app()
-        app.sidebar.radio[0].set_value("confirm").run()
-        app.sidebar.text_input[0].set_value("Ada Lovelace").run()
-        app.sidebar.radio[0].set_value("find_out").run()
-        app.sidebar.radio[0].set_value("confirm").run()
+        surface(app, "confirm")
+        app.text_input[0].set_value("Ada Lovelace").run()
+        surface(app, "find_out")
+        surface(app, "confirm")
 
         app.button[0].click().run()
         self.assertFalse(app.exception)
@@ -974,7 +985,7 @@ class TestStructuralViews(unittest.TestCase):
 
     def test_the_confirm_page_shows_a_cluster_membership_grid(self):
         app = run_app()
-        app.sidebar.radio[0].set_value("confirm").run()
+        surface(app, "confirm")
         rendered = text_of(app)
         self.assertIn("Who sits with whom", rendered)
         self.assertIn("nothing here is ordered or scored", rendered)
@@ -1039,10 +1050,13 @@ class TestSurfacesStaySeparate(unittest.TestCase):
         self.assertEqual(questions, {"What is worst?"},
                          "exactly one surface may render at a time")
 
-    def test_the_sidebar_states_why_they_are_separate(self):
+    def test_the_navigation_states_why_they_are_separate(self):
+        # The sentence moved from the sidebar caption to the navigation
+        # caption when the sidebar was removed. Its wording changed with it, so
+        # the assertion is on the claim rather than on the old phrasing.
         rendered = text_of(run_app())
-        self.assertIn("deliberately separate", rendered)
-        self.assertIn("a part, a field, a cluster", rendered)
+        self.assertIn("deliberately", rendered)
+        self.assertIn("a part, a field and a cluster", rendered)
 
 
 if __name__ == "__main__":  # keep last: classes below an entrypoint never run

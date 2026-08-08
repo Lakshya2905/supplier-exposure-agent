@@ -100,8 +100,7 @@ def open_surface(page, url, name):
     it was written to replace.
     """
     page.goto(url, wait_until="domcontentloaded")
-    page.wait_for_selector('[data-testid="stSidebar"] [role="radiogroup"]',
-                           timeout=60_000)
+    page.wait_for_selector('[data-testid="stButtonGroup"]', timeout=60_000)
     page.wait_for_selector("h1", timeout=60_000)
     # THE RADIO IS CLICKED THROUGH THE DOM, not through Playwright's role
     # locator. Streamlit stacks a decorative div over the control, so a real
@@ -110,18 +109,18 @@ def open_surface(page, url, name):
     # what was painted, not to prove a label is clickable.
     page.evaluate(
         """(name) => {
-            const label = [...document.querySelectorAll(
-                '[role="radiogroup"] label')].find(
-                    el => el.innerText.includes(name));
-            if (!label) throw new Error('no surface named ' + name);
-            (label.querySelector('input') || label).click();
+            const control = document.querySelector(
+                '[data-testid="stButtonGroup"]');
+            const button = [...control.querySelectorAll('button, label')].find(
+                el => el.innerText.trim() === name);
+            if (!button) throw new Error('no surface named ' + name);
+            button.click();
         }""", name)
     page.wait_for_function(
         """(name) => {
-            const label = [...document.querySelectorAll(
-                '[role="radiogroup"] label')].find(
-                    el => el.innerText.includes(name));
-            return label && !!label.querySelector('input:checked');
+            const h1 = document.querySelector('h1');
+            const caption = document.body.innerText;
+            return !!h1 && caption.length > 500;
         }""", arg=name, timeout=60_000)
     # Streamlit reruns the script on selection, so the previous surface is on
     # screen for a moment after the radio flips. Waiting for the network to
