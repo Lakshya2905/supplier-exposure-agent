@@ -445,11 +445,42 @@ on screen at any moment.
   that already exists for "wording with no event", golden-pinned with the rest.
   Writing those strings inline in the painter is the shortest path and it makes
   `README.md`'s claim that the interface assembles nothing of its own false.
-- **The record is session-scoped and says so in full-weight prose**, not a dimmed
-  caption. The log lives in `st.session_state` and is in-memory, so a refresh or an
-  idle reap empties it. An emptied log and a fresh session render identically
-  unless the wording distinguishes them, which is the `no record` versus
-  `none found` collapse the Absence section names.
+- **The record is written to disk as each decision is made, and says so in
+  full-weight prose**, not a dimmed caption. It used to say the opposite, which
+  was true and was the defect: the log lived in `st.session_state`, so a refresh
+  or an idle reap emptied it and "who decided what" survived exactly as long as a
+  browser tab. For a tool whose stated purpose is a reviewable audit trail, that
+  is the wrong thing to be honest about. `src/governance/store.py` appends one
+  JSON line per event to `decisions/decisions.jsonl` and reads it back when a
+  session starts.
+  - **Structured, never prose.** A line is the event's fields. The renderer owns
+    the wording and golden files pin it, so a sentence on disk would fork from
+    the renderer the first time a word changed, and the file would then be the
+    older of two truths with nothing marking it as such.
+  - **A malformed line raises rather than being skipped.** A silently dropped
+    decision is the audit trail lying by omission, which is worse than a file
+    that refuses to load and names the line that is wrong.
+  - **It is not a write path to source data.** What is recorded is a decision,
+    never a value; the pipeline never reads `decisions/` and nothing is graded
+    against it.
+  - **An unchanged repeat is now refused across sessions**, not only within one.
+    That was QA ISSUE-004: every reload started from nothing, so the same cluster
+    could be confirmed again and again with no warning.
+- **The panel leads the surface, and each row carries its own state.** It sat at
+  the foot of the page below twenty-two clusters and their paragraphs, which is
+  where a reviewer finds it only after deciding again. It is now rendered into a
+  container reserved at the top and **filled last**: written directly at the top
+  it was drawn before the button click further down had been applied, so a
+  decision just made did not appear until the reviewer touched something else.
+  Each cluster also states any decision standing against it, because a reviewer
+  scrolling to a cluster is about to act on it and the panel they passed four
+  screens ago is not where that warning lands.
+- **The reviewer's name belongs to the session, not to one page.** It lived on
+  Confirm, so Streamlit discarded it the moment a reviewer navigated away and
+  they came back anonymous. `actions.apply` refuses an anonymous decision, so the
+  failure surfaced as a rejected click rather than as the missing field it was.
+  It is not persisted: who is at the keyboard is a fact about now, and a
+  remembered name would put someone else's identity on a decision.
 - **The empty state renders before the first decision**, so a reviewer learns the
   panel exists before they need it. Zero decisions here is a **recorded** zero, the
   reviewer's own count, so a figure is honest.
@@ -846,4 +877,6 @@ with numbers:
 | 2026-08-07 | Form fields given the `border-ui` boundary they were always specified to have | Every field drew a border in its own fill colour, so the name box on Confirm was invisible at 1.04:1. The token was declared and correct and had never been referenced by anything |
 | 2026-08-07 | **Substrate changed from dark to light** | Owner's call. Every ratio re-derived against the floor its dark counterpart held, never inverted by eye, because this document said a substrate change voids its own guarantees until they are measured again |
 | 2026-08-07 | Two colour tests restated: they were pinning the dark palette, not the design | One required the sidebar to sit below the JND from the page; one required `border-ui` to be too weak for a focus ring. Both were findings about one set of greys, and both failed on a correct design |
+| 2026-08-07 | Decision log persisted to disk, and moved to the head of Confirm | It lived in session state and was gone on reload, so the audit trail survived as long as a browser tab. The panel also sat below twenty-two clusters, where a reviewer finds it only after deciding again |
+| 2026-08-07 | The suite writes decisions to a temporary directory, per test | Running the tests appended a decision by a fixture name to the operator's live record, which is a test forging an entry in the log the product exists to be trusted for |
 | 2026-08-07 | India drawn from vendored geometry including its full claimed territory | Plotly's built-in `IND` follows Natural Earth and stops near 35.5°N, and that shape ships inside plotly.js where no option reaches it. The claimed boundary is drawn on top, so areas Natural Earth assigns to neighbours are covered rather than split by a line |

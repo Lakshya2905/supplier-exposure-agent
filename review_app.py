@@ -30,6 +30,7 @@ import streamlit as st
 
 from src import governance as gov
 from src.governance import render as govrender
+from src.governance import store
 from src import ranking
 from src.interface import actions
 from src.interface import dashboard as dash
@@ -551,6 +552,19 @@ def finding(sentence):
 
 def note(text):
     st.markdown(f"<p class='note'>{text}</p>", unsafe_allow_html=True)
+
+
+def decision_log():
+    """The log, READ BACK FROM DISK the first time a session asks for it.
+
+    It used to be created empty in session state, so every reload started a
+    reviewer with no history and let them re-confirm a cluster somebody had
+    already settled. Loading it means `actions.apply` refuses an unchanged
+    repeat across sessions and not merely within one.
+    """
+    if "log" not in st.session_state:
+        st.session_state["log"] = store.load()
+    return st.session_state["log"]
 
 
 @st.cache_resource
@@ -1270,6 +1284,19 @@ def render_confirm(surface, result):
                    "they answer different questions, both can be true at once, "
                    "and no fact would settle one against the other.")
 
+    # WHAT HAS ALREADY BEEN DECIDED LEADS. It sat at the foot of the page, below
+    # twenty-two clusters and their paragraphs, which is where a reviewer finds
+    # it only after deciding again. The surface asks "do I agree with your
+    # model", and the first thing a returning reviewer needs is what they already
+    # answered.
+    #
+    # A RESERVED SLOT, FILLED LAST. Rendering it here directly put it above the
+    # rows in the script as well as on the page, so it was drawn before the
+    # button click further down had been applied and a decision just made did not
+    # appear until the reviewer touched something else. The container holds the
+    # position; the content is written at the end of this function.
+    log_slot = st.container()
+
     grid = view.cluster_membership(result.report)
     if grid:
         st.subheader("Who sits with whom")
@@ -1277,16 +1304,19 @@ def render_confirm(surface, result):
         note(f"{len(grid)} exposed parts, with the supplier and the region "
              f"each one is grouped under.")
         st.dataframe(list(grid), hide_index=True, width="stretch")
-    # Held outside the widget. This input exists only on this surface, so
-    # Streamlit discards its state the moment a reviewer navigates away, and
-    # they would come back anonymous with nothing on screen saying so.
-    reviewer = st.sidebar.text_input(
-        "Your name (recorded on every decision)",
-        key="reviewer-input", value=st.session_state.get("reviewer", ""))
-    st.session_state["reviewer"] = reviewer
+    reviewer = st.session_state.get("reviewer", "")
 
+    settled = store.decisions_by_subject(decision_log())
     for row in surface.rows:
         st.markdown(f"## `{row.key}`")
+        # ALREADY DECIDED IS SAID ON THE ROW, not only in the panel above. A
+        # reviewer scrolling to a cluster is about to act on it, and the panel
+        # they passed four screens ago is not where that warning lands.
+        prior = settled.get(row.key)
+        if prior is not None:
+            st.markdown(badge(prior.status) + " " +
+                        f"<span class='note'>by {prior.decided_by}, "
+                        f"{prior.at}</span>", unsafe_allow_html=True)
         finding(row.sentence)
         if row.detail.get("members"):
             # The rendered sentence already names every member, so the list is
@@ -1313,16 +1343,23 @@ def render_confirm(surface, result):
                     # is refused rather than silently stamped. Reading the time
                     # at the interface keeps the record real without putting a
                     # clock inside a module whose output is golden-pinned.
-                    actions.apply(st.session_state.setdefault(
-                        "log", gov.DecisionLog()), control, reviewer,
+                    event = actions.apply(
+                        decision_log(), control, reviewer,
                         reason_code=reason or "", note=note_text,
                         at=datetime.now(timezone.utc).isoformat())
+                    # PERSISTED HERE, not at exit. The failure this protects
+                    # against is the process going away, and a batch written on
+                    # shutdown is written exactly when shutdown is orderly.
+                    store.append(event)
                     st.success(f"Recorded: {control.action} {row.key}")
                 except ValueError as refusal:
                     st.warning(str(refusal))
         st.divider()
 
-    render_decision_panel(st.session_state.get("log"), len(surface.rows))
+    with log_slot:
+        render_decision_panel(decision_log(), len(surface.rows))
+        st.divider()
+
 
 
 def render_decision_panel(log, total_rows):
@@ -1425,6 +1462,18 @@ def main():
     st.sidebar.caption("Three decision surfaces, deliberately separate. Their "
                        "rows are different things: a part, a field, a cluster. "
                        "The dashboard is an overview and decides nothing.")
+
+    # THE NAME BELONGS TO THE SESSION, NOT TO ONE PAGE. It lived on Confirm, so
+    # Streamlit discarded it the moment a reviewer navigated away and they came
+    # back anonymous with nothing on screen saying so. `actions.apply` refuses an
+    # anonymous decision, so the failure surfaced as a rejected click rather than
+    # as the missing field it was.
+    st.sidebar.divider()
+    st.session_state["reviewer"] = st.sidebar.text_input(
+        "Your name (recorded on every decision)",
+        key="reviewer-input", value=st.session_state.get("reviewer", ""))
+    if not st.session_state["reviewer"].strip():
+        st.sidebar.caption("Required before any decision can be recorded.")
 
     if choice == DASHBOARD:
         render_dashboard(result)

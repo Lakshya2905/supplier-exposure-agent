@@ -485,25 +485,28 @@ def render_all(log):
 # anyway, because this module is where user-facing sentences are written and
 # golden-pinned, and splitting it would let two vocabularies drift apart.
 
-DECISION_PANEL_HEADING = "Decisions you recorded in this session"
+DECISION_PANEL_HEADING = "Decisions recorded"
 
 # ORDER IS DECLARED, never left to be inferred. A linear list with no stated
 # order reads as a ranking, which is the same objection that governs every other
 # ordered set in this system.
 DECISION_PANEL_ORDER = "in the order they were recorded"
 
-# THE SCOPE IS STATED AT FULL WEIGHT, not dimmed into a caption. The log lives in
-# the browser session and is written nowhere, so a refresh or an idle timeout
-# empties it. An emptied log and a fresh session render identically unless the
-# wording separates them, which is the "no record" versus "none found" collapse
-# this project treats as the pair most often confused.
-DECISION_PANEL_SCOPE = ("This record covers this browser session only. Nothing "
-                        "here is written to disk, and closing the tab ends it.")
+# THE SCOPE IS STATED AT FULL WEIGHT, not dimmed into a caption, and it changed
+# on 2026-08-07 because the behaviour did. This sentence used to read "This
+# record covers this browser session only. Nothing here is written to disk, and
+# closing the tab ends it." That was true, and it was the defect: for a tool
+# whose purpose is a reviewable audit trail, who decided what survived exactly as
+# long as a browser tab. The log is now appended to disk as it is written, so the
+# sentence says what the record actually is.
+DECISION_PANEL_SCOPE = ("This record is append-only and is written to disk as "
+                        "each decision is made, so it survives a reload. "
+                        "Nothing here can be edited or removed.")
 
 # The empty state is a RECORDED zero, not an absence: it is the reviewer's own
 # count of their own decisions, so a figure is honest here in a way it would not
 # be for a measurement.
-DECISION_PANEL_EMPTY = "No decision has been recorded in this session yet."
+DECISION_PANEL_EMPTY = "No decision has been recorded yet."
 
 
 def decision_panel_count(recorded, outstanding):
