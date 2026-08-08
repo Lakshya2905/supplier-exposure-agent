@@ -139,6 +139,34 @@ def open_surface(page, url, name):
             return !!h1 && h1.textContent.trim() === expected;
         }""", arg=TITLES[name], timeout=60_000)
     page.wait_for_load_state("networkidle")
+
+    # AND THEN WAIT FOR THE CHARTS. The title is server-rendered and plotly draws
+    # afterwards in the client, so a surface can carry its own h1 while its map
+    # does not exist yet. `networkidle` does not help: plotly drawing is not
+    # network activity.
+    #
+    # CI caught this on a commit that changed one markdown file: "no map was
+    # found on any surface". It is my own regression — removing the fixed 1.5s
+    # sleep made the title wait honest and took away the slack that was hiding
+    # this. A sleep that happens to be long enough is not a wait.
+    #
+    # The count has to be STABLE, not merely non-zero: plotly mounts plots one at
+    # a time, so "at least one is ready" is satisfied by the first of seven.
+    page.evaluate("() => { window.__plotCount = -1; window.__plotStable = 0; }")
+    page.wait_for_function(
+        """() => {
+            const plots = [...document.querySelectorAll('.js-plotly-plot')];
+            if (!plots.length || !plots.every(p => p._fullLayout)) {
+                window.__plotStable = 0;
+                return false;
+            }
+            if (window.__plotCount !== plots.length) {
+                window.__plotCount = plots.length;
+                window.__plotStable = 0;
+                return false;
+            }
+            return ++window.__plotStable >= 3;
+        }""", timeout=60_000, polling=250)
     return page
 
 
