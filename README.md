@@ -437,6 +437,7 @@ The dashboard has no authentication and is not built to have any.
 
 | document | contents |
 |---|---|
+| `docs/HANDOFF.md` | **start here.** Every feature, why it works that way, and what will bite you |
 | `docs/BRIEF.md` | the spec of record, the governance primitive, and the corrections log |
 | `docs/EVAL_SCENARIO.md` | what the second frozen dataset has to exercise, and what it must not do |
 | `docs/DATA_DICTIONARY.md` | columns, types, units, and null semantics |
