@@ -261,8 +261,12 @@ def run_tests(report):
     # than no control, because the gate prints green either way, and the
     # rendered-page checks skip when no browser is installed. Every skip in the
     # suite now says so here, not only those.
+    # `-rs` reports skip reasons, `-rf` reports which tests failed. Without
+    # `-rf` the gate printed "2 failed" and then nothing: a report that names a
+    # failure count without naming the failure sends whoever reads it back to
+    # run the suite themselves, which is the job the gate exists to do.
     completed = subprocess.run(
-        [sys.executable, "-m", "pytest", "-q", "--no-header", "-rs"],
+        [sys.executable, "-m", "pytest", "-q", "--no-header", "-rsf"],
         capture_output=True, text=True)
     tail = [line for line in completed.stdout.strip().splitlines() if line][-1:]
     for line in tail:
@@ -271,9 +275,16 @@ def run_tests(report):
         report.failures.append("test suite")
         report.say("  the suite is not green; the floors below are measured on "
                    "code that is failing its own tests")
-        for line in completed.stdout.strip().splitlines():
-            if line.startswith(("FAILED", "ERROR", "SUBFAIL")):
-                report.say(f"    {line}")
+        named = [line for line in completed.stdout.strip().splitlines()
+                 if line.startswith(("FAILED", "ERROR", "SUBFAIL"))]
+        for line in named:
+            report.say(f"    {line}")
+        if not named:
+            # Belt and braces: if the summary format ever changes again, print
+            # the tail rather than reporting a count with no subject.
+            report.say("    pytest named no failures in its summary; tail:")
+            for line in completed.stdout.strip().splitlines()[-25:]:
+                report.say(f"      {line}")
     skipped = [line for line in completed.stdout.splitlines()
                if line.startswith("SKIPPED")]
     if skipped:

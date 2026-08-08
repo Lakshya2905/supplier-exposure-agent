@@ -92,7 +92,24 @@ class TestACaptionNeverVariesWithTheData(unittest.TestCase):
     same against any dataset.
     """
 
-    MODULES = {"ranking", "view", "gov", "govrender", "st"}
+    #: Imported modules, plus this file's own module-level constants. The rule
+    #: is "does not vary with the data", and a CONSTANT does not, whether it
+    #: lives in an import or at the top of the painter. The first version listed
+    #: only imports and rejected `NAV_SUBTITLE[choice]`, a caption about which
+    #: page you are on, which is exactly the interface fact captions are for.
+    MODULES = {"ranking", "view", "gov", "govrender", "st", "dash", "store"}
+
+    def module_constants(self):
+        tree = ast.parse(SOURCE)
+        names = set()
+        for node in tree.body:
+            targets = (node.targets if isinstance(node, ast.Assign)
+                       else [node.target] if isinstance(node, ast.AnnAssign)
+                       else [])
+            for target in targets:
+                if isinstance(target, ast.Name) and target.id.isupper():
+                    names.add(target.id)
+        return names
 
     def captions(self):
         tree = ast.parse(SOURCE)
@@ -128,7 +145,7 @@ class TestACaptionNeverVariesWithTheData(unittest.TestCase):
                 root = self.root_of(node)
                 with self.subTest(line=call.lineno):
                     self.assertIn(
-                        root, self.MODULES,
+                        root, self.MODULES | self.module_constants(),
                         f"review_app.py:{call.lineno}: a caption reads "
                         f"{ast.unparse(node)!r}, which is data rather than a "
                         f"constant about the interface")

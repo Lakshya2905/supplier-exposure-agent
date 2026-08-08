@@ -40,7 +40,18 @@ APP = ROOT / "review_app.py"
 
 REQUIRED = os.environ.get("RENDER_CHECKS") == "required"
 BOOT_TIMEOUT = 120
-SURFACES = ("Dashboard", "Exposure", "Find out", "Confirm")
+
+# The h1 each surface renders, read from the model rather than retyped, so a
+# reworded question moves the wait with it instead of hanging on a title that no
+# longer exists.
+from src.interface.model import (CONFIRM, EXPOSURE, FIND_OUT,  # noqa: E402
+                                 SURFACE_QUESTION)
+
+TITLES = {"Dashboard": "Dashboard",
+          "Exposure": SURFACE_QUESTION[EXPOSURE],
+          "Find out": SURFACE_QUESTION[FIND_OUT],
+          "Confirm": SURFACE_QUESTION[CONFIRM]}
+SURFACES = tuple(TITLES)
 
 
 def playwright_or_skip():
@@ -100,8 +111,7 @@ def open_surface(page, url, name):
     it was written to replace.
     """
     page.goto(url, wait_until="domcontentloaded")
-    page.wait_for_selector('[data-testid="stSidebar"] [role="radiogroup"]',
-                           timeout=60_000)
+    page.wait_for_selector('[data-testid="stButtonGroup"]', timeout=60_000)
     page.wait_for_selector("h1", timeout=60_000)
     # THE RADIO IS CLICKED THROUGH THE DOM, not through Playwright's role
     # locator. Streamlit stacks a decorative div over the control, so a real
@@ -110,24 +120,25 @@ def open_surface(page, url, name):
     # what was painted, not to prove a label is clickable.
     page.evaluate(
         """(name) => {
-            const label = [...document.querySelectorAll(
-                '[role="radiogroup"] label')].find(
-                    el => el.innerText.includes(name));
-            if (!label) throw new Error('no surface named ' + name);
-            (label.querySelector('input') || label).click();
+            const control = document.querySelector(
+                '[data-testid="stButtonGroup"]');
+            const button = [...control.querySelectorAll('button, label')].find(
+                el => el.innerText.trim() === name);
+            if (!button) throw new Error('no surface named ' + name);
+            button.click();
         }""", name)
+    # WAIT FOR THIS SURFACE'S OWN TITLE. The previous condition was "an h1
+    # exists and the page has some text", which the surface being navigated AWAY
+    # from satisfies, so it returned the instant the click landed and the only
+    # real wait was a fixed 1.5s. That is a flake with a slow runner's name on
+    # it: CI failed two assertions once and passed the same commit on a retry,
+    # which is precisely how a gate stops being believed.
     page.wait_for_function(
-        """(name) => {
-            const label = [...document.querySelectorAll(
-                '[role="radiogroup"] label')].find(
-                    el => el.innerText.includes(name));
-            return label && !!label.querySelector('input:checked');
-        }""", arg=name, timeout=60_000)
-    # Streamlit reruns the script on selection, so the previous surface is on
-    # screen for a moment after the radio flips. Waiting for the network to
-    # settle rather than for a fixed delay keeps this honest on a slow runner.
+        """(expected) => {
+            const h1 = document.querySelector('h1');
+            return !!h1 && h1.textContent.trim() === expected;
+        }""", arg=TITLES[name], timeout=60_000)
     page.wait_for_load_state("networkidle")
-    page.wait_for_timeout(1500)
     return page
 
 

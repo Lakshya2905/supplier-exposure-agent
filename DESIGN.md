@@ -574,6 +574,50 @@ Green is still worth thinking about before using it. No dimension here has a
 "good": a part with one qualified supplier is not good, it is concentrated,
 which may be fine or fatal depending on the other four.
 
+## Navigation And The Standing Strip [SHIPPED]
+
+> [SHIPPED] Added 2026-08-08. The sidebar is gone; navigation is a row across the top and four things that were reachable from one page each are now on every surface.
+
+**The sidebar cost a fixed 16rem of every screen** to hold four links and one
+text field, on a surface whose whole argument is information per screen. A
+horizontal control costs one row. `--surface-sidebar` went with it: a token for
+a surface that does not exist is a colour nobody can be wrong about, which is
+worse than no token.
+
+**Four things were each reachable from exactly one page**, which meant the
+product's most distinctive claims were invisible from three quarters of it:
+
+| | was | is |
+|---|---|---|
+| the reviewer's name | Confirm only, discarded on navigation | the strip, every surface |
+| what has been decided | the foot of Confirm | the strip, every surface |
+| what is not assessed | Exposure only | the strip, every surface |
+| when the data was pulled | inside an evidence panel | the strip, every surface |
+
+**The strip is reserved at the top and filled last**, for the same reason the
+decision panel is: it reports what has been decided, and a decision is applied
+further down the same script run. Rendered in place it would show the state from
+before the click that just happened.
+
+**The coverage popover carries the sentences, not the panel.** Exposure still
+renders the full panel with its chart, because what the system does not know
+leads there. Rendering the same thing twice on one surface is the duplication QA
+ISSUE-005 was about, so the strip shows the same content at a coarser grain.
+
+**Filtering is offered; sorting still is not.** DESIGN.md's anti-ranking contract
+refuses sort controls because sorting by one dimension declares it the ranking,
+and offers filtering freely because a filter is a stated question. The Exposure
+findings carry a supplier-region filter, and **what it hides is counted on
+screen**: a filtered list that does not say so is a shorter list presented as the
+whole.
+
+**A dead selector, caught by the browser and not by the suite.** The print block
+hid `[data-testid="stSegmentedControl"]`, which matches nothing — Streamlit emits
+`stButtonGroup`. The rule was dead, the navigation would have printed, and a test
+asserting the selector appeared in the print list passed on it. That is the third
+time a plausible testid has been wrong in this file, after
+`stVerticalBlockBorderWrapper` and the `data-baseweb` attributes.
+
 ## The Dashboard Surface [SHIPPED]
 
 > [SHIPPED] Added 2026-08-06, when the owner retired the nominal-only encoding rule. Four figure tiles, a region choropleth, five small multiples and a supplier-to-part incidence grid.
@@ -922,6 +966,8 @@ with numbers:
 | 2026-08-07 | Form fields given the `border-ui` boundary they were always specified to have | Every field drew a border in its own fill colour, so the name box on Confirm was invisible at 1.04:1. The token was declared and correct and had never been referenced by anything |
 | 2026-08-07 | **Substrate changed from dark to light** | Owner's call. Every ratio re-derived against the floor its dark counterpart held, never inverted by eye, because this document said a substrate change voids its own guarantees until they are measured again |
 | 2026-08-07 | Two colour tests restated: they were pinning the dark palette, not the design | One required the sidebar to sit below the JND from the page; one required `border-ui` to be too weak for a focus ring. Both were findings about one set of greys, and both failed on a correct design |
+| 2026-08-08 | Sidebar removed; navigation across the top, four standing items in a strip | 16rem of every screen for four links and one field, while what the system does not know, what has been decided and when the data was pulled were each reachable from one page |
+| 2026-08-08 | Region filter on the Exposure findings, with the hidden count stated | Filtering is a stated question and the contract offers it freely; a filtered list that does not say what it hides is a shorter list presented as the whole |
 | 2026-08-08 | Rendered-page checks added to the gate, required in CI | Four defects had shipped that every source-reading test passed. A declaration is not a painted pixel, and nothing that reads the repository can tell them apart |
 | 2026-08-08 | Skips are printed by the gate rather than absorbed into a pass | A control that quietly does not run is worse than no control, because the report is green either way |
 | 2026-08-07 | Decision log persisted to disk, and moved to the head of Confirm | It lived in session state and was gone on reload, so the audit trail survived as long as a browser tab. The panel also sat below twenty-two clusters, where a reviewer finds it only after deciding again |
