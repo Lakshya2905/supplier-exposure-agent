@@ -651,17 +651,28 @@ class TestConfirmSurface(unittest.TestCase):
         """
         app = run_app()
         app.sidebar.radio[0].set_value("confirm").run()
-        self.assertIn("Decisions you recorded in this session",
+        self.assertIn("Decisions recorded",
                       [str(s.value) for s in app.subheader])
         self.assertIn("No decision has been recorded", text_of(app))
 
-    def test_the_panel_says_the_record_is_session_scoped_and_unwritten(self):
-        # An emptied log and a fresh session render identically unless the
-        # wording separates them. Stated at full weight, not dimmed to a caption.
+    def test_the_panel_says_what_the_record_actually_is(self):
+        """The wording tracks the behaviour, and the behaviour changed.
+
+        This asserted "this browser session only" and "Nothing here is written
+        to disk", which was true and was the defect: for a tool whose purpose is
+        a reviewable audit trail, who decided what survived exactly as long as a
+        browser tab. Now the log is appended to disk as it is written, so the
+        assertion is that the panel says so.
+
+        Stated at full weight, not dimmed to a caption: an emptied log and a
+        fresh session render identically unless the wording separates them.
+        """
         app = run_app()
         app.sidebar.radio[0].set_value("confirm").run()
-        self.assertIn("this browser session only", text_of(app))
-        self.assertIn("written to disk", text_of(app))
+        rendered = text_of(app)
+        self.assertIn("append-only", rendered)
+        self.assertIn("survives a reload", rendered)
+        self.assertNotIn("browser session only", rendered)
 
     def test_a_recorded_decision_appears_in_the_panel(self):
         app = run_app()
