@@ -169,6 +169,30 @@ def open_surface(page, url, name):
                 window.__plotStable = 0;
                 return false;
             }
+            // AND THEN WAIT FOR THE GEO SUBPLOT'S OWN PAINT. `_fullLayout`
+            // exists as soon as plotly has resolved the layout, and the geo
+            // subplot builds its topology AFTER that: land, coastlines and the
+            // filled locations all arrive later. CI failed here on a commit
+            // that touched three frontend files and nothing the Streamlit map
+            // can see, with "showland is on and no land was drawn" and zero
+            // filled regions, and passed on the other run of the same commit.
+            //
+            // A pass that depends on which runner was faster is not a pass, and
+            // the correct response is to wait for the thing being measured
+            // rather than to retry. Plots with no geo subplot satisfy this
+            // trivially, which is every plot on three of the four surfaces.
+            const geoReady = plots.every(plot => {
+                const geo = plot._fullLayout && plot._fullLayout.geo;
+                if (!geo) return true;
+                const land = plot.querySelectorAll('.layer.land path').length;
+                const filled =
+                    plot.querySelectorAll('.choroplethlocation').length;
+                return (!geo.showland || land > 0) && filled > 0;
+            });
+            if (!geoReady) {
+                window.__plotStable = 0;
+                return false;
+            }
             return ++window.__plotStable >= 3;
         }""", timeout=60_000, polling=250)
     return page
