@@ -1,0 +1,246 @@
+// Carbon v11, Gray 10. Tokens only: there are no hex values in this file or in
+// any component, because a hardcoded colour is how a design system stops being
+// one. g10 rather than White so surfaces layer without a border on everything.
+//
+// THE THEME IS APPLIED BY CLASS, NOT BY SASS CONFIGURATION. Carbon emits
+// `.cds--g10` when the package is used unconfigured, and `<body class="cds--g10">`
+// in the layout switches the tokens for the whole document. The documented
+// `@use '@carbon/react/scss/theme' with ($theme: ...)` alternative constrains
+// the order of every other Carbon @use in this file, because Sass refuses to
+// configure a module anything else has already loaded transitively. One class
+// attribute is a smaller thing to get wrong than a load order nobody can see.
+@use '@carbon/react';
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/type' as *;
+@use '@carbon/charts/styles.css';
+// Tearsheet and the other product patterns.
+@use '@carbon/ibm-products/css/index.min.css';
+
+html, body {
+  padding: 0;
+  margin: 0;
+  background: var(--cds-background);
+  color: var(--cds-text-primary);
+}
+
+// SQUARE CORNERS, INCLUDING CARBON'S OWN TAG.
+//
+// The rule is 0px everywhere and it is not a preference: a pill among square
+// components is the single thing that makes a Carbon application read as
+// off-brand, and Carbon v11 ships `Tag` at a 16px radius, which is a pill. The
+// tooltip's 2px is Carbon's popover and is left alone, because it is a floating
+// surface rather than an element in the layout.
+//
+// This overrides SHAPE ONLY. Nothing here touches the Tag's colour, contrast,
+// focus ring or markup, so the component stays the accessible one Carbon
+// tested; it is the one restyle in this application and it is written down.
+.cds--tag,
+.cds--tag--sm,
+.cds--tag__label {
+  border-radius: 0;
+}
+
+// TABULAR FIGURES EVERYWHERE A NUMBER IS COMPARED. Proportional digits make a
+// column of numbers ragged, and a ragged column is read as noisier data.
+.sea-figure,
+.cds--data-table td,
+.cds--structured-list-td {
+  font-variant-numeric: tabular-nums;
+}
+
+// ---------------------------------------------------------------- layout --
+// Carbon's Header is fixed at 3rem and out of flow. Everything else starts
+// below it rather than under it.
+.sea-below-header { padding-top: 3rem; }
+
+.sea-main {
+  margin-left: 16rem;
+  padding: $spacing-07 $spacing-07 $spacing-10;
+}
+
+// The side nav stops being persistent below this width and becomes an overlay,
+// so the gutter it reserved has to go with it.
+@media (max-width: 66rem) {
+  .sea-main, .sea-runbar { margin-left: 0; }
+}
+
+.sea-section { margin-bottom: $spacing-09; }
+
+.sea-section__heading {
+  @include type-style('heading-03');
+  margin-bottom: $spacing-03;
+}
+
+.sea-section__note {
+  @include type-style('body-01');
+  color: var(--cds-text-secondary);
+  max-width: 60rem;
+  margin-bottom: $spacing-05;
+}
+
+// ------------------------------------------------- the run context strip --
+.sea-runbar {
+  margin-left: 16rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $spacing-06;
+  padding: $spacing-04 $spacing-05;
+  background: var(--cds-layer-01);
+  border-bottom: 1px solid var(--cds-border-subtle-01);
+}
+
+.sea-runbar__item { display: flex; flex-direction: column; }
+
+.sea-runbar__label {
+  @include type-style('label-01');
+  color: var(--cds-text-secondary);
+}
+
+.sea-runbar__value {
+  @include type-style('body-compact-01');
+  font-variant-numeric: tabular-nums;
+}
+
+// ------------------------------------------------------------- the tiles --
+.sea-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: $spacing-05;
+}
+
+.sea-metric { padding: $spacing-05; background: var(--cds-layer-01); }
+
+.sea-metric__label {
+  @include type-style('label-01');
+  color: var(--cds-text-secondary);
+}
+
+.sea-metric__value {
+  // Display weight, 300, which is Carbon's rule for figures at this size.
+  @include type-style('productive-heading-05');
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+  margin: $spacing-02 0;
+}
+
+.sea-metric__of {
+  @include type-style('helper-text-01');
+  color: var(--cds-text-helper);
+}
+
+// --------------------------------------------------- the no-composite row --
+// Five figures with no hierarchy read as unfinished unless the layout says
+// they are deliberately not combined. Equal width, equal weight, each with its
+// own unit printed under it, and no total anywhere on the row.
+.sea-measures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 1px;
+  background: var(--cds-border-subtle-01);
+  border: 1px solid var(--cds-border-subtle-01);
+}
+
+.sea-measure {
+  background: var(--cds-layer-01);
+  padding: $spacing-05;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-02;
+  min-height: 9rem;
+}
+
+.sea-measure__name {
+  @include type-style('label-01');
+  color: var(--cds-text-secondary);
+}
+
+.sea-measure__value {
+  @include type-style('productive-heading-04');
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+}
+
+.sea-measure__unit {
+  @include type-style('helper-text-01');
+  color: var(--cds-text-helper);
+  margin-top: auto;
+}
+
+.sea-standing {
+  @include type-style('body-01');
+  color: var(--cds-text-secondary);
+  max-width: 60rem;
+  margin-top: $spacing-04;
+  border-left: 2px solid var(--cds-border-interactive);
+  padding-left: $spacing-04;
+}
+
+// ------------------------------------------------------------ small mult --
+.sea-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  gap: $spacing-05;
+}
+
+.sea-chart { background: var(--cds-layer-01); padding: $spacing-05; }
+
+.sea-chart__title {
+  @include type-style('heading-compact-01');
+  margin-bottom: $spacing-02;
+}
+
+.sea-chart__unit {
+  @include type-style('helper-text-01');
+  color: var(--cds-text-helper);
+  margin-bottom: $spacing-04;
+}
+
+// A measure nothing has established. SAME FOOTPRINT as a chart, because an
+// absence that shrinks reads as less important than a value, and here the
+// absence IS the finding. Dashed, per the form cue absence carries elsewhere,
+// and never dimmed.
+.sea-chart__absent {
+  min-height: 12rem;
+  display: flex;
+  align-items: center;
+  padding: $spacing-05;
+  border: 1px dashed var(--cds-border-strong-01);
+  color: var(--cds-text-primary);
+}
+
+// ------------------------------------------------------------ review grid --
+.sea-review {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: $spacing-05;
+}
+
+@media (min-width: 82rem) {
+  .sea-review { grid-template-columns: 1fr 1fr; }
+}
+
+.sea-judgment { padding: $spacing-05; background: var(--cds-layer-01); }
+
+.sea-judgment__claim {
+  @include type-style('body-01');
+  margin: $spacing-03 0 $spacing-05;
+}
+
+.sea-judgment__actions {
+  display: flex;
+  gap: $spacing-03;
+  margin-top: $spacing-05;
+}
+
+.sea-stack > * + * { margin-top: $spacing-05; }
+
+.sea-evidence {
+  @include type-style('code-01');
+  white-space: pre-wrap;
+  background: var(--cds-layer-02);
+  padding: $spacing-05;
+  overflow-x: auto;
+}
+
+.sea-inline-tags { display: flex; flex-wrap: wrap; gap: $spacing-02; }
