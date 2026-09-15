@@ -26,7 +26,9 @@ from fastapi.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel
 
 from .. import binding
+from .. import changes as diff
 from .. import governance as gov
+from .. import criticality as crit
 from .. import scoring
 from ..governance import store
 from ..governance.render import VERDICT_PROSE
@@ -34,7 +36,9 @@ from ..interface import actions
 from ..interface import dashboard as dash
 from ..interface import model as view
 from ..pipeline import DEMO_DIR, WORKING_DIR, run, surfaces
+from ..commitments import COMMITMENTS_FILE
 from ..recovery import RECOVERY_INPUTS_FILE
+from ..subtier import SUB_TIER_FILE
 from . import runs
 from .encode import encode
 
@@ -44,7 +48,7 @@ from .encode import encode
 # Named here so an upload can be checked against a list somebody can read.
 REQUIRED_FILES = ("bom.csv", "part_master.csv", "demand_plan.csv",
                   "suppliers.csv", "lead_times.csv", "sources.csv")
-OPTIONAL_FILES = (RECOVERY_INPUTS_FILE,)
+OPTIONAL_FILES = (RECOVERY_INPUTS_FILE, COMMITMENTS_FILE, SUB_TIER_FILE)
 
 # Datasets already in this repository, by name. A caller naming one of these
 # gets it scored without uploading anything, which is what lets a cold frontend
@@ -175,6 +179,13 @@ def score_payload(result, record):
         # trap and cannot say "long lead" until a named person states what long
         # means.
         "thresholds": encode(result.thresholds),
+        # WHAT THIS RUN ASSESSED AND WHAT IT DID NOT. Present even when nothing
+        # was left out, because "we looked at everything" is a claim a reader
+        # should be able to see made rather than infer from the absence of a
+        # caveat.
+        "scope": dict(encode(result.scope) if result.scope else {},
+                      sentence=crit.describe(result.scope)
+                      if result.scope else ""),
         # WHERE A COMPETITOR PUTS AN INDEX. Computed in `src/binding.py`, which
         # compares states and never magnitudes, so the interface can name what
         # is wrong with a part without the frontend inventing a ranking that no
@@ -187,17 +198,39 @@ def score_payload(result, record):
 
 # ------------------------------------------------------------------ score --
 
-def _scored(data_dir, record):
-    return score_payload(run(data_dir=data_dir), record)
+def _labels(raw):
+    """A comma-separated request parameter as a set of labels, or None.
+
+    An empty string is None rather than an empty set: "?criticality=" is a
+    caller who left the box blank, and scoring nothing at all is never what they
+    meant. A caller who genuinely wants no parts can say so with a label that
+    matches none, and will see it in `scope.included`.
+    """
+    if raw is None:
+        return None
+    wanted = [part.strip() for part in raw.split(",") if part.strip()]
+    return wanted or None
+
+
+def _scored(data_dir, record, criticality=None):
+    return score_payload(run(data_dir=data_dir, criticality=criticality),
+                         record)
 
 
 @app.post("/api/score")
-async def score(files: list[UploadFile] = None, dataset: str = Form(None)):
+async def score(files: list[UploadFile] = None, dataset: str = Form(None),
+                criticality: str = Form(None)):
     """Score an uploaded set of CSVs, or a dataset this repository ships.
 
     An upload is written to a run directory and scored from there, so the bytes
     that produced an answer are still on disk when somebody asks how it was
     reached. Nothing is scored from memory and discarded.
+
+    `criticality` is a comma-separated set of labels to assess. Omitted means
+    everything, which is the honest default: a tool that quietly scoped itself
+    would report a clean result for a bill of materials it had mostly not read.
+    A SET, never a cut-off, because the ordering of a company's tiers is theirs
+    and this layer is not told it.
     """
     files = [f for f in (files or []) if f.filename]
     if files:
@@ -215,7 +248,8 @@ async def score(files: list[UploadFile] = None, dataset: str = Form(None)):
                     "required": list(REQUIRED_FILES),
                     "optional": list(OPTIONAL_FILES)})
             record = runs.record_run(staging, dataset or "uploaded")
-            return _scored(Path(record["data_dir"]), record)
+            return _scored(Path(record["data_dir"]), record,
+                           _labels(criticality))
 
     name = dataset or DEFAULT_DATASET
     if name not in BUILT_IN:
@@ -228,7 +262,7 @@ async def score(files: list[UploadFile] = None, dataset: str = Form(None)):
             "error": f"the {name!r} dataset is not present in this deployment",
             "expected_at": str(directory)})
     record = runs.record_run(directory, name, copy_inputs=False)
-    return _scored(directory, record)
+    return _scored(directory, record, _labels(criticality))
 
 
 @app.get("/api/run/{run_id}")
@@ -247,6 +281,52 @@ def get_run(run_id: str):
                      "and a run is its inputs",
             "expected_at": str(data_dir)})
     return _scored(data_dir, record)
+
+
+@app.get("/api/changes")
+def get_changes(before: str, after: str):
+    """What changed between two runs, older first.
+
+    RE-SCORED FROM BOTH SETS OF INPUTS, not diffed from two saved payloads, for
+    the reason `runs.py` gives: a comparison against a frozen answer would
+    outlive the code that produced it and quietly stop meaning anything.
+
+    The four ways a diff lies are handled in `changes.py` and not here. This
+    endpoint's only job is to refuse a comparison it cannot make and to carry
+    the provenance of both sides, because two runs of different datasets are not
+    a trend.
+    """
+    records = {}
+    for label, run_id in (("before", before), ("after", after)):
+        record = runs.load_run(run_id)
+        if record is None:
+            raise HTTPException(status_code=404, detail={
+                "error": f"no run named {run_id!r}", "side": label})
+        if not (Path(record["data_dir"]) / "bom.csv").exists():
+            raise HTTPException(status_code=410, detail={
+                "error": "the inputs one of these runs was scored from are no "
+                         "longer there, and a run is its inputs",
+                "side": label, "expected_at": record["data_dir"]})
+        records[label] = record
+
+    older = run(data_dir=Path(records["before"]["data_dir"]))
+    newer = run(data_dir=Path(records["after"]["data_dir"]))
+    comparison = diff.compare_runs(older, newer)
+    return {
+        "before": dict(records["before"], provenance=comparison.before),
+        "after": dict(records["after"], provenance=comparison.after),
+        "changes": encode(comparison.changes),
+        # COUNTS PER KIND, not one total. A new single source and a measure
+        # that stopped being answerable are different events, and one number
+        # covering both would invite reading churn as risk.
+        "counts": {kind: len(comparison.of_kind(kind))
+                   for kind in diff.KINDS
+                   if comparison.of_kind(kind)},
+        "worsened": len(comparison.worsened()),
+        # THE ONES WITH NO BETTER-OR-WORSE ANSWER, counted separately rather
+        # than dropped. They are the rows a diff usually loses.
+        "unjudged": len(comparison.unjudged()),
+    }
 
 
 @app.get("/api/runs")

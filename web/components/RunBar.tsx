@@ -11,6 +11,7 @@ import { Button, Tag } from '@carbon/react';
 import { Renew } from '@carbon/react/icons';
 import { useRun } from './RunProvider';
 import { DataPanel } from './DataPanel';
+import { ScopePicker } from './ScopePicker';
 
 export function RunBar() {
   const { result, loading, reload } = useRun();
@@ -39,14 +40,27 @@ export function RunBar() {
         <span className="sea-runbar__label">Run</span>
         <span className="sea-runbar__value">{result?.run.id ?? '—'}</span>
       </div>
+      {/* SHORT ENOUGH NOT TO TRUNCATE. Carbon caps a Tag's width and clips
+          with an ellipsis, and "1,051 of 2,072 results need a per…" is a figure
+          a reader cannot use. */}
       {result && (
         <Tag type="cool-gray" size="sm">
           {result.run.counts.deferring.toLocaleString()} of{' '}
-          {result.run.counts.dimension_results.toLocaleString()} results need a
-          person
+          {result.run.counts.dimension_results.toLocaleString()} need a person
+        </Tag>
+      )}
+      {result?.scope.is_scoped && (
+        // A SCOPED RUN SAYS SO WHEREVER THE READER IS. The count of what was
+        // left out belongs beside the count of what was assessed, because a
+        // screen showing 40 parts looks identical whether the other 11,960 are
+        // fine or were never opened.
+        <Tag type="warm-gray" size="sm">
+          {result.scope.parts_excluded.length.toLocaleString()} parts not
+          assessed
         </Tag>
       )}
       <div style={{ marginInlineStart: 'auto', display: 'flex', gap: '0.5rem' }}>
+        <ScopePicker />
         <DataPanel />
         <Button
           kind="ghost"

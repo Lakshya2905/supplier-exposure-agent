@@ -121,6 +121,10 @@ NO_TERMINAL_STATE = {
         "how long resourcing takes has no worst value until somebody says how "
         "long is too long, and that threshold lives in "
         "config/archetypes.yaml"),
+    scoring.COMMITTED_AT_RISK: (
+        "how many promised orders would be missed has no worst value until "
+        "somebody says how many is too many, which is a threshold with an "
+        "owner and not a number this tool may choose"),
 }
 
 

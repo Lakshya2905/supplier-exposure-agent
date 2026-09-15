@@ -46,12 +46,54 @@ part.
 | `on_hand_units` | int or blank | blank = no record, `0` = counted and empty |
 | `tooling_owner` | str | `company`, `supplier`, or blank (portability unknown) |
 | `annual_spend_usd` | int | **display only. Never scored, ranked or weighted.** |
+| `criticality` | str | **optional.** A label your company already maintains. Blank or absent = unclassified |
+
+`criticality` **scopes a run and never enters a score**, in the same way
+`sourcing_list_status` gates the verdict only. It is read, never derived: a tier
+computed from the measures would be a weighted sum of them wearing a letter.
+Scope is a set of labels, never a cut-off, because the ordering of your tiers is
+yours and this tool is not told it. Blank stays in scope.
 
 `source_type` is what separates two cases that otherwise look identical: a part
 with no supplier rows is either made in-house (a known fact) or a bought part
 whose suppliers nobody recorded (an unknown).
 
 `sourcing_list_status` gates the verdict only. It never enters scoring.
+
+## commitments.csv
+
+**Optional.** The order book: what has already been promised to a customer, as
+against what the demand plan says is expected. Read by `committed_at_risk`.
+
+| column | type | notes |
+|---|---|---|
+| `finished_good_part` | str | |
+| `committed_units` | int | units already promised |
+
+A finished good **absent from a file that exists** is unrecorded, so any total
+it feeds is a lower bound. **No file at all** is a different fact: nobody
+supplied an order book, and the measure abstains. `read_commitments` returns
+`None` for the second and a dict for the first, and collapsing them would make a
+company with no promised orders look identical to one that has not told us.
+
+Units, not money. See the README on why revenue is not counted here.
+
+## sub_tier_sources.csv
+
+**Optional.** Where a supplier sources the critical input: one hop below your
+own suppliers, which is as far as most companies can see.
+
+| column | type | notes |
+|---|---|---|
+| `supplier_name` | str | as spelled in `suppliers.csv` |
+| `sub_tier_source` | str | blank means they have not said |
+
+A blank is **dropped, not kept as an empty source**. Two suppliers who have both
+declined to say are not thereby buying from the same place, and grouping them
+would manufacture a correlation out of an absence.
+
+One hop only. Where that source buys is not representable, and that is a stated
+known gap rather than a silence.
 
 ## recovery_inputs.csv
 

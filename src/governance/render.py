@@ -52,6 +52,7 @@ DIMENSION_PROSE = {
     "wait_out_days": "how long until parts flow again from this supplier",
     "resource_days": "how long to get a new supplier approved",
     "blast_radius": "how much of the build stops",
+    "committed_at_risk": "how many promised orders would be missed",
     "buffer_cover": "how long current stock lasts",
     "portability": "how hard it is to move to another supplier",
     "concentration": "how many other parts share this supplier or region",
@@ -374,6 +375,7 @@ RANKED_CLAUSE = {
     "resource_days": "{prefix}{measure} days to approve a new supplier",
     "buffer_cover": "{prefix}{measure} days of stock left",
     "blast_radius": "stops {prefix}{measure} finished units a year",
+    "committed_at_risk": "misses {prefix}{measure} promised units",
     "portability": "tooling owned by the {measure}",
     "concentration":
         "shares a supplier or region with {measure} other exposed parts",
@@ -397,6 +399,9 @@ RANKED_ABSENT = {
     "buffer_cover": {
         "cannot_tell":
             "no stock count on file, so we cannot say how long stock lasts",
+    },
+    "committed_at_risk": {
+        "cannot_tell": "no order book on file, so promised orders are unknown",
     },
     "portability": {
         "cannot_tell": "no tooling owner on file",
@@ -672,6 +677,7 @@ FIELD_PROSE = {
     "verdict": "confirmation that the supplier list is complete",
     "concentration": "confirmation that two supplier names are the same firm",
     "wait_out_days": "a lead time",
+    "committed_at_risk": "an order book",
     "resource_days": "how long approving a new supplier takes",
 }
 

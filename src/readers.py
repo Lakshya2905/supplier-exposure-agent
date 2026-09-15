@@ -21,6 +21,9 @@ from pathlib import Path
 import pandas as pd
 
 from .recovery import INPUT_FIELDS as RECOVERY_INPUT_FIELDS
+from .criticality import CRITICALITY_COLUMN as CRITICALITY
+from .commitments import COMMITTED_UNITS
+from .subtier import SUB_TIER_SOURCE
 from .synthetic.model import (ANNUAL_UNITS, CHILD_PART, FINISHED_GOOD_PART,
                               LEAD_TIME_P95_DAYS, ON_HAND_UNITS, PARENT_PART,
                               PART_NUMBER, QTY_PER_PARENT,
@@ -45,8 +48,17 @@ def optional_int(text):
 
 
 def read_part_master(path):
-    """part_number -> dict, with on_hand_units as int or None."""
+    """part_number -> dict, with on_hand_units as int or None.
+
+    `criticality` IS OPTIONAL AND ITS ABSENCE IS NOT AN ERROR. A part master
+    that predates the column reads as every part unclassified, which keeps every
+    part in scope: see `criticality.py` for why the inclusive default is the
+    only honest one. Read with `.get` on the row rather than by indexing,
+    because pandas raises on a column that is not there and a dataset assembled
+    before a feature existed is not a malformed dataset.
+    """
     frame = _frame(path)
+    has_criticality = CRITICALITY in frame.columns
     parts = {}
     for _, row in frame.iterrows():
         parts[row[PART_NUMBER]] = {
@@ -54,6 +66,7 @@ def read_part_master(path):
             "sourcing_list_status": row[SOURCING_LIST_STATUS].strip(),
             "on_hand_units": optional_int(row[ON_HAND_UNITS]),
             "tooling_owner": row[TOOLING_OWNER].strip(),
+            "criticality": row[CRITICALITY].strip() if has_criticality else "",
         }
     return parts
 
@@ -165,6 +178,64 @@ def read_recovery_inputs(path):
         values = {field: optional_int(row[field]) for field in fields}
         rows[row[PART_NUMBER]] = {field: value for field, value in values.items()
                                   if value is not None}
+    return rows
+
+
+def read_commitments(path):
+    """finished_good -> units already promised to a customer. OPTIONAL.
+
+    RETURNS None WHEN THE FILE IS ABSENT, not an empty dict, and the difference
+    is the whole contract. An empty dict means "there is an order book and this
+    finished good is not in it"; None means "nobody supplied an order book".
+    `committed_at_risk` abstains differently for the two, and collapsing them
+    here would make a part with no promised orders look identical to a company
+    that has not told us about any.
+
+    A finished good absent from a file that DOES exist is unrecorded rather than
+    zero, so the total it feeds is a lower bound. Same direction as blast
+    radius, same reason: the uncertain quantity is in the numerator.
+    """
+    path = Path(path)
+    if not path.exists():
+        return None
+    frame = _frame(path)
+    if COMMITTED_UNITS not in frame.columns:
+        return None
+    return {row[FINISHED_GOOD_PART]: int(row[COMMITTED_UNITS])
+            for _, row in frame.iterrows()
+            if row[COMMITTED_UNITS].strip()}
+
+
+def read_sub_tier_sources(path):
+    """supplier_name -> where that supplier sources the critical input.
+
+    OPTIONAL, LIKE `recovery_inputs.csv`, and absent from every dataset this
+    repository generates. Roughly 95% of companies can see their own suppliers
+    and fewer than half can see one level below, so a tool that required this
+    would be unusable by most of the people it is for; one that refuses to model
+    it at all cannot see the correlation that matters most, where two suppliers
+    are the same supplier one hop down.
+
+    ONE HOP, and the file shape says so: a supplier and a place, with no column
+    for where that place buys. `tests/test_concentration.py` carries the gap
+    that leaves open.
+
+    A blank cell is dropped rather than kept as an empty source. Two suppliers
+    who have both declined to say are not thereby buying from the same place,
+    and a group built out of that absence would be a correlation manufactured
+    from a gap and then presented to somebody for confirmation.
+    """
+    path = Path(path)
+    if not path.exists():
+        return {}
+    frame = _frame(path)
+    if SUB_TIER_SOURCE not in frame.columns:
+        return {}
+    rows = {}
+    for _, row in frame.iterrows():
+        source = row[SUB_TIER_SOURCE].strip()
+        if source:
+            rows[row[SUPPLIER_NAME].strip()] = source
     return rows
 
 

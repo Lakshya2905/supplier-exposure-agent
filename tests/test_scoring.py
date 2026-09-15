@@ -34,8 +34,8 @@ from src.readers import (read_bom, read_demand_plan, read_part_master,
 from src.scoring import (CANNOT_TELL, DAYS, KNOWN, LOWER_BOUND, NOT_APPLICABLE,
                          NO_RECOVERY_PATH, UPPER_BOUND, DimensionScore,
                          ExposureProfile, abstention_lane, blast_radius,
-                         buffer_cover, portability, resource_days, score_part,
-                         wait_out_days)
+                         buffer_cover, committed_at_risk, portability,
+                         resource_days, score_part, wait_out_days)
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -648,6 +648,9 @@ class TestAutonomyIsPerDimensionPerPart(unittest.TestCase):
             resource_days=resource_days("P", "company", stages),
             blast_radius=blast_radius("P", (), Usage("P", Fraction(0),
                                                      USAGE_KNOWN)),
+            # An order book in hand, so this dimension is settled and the
+            # lane assertions below are about the dimensions they name.
+            committed_at_risk=committed_at_risk("P", (), {}),
             buffer_cover=buffer_cover("P", 0, Usage("P", Fraction(0),
                                                     USAGE_KNOWN)),
             portability=portability("P", "company"))
@@ -782,17 +785,17 @@ class TestConcentrationSlotIsReserved(unittest.TestCase):
         self.assertIn("concentration", ExposureProfile.__dataclass_fields__)
         self.assertIsNone(profile.concentration)
 
-    def test_concentration_is_not_one_of_the_scored_five(self):
+    def test_concentration_is_not_one_of_the_scored_six(self):
         # Reserved is distinct from answered AND from abstained. Collapsing it
         # into either would be a claim about a stage that has not run.
         profile = fixture_profiles()["ONLY-M01"]
-        self.assertEqual(len(profile.scored()), 5)
+        self.assertEqual(len(profile.scored()), 6)
         self.assertNotIn("concentration",
                          [score.dimension for score in profile.scored()])
 
     def test_concentration_is_declared_as_a_dimension(self):
         self.assertIn("concentration", scoring.DIMENSIONS)
-        self.assertEqual(len(scoring.DIMENSIONS), 6)
+        self.assertEqual(len(scoring.DIMENSIONS), 7)
 
 
 class TestLogging(unittest.TestCase):
@@ -800,7 +803,7 @@ class TestLogging(unittest.TestCase):
     def test_one_event_per_dimension_with_the_right_kind(self):
         log = gov.DecisionLog()
         scoring.log_profile(log, fixture_profiles()["MISSING-M01"])
-        self.assertEqual(len(log), 5)
+        self.assertEqual(len(log), 6)
         kinds = {event.field: event.kind for event in log}
         self.assertEqual(kinds["blast_radius"], gov.KIND_DIMENSION_SCORED)
         self.assertEqual(kinds["buffer_cover"], gov.KIND_DIMENSION_ABSTAINED)

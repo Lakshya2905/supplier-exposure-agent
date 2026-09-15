@@ -276,7 +276,7 @@ class TestDocIntegrity(unittest.TestCase):
         # drift and the README is the one a reader believes.
         readme = README.read_text().lower()
         markers = {
-            "tier correlation is unrepresentable": "tier",
+            "sub-tier visibility stops one level down": "sub-tier",
             "in-house concentration is not modelled": "in-house",
             "not per candidate alternate source": "candidate sources",
             "fractional quantities": "fractional quantities",
@@ -286,11 +286,26 @@ class TestDocIntegrity(unittest.TestCase):
                 self.assertIn(marker, readme)
 
     def test_every_xfail_gap_appears_in_the_readme_known_gaps_section(self):
+        """FIVE HEADINGS, counted as headings.
+
+        This counted every `**` in the section and divided by two, which is a
+        proxy for "how many bold headings are there" and stops being one the
+        moment a gap's prose emphasises a word. It did: closing the tier gap
+        needed a paragraph distinguishing where a supplier buys from where THEY
+        buy, the emphasis made the count 14, and a correct README failed.
+
+        A heading here opens its own line and the sentence that follows, so that
+        is what is counted. Inline emphasis inside a paragraph no longer looks
+        like a sixth gap, and removing a gap still fails.
+        """
         readme = README.read_text()
         section = readme[readme.index("## Known gaps"):readme.index(
             "## How it is verified")]
-        self.assertEqual(section.count("**"), 10,
-                         "five bold gap headings expected in Known gaps")
+        headings = [line for line in section.splitlines()
+                    if line.startswith("**")]
+        self.assertEqual(len(headings), 5,
+                         f"five bold gap headings expected in Known gaps, "
+                         f"found {len(headings)}: {headings}")
 
     def test_the_readme_says_which_figures_are_gated_and_which_are_not(self):
         # Asserting every count would fail the build whenever the snapshot

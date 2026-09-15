@@ -8,7 +8,7 @@
  * only useful part of the response, so `ApiError` keeps the detail and the
  * components render it.
  */
-import type { DecisionEvent, ScoreResult } from './types';
+import type { Comparison, DecisionEvent, ScoreResult } from './types';
 
 export const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE ?? 'http://127.0.0.1:8000';
@@ -71,10 +71,29 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export function scoreDataset(dataset: string): Promise<ScoreResult> {
+export function scoreDataset(dataset: string,
+                             criticality?: string[]): Promise<ScoreResult> {
   const body = new FormData();
   body.append('dataset', dataset);
+  // A SET OF LABELS, never a cut-off. Omitted entirely when nothing was chosen,
+  // because an empty parameter is somebody who left the box alone and scoring
+  // nothing at all is never what they meant.
+  if (criticality && criticality.length) {
+    body.append('criticality', criticality.join(','));
+  }
   return request<ScoreResult>('/api/score', { method: 'POST', body });
+}
+
+export function fetchChanges(before: string, after: string): Promise<Comparison> {
+  return request<Comparison>(
+    `/api/changes?before=${encodeURIComponent(before)}`
+    + `&after=${encodeURIComponent(after)}`);
+}
+
+export function fetchRuns(): Promise<{ runs: Array<{
+  id: string; created_at: string; dataset: string;
+}> }> {
+  return request('/api/runs');
 }
 
 export function scoreUpload(files: File[], name: string): Promise<ScoreResult> {

@@ -24,6 +24,11 @@ interface RunState {
   loadUpload: (files: File[], name: string) => Promise<void>;
   reviewer: string;
   setReviewer: (name: string) => void;
+  /** Criticality labels this run assessed. Empty means everything, which is
+   *  the honest default: a tool that quietly scoped itself would report a
+   *  clean result for a bill of materials it had mostly not read. */
+  criticality: string[];
+  setCriticality: (labels: string[]) => void;
 }
 
 const Context = createContext<RunState | null>(null);
@@ -40,6 +45,7 @@ export function RunProvider({ children }: { children: ReactNode }) {
   // the header here and is remembered per browser, never sent anywhere except
   // as the author of a decision the reviewer is making.
   const [reviewer, setReviewerState] = useState('');
+  const [criticality, setCriticalityState] = useState<string[]>([]);
 
   useEffect(() => {
     try {
@@ -68,7 +74,8 @@ export function RunProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loadDataset = useCallback(
-    (dataset: string) => run(() => scoreDataset(dataset)), [run]);
+    (dataset: string) => run(() => scoreDataset(dataset, criticality)),
+    [run, criticality]);
   const loadUpload = useCallback(
     (files: File[], name: string) => run(() => scoreUpload(files, name)),
     [run]);
@@ -77,11 +84,16 @@ export function RunProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => { void loadDataset(DEFAULT_DATASET); }, [loadDataset]);
 
+  const setCriticality = useCallback((labels: string[]) => {
+    setCriticalityState(labels);
+    void run(() => scoreDataset(DEFAULT_DATASET, labels));
+  }, [run]);
+
   const value = useMemo<RunState>(() => ({
     result, loading, error, reload, loadDataset, loadUpload,
-    reviewer, setReviewer,
+    reviewer, setReviewer, criticality, setCriticality,
   }), [result, loading, error, reload, loadDataset, loadUpload,
-       reviewer, setReviewer]);
+       reviewer, setReviewer, criticality, setCriticality]);
 
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
