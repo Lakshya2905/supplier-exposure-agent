@@ -27,6 +27,9 @@ from fastapi.testclient import TestClient
 from src import governance as gov
 from src import scoring
 from src.governance import store
+import os
+
+from src.api import main
 from src.api import runs
 from src.api.encode import encode
 from src.api.main import app
@@ -403,6 +406,98 @@ class TestComparingTwoRuns(unittest.TestCase):
             with self.subTest(side=side):
                 self.assertEqual(response.status_code, 404)
                 self.assertEqual(response.json()["detail"]["side"], side)
+
+
+class TestTheOptionalApiKey(unittest.TestCase):
+    """A shared secret, and only if somebody sets one.
+
+    THE DEFAULT IS OPEN, which is what a developer on their own machine wants
+    and what every other test in this file runs against. That default is the
+    thing most likely to be broken by accident, so it is asserted first.
+    """
+
+    def setUp(self):
+        self.previous = os.environ.get(main.API_KEY_ENV)
+
+    def tearDown(self):
+        if self.previous is None:
+            os.environ.pop(main.API_KEY_ENV, None)
+        else:
+            os.environ[main.API_KEY_ENV] = self.previous
+
+    def set_key(self, key):
+        os.environ[main.API_KEY_ENV] = key
+
+    def test_with_no_key_configured_everything_is_open(self):
+        os.environ.pop(main.API_KEY_ENV, None)
+        self.assertEqual(
+            client.post("/api/score", data={"dataset": "frozen"}).status_code,
+            200)
+
+    def test_with_a_key_configured_a_request_without_one_is_refused(self):
+        self.set_key("a-shared-secret")
+        response = client.post("/api/score", data={"dataset": "frozen"})
+        self.assertEqual(response.status_code, 401)
+        self.assertIn("requires an API key",
+                      response.json()["detail"]["error"])
+
+    def test_a_wrong_key_is_refused(self):
+        self.set_key("a-shared-secret")
+        response = client.get("/api/runs",
+                              headers={main.API_KEY_HEADER: "not-it"})
+        self.assertEqual(response.status_code, 401)
+
+    def test_the_right_key_gets_through(self):
+        self.set_key("a-shared-secret")
+        response = client.post(
+            "/api/score", data={"dataset": "frozen"},
+            headers={main.API_KEY_HEADER: "a-shared-secret"})
+        self.assertEqual(response.status_code, 200, response.text)
+
+    def test_the_rule_covers_reads_as_well_as_writes(self):
+        """One rule with one exception, rather than a list of safe endpoints.
+
+        Leaving reads open would be defensible on this data, which is synthetic.
+        It is not done, because "which endpoints are safe to expose" is a
+        judgment that has to be remade every time one is added, and the
+        endpoint added in a hurry is the one nobody remakes it for.
+        """
+        self.set_key("a-shared-secret")
+        for method, path in (("get", "/api/runs"), ("get", "/api/decisions"),
+                             ("get", "/api/run/whatever"),
+                             ("get", "/api/assets/india-claimed.geojson")):
+            with self.subTest(path=path):
+                self.assertEqual(
+                    getattr(client, method)(path).status_code, 401)
+
+    def test_the_health_check_is_never_gated(self):
+        """A liveness probe needing a credential reports down when it is wrong.
+
+        Which is the worst possible failure: the host restarts a container that
+        is working, because the probe cannot authenticate to ask.
+        """
+        self.set_key("a-shared-secret")
+        response = client.get("/api/health")
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["requires_api_key"])
+
+    def test_health_says_a_key_is_needed_without_saying_what_it_is(self):
+        self.set_key("a-shared-secret")
+        body = client.get("/api/health").text
+        self.assertIn("requires_api_key", body)
+        self.assertNotIn("a-shared-secret", body)
+
+    def test_a_decision_cannot_be_written_without_the_key(self):
+        """The reason this exists at all.
+
+        The decision log is what this product asks to be trusted for, and an
+        open write path lets anybody put a name and a judgment into it.
+        """
+        self.set_key("a-shared-secret")
+        response = client.post("/api/decisions", json={
+            "run_id": "any", "subject": "any", "action": "confirm",
+            "decided_by": "A Stranger"})
+        self.assertEqual(response.status_code, 401)
 
 
 class TestDecisions(unittest.TestCase):

@@ -1000,33 +1000,66 @@ decision log that resets on deploy is the defect `governance/store.py` exists to
 close, one layer out.
 
 **The frontend** is static and goes on Vercel with `web/` as the root directory.
-The two deploy separately on purpose: the frontend is the thing a link points at
-and Vercel does not sleep it, and the backend is the thing that must not sleep,
-which is a different requirement served by a different host.
+**The backend** is a container and goes somewhere that stays awake: `render.yaml`
+and `fly.toml` are both here, alongside the `Dockerfile` and `Procfile`, and both
+pin the settings that matter rather than leaving them to a dashboard.
 
-Three things catch people out, in the order they catch them:
+They deploy separately on purpose. The frontend is what a link points at and
+Vercel does not sleep it; the backend is what must not sleep, which is a
+different requirement served by a different host. Both host configs explicitly
+refuse the free tier's scale-to-zero, because a sleeping backend is the Streamlit
+problem this project moved to escape, with extra steps.
 
-1. **Deployment Protection is on by default.** A fresh Vercel project puts every
+### The browser never holds the key
+
+The API takes an optional `SEA_API_KEY`. Unset, everything is open, which is what
+a developer on their own machine wants and what every test runs against. Set,
+every endpoint except `/api/health` requires it — one rule with one exception,
+rather than a list of endpoints somebody has to decide are safe each time one is
+added.
+
+**A static frontend cannot hold a secret.** Anything named `NEXT_PUBLIC_*` is
+readable in the bundle by every visitor, so a key put there is not a key.
+`web/app/api/[...path]/route.ts` is a server-side proxy: it holds `SEA_API_KEY`,
+forwards to `SEA_API_URL`, and returns the backend's status and body **verbatim**
+— every refusal this API makes is a sentence somebody needs to read, and a proxy
+that reshaped them would throw away the useful half.
+
+That also removes the trap below. `SEA_API_URL` is read at **request** time, so
+changing it takes effect on the next request. `NEXT_PUBLIC_API_BASE` survives as
+an escape hatch for talking to a backend directly, and is no longer the
+mechanism.
+
+### Three things that catch people out
+
+1. **Vercel Deployment Protection is on by default.** A fresh project puts every
    deployment behind a Vercel login, so the link you send opens a sign-in page
-   for an account the recipient does not have. That is the same dead link this
-   whole move was meant to fix, wearing a different hat. Turn it off under
-   *Project → Settings → Deployment Protection → Vercel Authentication*, or add
-   a protection bypass, before you send the URL to anybody.
+   for an account the recipient does not have — the same dead link this move was
+   meant to fix, wearing a different hat. Turn it off under *Project → Settings
+   → Deployment Protection*, or add a bypass, before sending the URL anywhere.
 
-2. **`NEXT_PUBLIC_API_BASE` is inlined at build time, not read at runtime.**
-   Adding it to the project settings does nothing to a deployment that is
-   already built. Set it, then **redeploy**. Without it the page tries to reach
-   `127.0.0.1:8000`, which is the *visitor's* machine; the error state says so
-   in those words rather than telling a stranger to run uvicorn.
+2. **Set the Vercel variables without a `NEXT_PUBLIC_` prefix.** `SEA_API_URL`
+   and `SEA_API_KEY` are read by the proxy on the server. Prefixing either would
+   publish it to every visitor.
 
-3. **The backend needs a host that stays awake and a volume.** Mount `/data`:
-   `SEA_RUNS_DIR` and `SEA_DECISIONS_DIR` are written at request time, and a
-   decision log that resets on deploy is the defect `governance/store.py` exists
-   to close, one layer out.
+3. **`/data` must be a volume.** `SEA_RUNS_DIR` and `SEA_DECISIONS_DIR` are
+   written at request time, and a decision log that resets on deploy is the
+   defect `governance/store.py` exists to close, one layer out. Both host configs
+   mount one.
 
-Neither half has authentication and neither is built to have any. Deployment
-Protection is Vercel's, not this application's, and it protects the frontend
-only: an unprotected backend URL is an unprotected backend.
+### What this authentication is, and is not
+
+It is a lock on the door, not a register at reception. There are no accounts, no
+sessions and no roles, and it identifies nobody: `decided_by` is still whatever
+the reviewer typed, and the key says only that a request came from a deployment
+holding it. A tool whose autonomy claims rest on a named human confirming things
+eventually needs to know *which* human, and that is a different piece of work
+with a different design.
+
+This README used to say the system has no authentication and is not built to have
+any. That was true of the Streamlit dashboard, which reads a committed demo set
+and writes nothing a stranger can reach. It stopped being true the moment a
+backend carrying a decision log and an upload path went on a public address.
 
 ## Where the reasoning lives
 

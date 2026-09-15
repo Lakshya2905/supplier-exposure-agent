@@ -10,27 +10,27 @@
  */
 import type { Comparison, DecisionEvent, ScoreResult } from './types';
 
-const CONFIGURED_BASE = process.env.NEXT_PUBLIC_API_BASE;
-
-export const API_BASE = CONFIGURED_BASE ?? 'http://127.0.0.1:8000';
-
 /**
- * Whether this build was given an API address at all.
+ * Where the scoring API is, from the browser's point of view.
  *
- * `NEXT_PUBLIC_*` IS INLINED AT BUILD TIME, not read at runtime, so a variable
- * added to a host's settings after the build has no effect until something
- * redeploys. That is the single most confusing thing about deploying this: the
- * setting is visibly correct in the dashboard and the page is visibly still
- * wrong, and nothing connects the two.
+ * SAME ORIGIN BY DEFAULT, which means `app/api/[...path]/route.ts`: a
+ * server-side proxy that holds the API key and resolves the backend address at
+ * REQUEST time. That is the whole point. A static frontend ships its
+ * environment to every visitor, so a key in `NEXT_PUBLIC_*` is not a key; and
+ * `NEXT_PUBLIC_*` is inlined at BUILD time, so an address put there cannot be
+ * changed without a redeploy.
+ *
+ * `NEXT_PUBLIC_API_BASE` survives as an ESCAPE HATCH for talking to a backend
+ * directly — a developer pointing at a local uvicorn, or a deployment with no
+ * credential to protect. It is no longer the mechanism, and nothing that needs
+ * a secret goes down that path.
  */
-export const API_IS_CONFIGURED = Boolean(CONFIGURED_BASE);
+const DIRECT_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
-/** Whether the page itself is being served from somebody's own machine. */
-function servedLocally() {
-  if (typeof window === 'undefined') return true;
-  return ['localhost', '127.0.0.1', '0.0.0.0'].includes(
-    window.location.hostname);
-}
+export const API_BASE = DIRECT_BASE ?? '';
+
+/** True when the browser is talking to the backend without the proxy. */
+export const API_IS_DIRECT = Boolean(DIRECT_BASE);
 
 export class ApiError extends Error {
   detail: unknown;
@@ -71,27 +71,17 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   try {
     response = await fetch(`${API_BASE}${path}`, init);
   } catch (offline) {
-    // NAMES THE ADDRESS IT TRIED, AND SAYS WHOSE MACHINE THAT IS. The same
-    // failure has two completely different causes and the wrong advice is
-    // useless in both directions.
-    //
-    // On a developer's machine, `127.0.0.1:8000` is their backend and the fix
-    // is to start it. On a DEPLOYED page, `127.0.0.1` is the VISITOR'S machine:
-    // the browser is loyally trying to reach a server on the laptop of whoever
-    // opened the link. Telling them to run uvicorn is advice for somebody else.
-    // That case means the build never received NEXT_PUBLIC_API_BASE, and
-    // because it is inlined at build time, setting it now is not enough.
-    const deployedWithoutBackend = !API_IS_CONFIGURED && !servedLocally();
+    // ONLY REACHED WHEN THE PAGE ITSELF IS UNREACHABLE. Going through the proxy,
+    // a backend that is down comes back as a 502 carrying the proxy's own
+    // sentence, which knows the address it tried and whether anybody configured
+    // one. This branch is the direct path, or this deployment being offline.
     throw new ApiError(
-      deployedWithoutBackend
-        ? 'This deployment was built without NEXT_PUBLIC_API_BASE, so the page '
-          + `is trying to reach a scoring API at ${API_BASE} — which is your `
-          + 'own machine, not the server. Set NEXT_PUBLIC_API_BASE to where '
-          + 'the backend is running and redeploy: the value is baked in at '
-          + 'build time, so saving it without a redeploy changes nothing.'
-        : `The scoring API did not answer at ${API_BASE}. Start it with `
-          + '"uvicorn src.api.main:app --port 8000", or set '
-          + 'NEXT_PUBLIC_API_BASE to where it is running.',
+      API_IS_DIRECT
+        ? `The scoring API did not answer at ${API_BASE}. Start it with `
+          + '"uvicorn src.api.main:app --port 8000", or point '
+          + 'NEXT_PUBLIC_API_BASE somewhere it is running.'
+        : 'This page could not reach its own server. If it is deployed, the '
+          + 'deployment is down; if it is local, restart "npm run dev".',
       0, { cause: String(offline) });
   }
   if (!response.ok) {
