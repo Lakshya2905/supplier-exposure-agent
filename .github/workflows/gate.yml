@@ -45,3 +45,37 @@ jobs:
           # checks skip and the gate prints every skip reason; here they run.
           RENDER_CHECKS: required
         run: python eval_harness.py
+
+  # THE FRONTEND'S OWN GATE, in the same workflow and as a separate job.
+  #
+  # Separate because it fails for different reasons and a mixed job makes "the
+  # gate is red" ambiguous. Same workflow because a pull request that typechecks
+  # the scoring library and ships a frontend that does not compile is not a
+  # green pull request.
+  #
+  # The scoring floors are NOT measured here. Nothing in `web/` can move one:
+  # every figure it draws is computed in Python and asserted there, which is the
+  # arrangement that keeps a judgment out of the transport and out of the paint.
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install
+        run: npm ci
+        working-directory: web
+
+      - name: Typecheck
+        # Separate from the build so a type error is reported as a type error.
+        run: npm run typecheck
+        working-directory: web
+
+      - name: Build
+        run: npm run build
+        working-directory: web

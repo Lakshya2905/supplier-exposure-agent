@@ -5,7 +5,12 @@ __pycache__/
 .pytest_cache/
 venv/
 .gstack/
-decisions/
 
-# API run store: inputs and records written at request time, like decisions/
-runs/
+# Written at request time, AT THE REPOSITORY ROOT and nowhere else.
+#
+# ANCHORED WITH A LEADING SLASH, and it is not cosmetic. An unanchored
+# `decisions/` matches at any depth, so it silently excluded
+# `web/app/decisions/`, the route that surfaces the decision log. The file was
+# written, the page worked locally, and `git add -A` skipped it without a word.
+/decisions/
+/runs/

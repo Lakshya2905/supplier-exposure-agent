@@ -1,0 +1,234 @@
+'use client';
+/**
+ * Exposure: what is worst. The row is a part.
+ *
+ * A TABLE, NOT PARAGRAPHS. The Streamlit surface renders a full sentence per
+ * part in running prose, which is unscannable at three hundred rows: a reader
+ * cannot compare two parts without reading two paragraphs. The sentence has not
+ * gone anywhere, it has moved to the Tearsheet, where it is read once about one
+ * part, which is the only place a sentence is the right shape.
+ *
+ * NO SORT IS APPLIED BY DEFAULT, and the caption says so. Carbon's DataTable
+ * offers column sort and that is fine: a reader who sorts by cover has asked a
+ * question about cover. What must not happen is the tool arriving pre-sorted by
+ * something, because a default order is read as a ranking within minutes and
+ * nobody checks which column it was.
+ */
+import { useMemo, useState } from 'react';
+import {
+  Button, DataTable, Table, TableBody, TableCell, TableContainer, TableHead,
+  TableHeader, TableRow, TableToolbar, TableToolbarContent,
+  TableToolbarSearch, Tag,
+} from '@carbon/react';
+import { useRun } from '@/components/RunProvider';
+import { Empty, Failed, Loading, NotConfigured } from '@/components/States';
+import { PartTearsheet } from '@/components/PartTearsheet';
+import type { PartDetail } from '@/components/PartTearsheet';
+import { boundPrefix } from '@/components/Absence';
+import { downloadCsv } from '@/lib/csv';
+import { labelFor } from '@/lib/labels';
+import {
+  boundIsTrivial, formatNumber, isUnbounded, toNumber,
+} from '@/lib/measure';
+import type { DimensionScore, Row } from '@/lib/types';
+
+const HEADERS = [
+  { key: 'part', header: 'Part' },
+  { key: 'pattern', header: 'Pattern' },
+  { key: 'stops', header: 'How much of the build stops' },
+  { key: 'cover', header: 'How long stock lasts' },
+  { key: 'lead', header: 'Worst case lead time' },
+  { key: 'supplier', header: 'Supplier' },
+  { key: 'region', header: 'Region' },
+];
+
+const UNKNOWN = 'not enough data to say';
+
+/** A cell that is a measure, with its absence stated rather than blanked. */
+function cell(
+  score: DimensionScore | undefined,
+  render: (s: DimensionScore) => string | null,
+): string {
+  if (!score) return 'not scored';
+  if (score.completeness === 'cannot_tell') return UNKNOWN;
+  if (score.completeness === 'not_applicable') return 'does not apply here';
+  if (score.completeness === 'no_recovery_path') return 'no supplier on file';
+  const text = render(score);
+  if (text === null) return UNKNOWN;
+  const prefix = boundPrefix(score.completeness);
+  return prefix ? `${prefix} ${text}` : text;
+}
+
+export default function Exposure() {
+  const { result, loading, error, reload } = useRun();
+  const [open, setOpen] = useState<PartDetail | null>(null);
+
+  const rows = useMemo(() => {
+    if (!result) return [];
+    const parts: Array<Row & { archetypes: string[] }> = [];
+    const seen = new Map<string, Row & { archetypes: string[] }>();
+    for (const layer of result.surfaces.exposure.layers) {
+      for (const group of layer) {
+        for (const row of group.rows) {
+          const already = seen.get(row.key);
+          if (already) { already.archetypes.push(group.label); continue; }
+          const entry = { ...row, archetypes: [group.label] };
+          seen.set(row.key, entry);
+          parts.push(entry);
+        }
+      }
+    }
+    return parts.map((row) => {
+      const scores = result.profiles[row.key] ?? {};
+      const supplier = row.evidence?.supplier_rows?.[0] as
+        Record<string, string> | undefined;
+      return {
+        id: row.key,
+        part: row.key,
+        pattern: row.archetypes.join(', '),
+        // THE STRUCTURAL REACH, WHERE THE VOLUME COULD NOT BE COUNTED. Blast
+        // radius carries two facts: how many finished goods stop, which is
+        // always known, and how many units that is, which inherits the demand
+        // plan's gaps. Rendering only the second gives "at least 0 units a
+        // year", which is true, carries nothing, and reads as a measurement.
+        // The part certainly stops those finished goods and the cell says so.
+        stops: cell(scores.blast_radius, (s) => {
+          const goods = toNumber(s.detail.finished_goods_blocked);
+          if (boundIsTrivial(s.value, s.completeness) && goods) {
+            return `${goods} finished good${goods === 1 ? '' : 's'}, none of `
+              + 'them in the demand plan';
+          }
+          const n = toNumber(s.value);
+          return n === null ? null : `${n.toLocaleString()} units a year`;
+        }),
+        cover: cell(scores.buffer_cover, (s) => {
+          if (isUnbounded(s.value)) return 'unbounded';
+          const text = formatNumber(s.value);
+          return text === null ? null : `${text} days`;
+        }),
+        lead: cell(scores.wait_out_days, (s) => {
+          if (!Array.isArray(s.value)) return null;
+          const worst = formatNumber(s.value[1]);
+          return worst === null ? null : `${worst} days`;
+        }),
+        supplier: supplier?.supplier_name ?? 'no supplier on file',
+        region: supplier?.region
+          ? labelFor(String(supplier.region), result.overview.region_labels)
+          : 'no supplier on file',
+        __row: row,
+      };
+    });
+  }, [result]);
+
+  if (loading && !result) return <Loading label="Scoring the dataset." />;
+  if (!result) return <Failed error={error} onRetry={reload} />;
+
+  return (
+    <>
+      <section className="sea-section">
+        <h2 className="sea-section__heading">Exposure</h2>
+        <p className="sea-section__note">
+          One row per part that matched a named pattern. Every figure keeps its
+          own unit and nothing here is combined. The table arrives in part
+          number order, which carries no meaning; sort a column to ask a
+          question about that column. Select a part for the finding, the
+          workings, and what binds.
+        </p>
+
+        {/* A THRESHOLD NOBODY HAS SET IS ITS OWN KIND OF UNKNOWN, and it is
+            not the same as missing data: this one is settled by editing a file,
+            which is why it points at the file and the key rather than at a
+            system of record. */}
+        {!result.thresholds?.thresholds?.long_lead_days && (
+          <NotConfigured what="Long lead" key_="thresholds.long_lead_days" />
+        )}
+
+        {rows.length === 0 ? (
+          <Empty title="No part matched a named pattern">
+            Every part in this run is either multi-sourced or was excluded by a
+            condition the catalogue states. That is a finding about the data,
+            not an empty screen.
+          </Empty>
+        ) : (
+          <DataTable rows={rows} headers={HEADERS} isSortable>
+            {({ rows: shown, headers, getTableProps, getHeaderProps,
+                getRowProps, onInputChange }) => (
+              <TableContainer>
+                <TableToolbar>
+                  <TableToolbarContent>
+                    <TableToolbarSearch
+                      onChange={onInputChange}
+                      placeholder="Search part, pattern, supplier or region"
+                      persistent
+                    />
+                    <Button
+                      kind="ghost"
+                      onClick={() => downloadCsv(
+                        'exposure.csv',
+                        HEADERS.map((header) => header.header),
+                        rows.map((row) => HEADERS.map((header) =>
+                          String((row as unknown as Record<string, unknown>)[
+                            header.key] ?? ''))))}
+                    >
+                      Export CSV
+                    </Button>
+                  </TableToolbarContent>
+                </TableToolbar>
+                <Table {...getTableProps()} size="sm">
+                  <TableHead>
+                    <TableRow>
+                      {headers.map((header) => {
+                        const props = getHeaderProps({ header }) as
+                          Record<string, unknown> & { key?: string };
+                        const { key: _drop, ...rest } = props;
+                        return (
+                          <TableHeader key={header.key} {...rest}>
+                            {header.header}
+                          </TableHeader>
+                        );
+                      })}
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {shown.map((row) => {
+                      const props = getRowProps({ row }) as
+                        Record<string, unknown> & { key?: string };
+                      const { key: _drop, ...rest } = props;
+                      const source = rows.find((entry) => entry.id === row.id);
+                      return (
+                        <TableRow
+                          key={row.id}
+                          {...rest}
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => source && setOpen({
+                            row: source.__row,
+                            scores: result.profiles[row.id] ?? {},
+                            binding: result.binding[row.id],
+                            verdict: result.verdicts[row.id] ?? '',
+                            dimensions: result.dimensions,
+                          })}
+                        >
+                          {row.cells.map((datum) => (
+                            <TableCell key={datum.id}>
+                              {typeof datum.value === 'string'
+                                && datum.value === UNKNOWN
+                                ? <Tag type="warm-gray" size="sm">{UNKNOWN}</Tag>
+                                : datum.value}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </DataTable>
+        )}
+      </section>
+
+      <PartTearsheet detail={open} open={open !== null}
+                     onClose={() => setOpen(null)} />
+    </>
+  );
+}

@@ -24,10 +24,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel
 
+from .. import binding
 from .. import governance as gov
 from .. import scoring
 from ..governance import store
 from ..interface import actions
+from ..interface import dashboard as dash
 from ..interface import model as view
 from ..pipeline import DEMO_DIR, WORKING_DIR, run, surfaces
 from ..recovery import RECOVERY_INPUTS_FILE
@@ -84,6 +86,45 @@ def _counts(result):
     }
 
 
+def overview_payload(result, built):
+    """The Overview surface's aggregates, computed by the LIBRARY.
+
+    Every figure here comes from `interface.dashboard`, which is already tested
+    and already carries the decisions that matter: which regions appear even
+    when the map cannot draw them, that archetype groups keep lattice order
+    rather than being sorted by size, that the work queue IS legitimately a
+    ranking and the lattice is not. Recomputing any of that in the frontend
+    would put a second copy of a judgment in a language none of these tests can
+    reach.
+
+    `dimension_series` carries floats, and that is correct rather than a lapse:
+    it is a CHART SERIES and not a measure. The measures themselves are in
+    `profiles`, exact. A caller wanting a figure to quote reads those.
+    """
+    parts, suppliers, grid = dash.incidence(result)
+    exposure = built[view.EXPOSURE]
+    return {
+        "tiles": encode(dash.tiles(result)),
+        "dimension_series": encode(dash.dimension_series(result)),
+        "regions": encode(dash.regions(result)),
+        "incidence": {"parts": list(parts), "suppliers": list(suppliers),
+                      "grid": encode(grid),
+                      "exposed_parts": len(dash.exposed_parts(result))},
+        "coverage_counts": encode(dash.coverage_counts(exposure.coverage))
+        if exposure.coverage else [],
+        "group_sizes": encode(dash.group_sizes(exposure)),
+        "field_sizes": encode(dash.field_sizes(built[view.FIND_OUT])),
+        "cluster_sizes": encode(dash.cluster_sizes(result.report)),
+        # THE DISPLAY NAME FOR AN INTERNAL KEY, served rather than hardcoded in
+        # the frontend. `south_asia` is the key a cluster is identified by and
+        # must stay exactly that on the wire; "South Asia" is what a person
+        # reads. A second copy of this map in TypeScript is how the two drift
+        # until a region appears on one screen under two spellings, which is
+        # what the interface does today.
+        "region_labels": encode(dash.REGION_LABEL),
+    }
+
+
 def score_payload(result, record):
     """One run, whole. Structure everywhere, prose only where it was rendered.
 
@@ -95,6 +136,7 @@ def score_payload(result, record):
     built = surfaces(result)
     return {
         "run": dict(record, counts=_counts(result)),
+        "overview": overview_payload(result, built),
         "verdicts": encode(result.verdicts),
         "profiles": {
             part: {score.dimension: encode(score)
@@ -109,6 +151,19 @@ def score_payload(result, record):
         "unplaceable_parts": encode(result.report.unplaceable_parts),
         "extracts": encode(result.extracts),
         "dimensions": list(scoring.DIMENSIONS),
+        # NULL WHEN NOBODY HAS SET ONE, and the interface says so rather than
+        # rendering a band nobody owns. The system ships with every threshold
+        # commented out on purpose: out of the box it can name the resourcing
+        # trap and cannot say "long lead" until a named person states what long
+        # means.
+        "thresholds": encode(result.thresholds),
+        # WHERE A COMPETITOR PUTS AN INDEX. Computed in `src/binding.py`, which
+        # compares states and never magnitudes, so the interface can name what
+        # is wrong with a part without the frontend inventing a ranking that no
+        # Python test could reach. See that module for why blast radius and
+        # resourcing days appear in `no_terminal_state` rather than binding.
+        "binding": {part: encode(binding.summary(profile))
+                    for part, profile in result.profiles.items()},
     }
 
 

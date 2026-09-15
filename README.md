@@ -654,12 +654,71 @@ Review surface, never constructed from the request, because a control's
 existence is the autonomy claim and building one here would hand a reviewer
 power this system does not offer them.
 
+### The interface
+
+`web/` is a Next.js application using IBM Carbon v11 at the Gray 10 theme. It
+replaces the Streamlit surface rather than wrapping it: the four surfaces are
+the same four, renamed for clarity, and every figure on them is computed in
+Python and served by the API.
+
+```
+cd web && npm install && npm run dev      # needs the API on :8000
+```
+
+| surface | job | the row is |
+|---|---|---|
+| Overview | the shape of the whole set. Decides nothing | — |
+| Exposure | what is worst | a part |
+| What to check | what one fetch settles the most | a **field**, never a part |
+| Review | judgments waiting for a person | a cluster |
+| Decision log | who decided what, when and why | an event |
+
+**Why Carbon.** Every competitor leads with a branded composite index. This
+tool's thesis is refusing to combine, so the interface has to make that refusal
+read as a position rather than an unfinished feature. Carbon is built for dense
+enterprise data, is accessibility-tested, and its restraint does the work that
+decoration cannot.
+
+**Where an index would go, there are words.** `src/binding.py` names what binds
+on a part and what blocks it, and it does so by comparing **states, never
+magnitudes**. "Which dimension is worst" would be 300 days measured against
+12,000 finished-good units, and no unit makes those the same quantity; a
+function answering it would be the composite this project refuses, hidden inside
+a superlative. So a dimension binds when it reaches the worst value it can
+express **without a threshold**: nobody to wait on, stock counted and empty,
+tooling that does not come with you. How much of the build stops and how long
+resourcing takes have no entry, because neither has a worst value until somebody
+states a threshold, and a part whose only notable feature is a large blast
+radius therefore binds on nothing. The screen says so rather than promoting the
+largest number on the row.
+
+**Three kinds of unknown, three treatments.** Something that could be
+established and has not been is a warm-grey tag; a question that does not attach
+to this part is a cool-grey one; a threshold nobody has configured is an info
+notification pointing at the file and the key. They are not interchangeable: one
+is settled by a phone call, one by nobody ever, and one by editing
+`config/archetypes.yaml`. Nothing renders as zero, blank, or a dash.
+
+**One restyle, written down.** Carbon ships `Tag` at a 16px radius, which is a
+pill, and the rule here is square corners everywhere. `globals.scss` sets that
+radius to 0 and touches nothing else about the component, so the accessible
+markup, contrast and focus behaviour Carbon tested are all intact.
+
 ### Deploying it
 
-`Dockerfile` and `Procfile` are both here; the container is the fuller
-statement. Mount a volume at `/data`: `SEA_RUNS_DIR` and `SEA_DECISIONS_DIR` are
-written at request time, and a decision log that resets on deploy is the defect
-`governance/store.py` exists to close, one layer out.
+**The backend** needs a host that stays awake. `Dockerfile` and `Procfile` are
+both here; the container is the fuller statement. Mount a volume at `/data`:
+`SEA_RUNS_DIR` and `SEA_DECISIONS_DIR` are written at request time, and a
+decision log that resets on deploy is the defect `governance/store.py` exists to
+close, one layer out.
+
+**The frontend** is static and goes on Vercel with `web/` as the root directory.
+Set `NEXT_PUBLIC_API_BASE` to wherever the backend answers. The two deploy
+separately on purpose: the frontend is the thing a link points at and Vercel
+does not sleep it, and the backend is the thing that must not sleep, which is a
+different requirement served by a different host.
+
+Neither has authentication and neither is built to have any.
 
 ## Where the reasoning lives
 
