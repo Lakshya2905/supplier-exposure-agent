@@ -601,6 +601,66 @@ with the arithmetic in a comment block above the data.
 
 The dashboard has no authentication and is not built to have any.
 
+---
+
+## Running the scoring API
+
+The scoring library is wrapped in FastAPI so a frontend that is not Streamlit
+can reach it. **The wrap changed no answer**, and `tests/test_api.py` proves it
+rather than asserting it: the frozen eval set is scored in process and through
+the transport, and every one of the 1776 dimension results is compared on value,
+unit, completeness, autonomy and reasons, plus the rendered sentence of every
+row on every surface.
+
+```
+uvicorn src.api.main:app --reload --port 8000
+```
+
+| endpoint | does |
+|---|---|
+| `POST /api/score` | scores an upload, or a dataset named in the body (`demo`, `frozen`, `working`) |
+| `GET /api/run/{id}` | a previous run, **re-scored from its stored inputs** |
+| `GET /api/runs` | every run, newest first |
+| `POST /api/decisions` | records one confirm or reject, through `interface.actions` |
+| `GET /api/decisions` | the decision log, each sentence rendered on read |
+| `GET /api/health` | liveness, and which datasets the container can see |
+
+### Three things the transport is careful about
+
+**A run is re-scored, never replayed.** The run store holds the input CSVs and a
+digest of each, and nothing else. Fetching a run scores those bytes again, so a
+wording change reaches a run recorded last month and a scoring change shows up
+as a changed answer instead of the record quietly disagreeing with the code that
+claims to have produced it. The cost is accepted: about a second, and a run is
+not reproducible if its inputs are deleted from under it, which the endpoint
+says out loud rather than substituting another dataset.
+
+**Nothing is rounded on the way out.** Cover is `Fraction(73, 2)` exactly, and it
+crosses as `{"type": "exact", "numerator": 73, "denominator": 2}`. A float there
+would move rounding out of the renderer, where this project puts it, into
+transport, where nobody would look for it. `null` and `0` stay distinct because
+they are different findings. `UNBOUNDED` crosses as `{"type": "unbounded"}`,
+because cover with nothing consuming it is an answer and not an absence. And
+every non-plain value is tagged, because a `(quoted, p95)` pair and a rational
+are both two integers, and a caller holding only the payload cannot tell them
+apart by branch order the way the renderer does.
+
+**No judgment lives in the HTTP layer.** A decision is recorded through
+`interface.actions.apply` and never around it, so every refusal that module
+makes still holds over the wire: an anonymous decision is refused, a rejection
+without a reason is refused, and the same person clicking the same button twice
+is refused as one judgment arriving twice. The control is **found** on the
+Review surface, never constructed from the request, because a control's
+existence is the autonomy claim and building one here would hand a reviewer
+power this system does not offer them.
+
+### Deploying it
+
+`Dockerfile` and `Procfile` are both here; the container is the fuller
+statement. Mount a volume at `/data`: `SEA_RUNS_DIR` and `SEA_DECISIONS_DIR` are
+written at request time, and a decision log that resets on deploy is the defect
+`governance/store.py` exists to close, one layer out.
+
 ## Where the reasoning lives
 
 | document | contents |
