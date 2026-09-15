@@ -1,0 +1,13 @@
+# The blank cells are load-bearing. SAMPLE-P-05 has NO on-hand record and
+# SAMPLE-P-06 has one RECORDED AS ZERO; those are different findings and the
+# whole tool exists to keep them apart. Do not fill blanks with zeros.
+part_number,description,source_type,sourcing_list_status,on_hand_units,tooling_owner,annual_spend_usd,criticality
+SAMPLE-FG-01,Sample finished good 1,make,verified,0,company,0,A
+SAMPLE-FG-02,Sample finished good 2,make,verified,0,company,0,B
+SAMPLE-P-01,Cast housing,buy,verified,400,supplier,52000,A
+SAMPLE-P-02,Control board,buy,verified,900,company,38000,A
+SAMPLE-P-03,Sealing ring,buy,verified,120,company,4000,C
+SAMPLE-P-04,Machined shaft,make,verified,60,company,0,
+SAMPLE-P-05,Drive coupling,buy,verified,,supplier,17000,B
+SAMPLE-P-06,Bearing set,buy,verified,0,company,9000,B
+SAMPLE-P-07,Wiring loom,buy,verified,250,supplier,23000,C

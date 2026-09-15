@@ -1,0 +1,10 @@
+# SAMPLE-P-03 has no row at all: its list was checked and is empty, which is a
+# finding and not a gap. SAMPLE-P-07's supplier is spelled in full here and
+# abbreviated in lead_times.csv, which is the cross-file merge.
+part_number,supplier_name,supplier_region,qualification_date
+SAMPLE-P-01,Northgate Castings,europe,2024-03-11
+SAMPLE-P-02,Vantage Works,north_america,2023-11-02
+SAMPLE-P-02,Pinehurst Tooling,east_asia,2024-01-19
+SAMPLE-P-05,Northgate Castings,europe,2024-03-11
+SAMPLE-P-06,Pinehurst Tooling,east_asia,2024-01-19
+SAMPLE-P-07,Calder Corporation,south_asia,2022-07-30

@@ -1,0 +1,7 @@
+# SAMPLE-P-01: every step timed EXCEPT tooling, so the chain is a lower bound
+# and the sentence names tooling as the untimed step.
+# SAMPLE-P-05: every step timed AND a cycle count, so the chain is settled and
+# reports both "if it passes first time" and "if it takes two attempts".
+part_number,alternate_source_days,tooling_lead_time_days,engineering_transfer_days,first_article_days,qualification_test_days,ramp_to_rate_days,qualification_cycles
+SAMPLE-P-01,45,,30,20,60,25,
+SAMPLE-P-05,40,120,25,15,50,20,2

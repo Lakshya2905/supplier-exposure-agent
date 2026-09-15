@@ -1,0 +1,11 @@
+# The extract manifest: which system each file came out of and when. It is what
+# lets an evidence panel cite a system of record instead of inventing one.
+source_file,system_of_record,retrieved_at
+bom.csv,PLM bill of materials,2026-09-01T08:00:00+00:00
+part_master.csv,ERP part master,2026-09-01T08:05:00+00:00
+suppliers.csv,ERP approved vendor list,2026-09-01T08:10:00+00:00
+lead_times.csv,supplier quote history,2026-09-01T08:15:00+00:00
+demand_plan.csv,S&OP demand plan,2026-09-01T08:20:00+00:00
+recovery_inputs.csv,NPI programme estimates,2026-09-01T09:00:00+00:00
+commitments.csv,order book,2026-09-01T09:05:00+00:00
+sub_tier_sources.csv,supplier declarations,2026-09-01T09:10:00+00:00

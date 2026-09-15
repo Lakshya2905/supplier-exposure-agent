@@ -1,0 +1,12 @@
+# SAMPLE DATA. Synthetic, hand-authored, and small enough to read.
+# Two finished goods, seven bought or made parts. sample/README.md says what
+# each row is here to demonstrate.
+parent_part,child_part,qty_per_parent
+SAMPLE-FG-01,SAMPLE-P-01,2
+SAMPLE-FG-01,SAMPLE-P-02,1
+SAMPLE-FG-01,SAMPLE-P-03,1
+SAMPLE-FG-01,SAMPLE-P-05,1
+SAMPLE-FG-02,SAMPLE-P-02,1
+SAMPLE-FG-02,SAMPLE-P-04,1
+SAMPLE-FG-02,SAMPLE-P-06,2
+SAMPLE-FG-02,SAMPLE-P-07,1

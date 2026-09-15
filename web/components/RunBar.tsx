@@ -11,6 +11,7 @@ import { Button, Tag } from '@carbon/react';
 import { Renew } from '@carbon/react/icons';
 import { useRun } from './RunProvider';
 import { DataPanel } from './DataPanel';
+import { PrintButton } from './RunSummary';
 import { ScopePicker } from './ScopePicker';
 
 export function RunBar() {
@@ -61,6 +62,7 @@ export function RunBar() {
       )}
       <div style={{ marginInlineStart: 'auto', display: 'flex', gap: '0.5rem' }}>
         <ScopePicker />
+        <PrintButton />
         <DataPanel />
         <Button
           kind="ghost"

@@ -1,0 +1,4 @@
+# Only SAMPLE-FG-01 is here. Parts feeding SAMPLE-FG-02 therefore report a
+# LOWER BOUND: orders nobody recorded still stop.
+finished_good_part,committed_units
+SAMPLE-FG-01,300

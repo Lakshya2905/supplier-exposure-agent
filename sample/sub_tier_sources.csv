@@ -1,0 +1,9 @@
+# Two different companies in two different regions both buy from Ferrite Mill,
+# so the parts behind them are not independent. Neither supplier grouping nor
+# region grouping can see that. Vantage Works has not said, and a blank groups
+# with nothing.
+supplier_name,sub_tier_source
+Northgate Castings,Ferrite Mill
+Pinehurst Tooling,Ferrite Mill
+Vantage Works,
+Calder Corporation,Halden Polymers

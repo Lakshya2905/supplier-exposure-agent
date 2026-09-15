@@ -48,6 +48,83 @@ html, body {
   font-variant-numeric: tabular-nums;
 }
 
+// ------------------------------------------------------------------ print --
+// THE RUN SUMMARY, AND ONLY IT, GOES ON PAPER. A browser printing the live page
+// would emit the shell, the side nav, a truncated table and four charts cut in
+// half across a page break. So the screen is hidden at print and a summary laid
+// out for paper is shown, which is the same trade every enterprise tool makes
+// and the reason their exports look designed.
+.sea-print-only { display: none; }
+
+@media print {
+  .sea-print-only { display: block; }
+
+  // Everything that is not the summary. `visibility` is not enough: a hidden
+  // element still takes its space and leaves blank pages.
+  .cds--header, .cds--side-nav, .sea-runbar, .sea-main,
+  .cds--header-panel, .cds--modal { display: none !important; }
+
+  @page { margin: 18mm 14mm; }
+
+  // `body.cds--g10` is a CLASS and beats a bare `body`, so the g10 surface
+  // printed as a grey slab across every page. Named at the same specificity
+  // rather than with `!important`, which would be the same fix with less said.
+  html, body.cds--g10, body {
+    background: #fff;
+    color: #000;
+    font-size: 10pt;
+  }
+
+  .sea-print-only h1 {
+    @include type-style('productive-heading-04');
+    font-weight: 300;
+    margin-bottom: $spacing-05;
+  }
+
+  .sea-print-only h2 {
+    @include type-style('heading-compact-01');
+    margin: $spacing-06 0 $spacing-03;
+    // A heading alone at the foot of a page is a heading on the wrong page.
+    break-after: avoid;
+  }
+
+  .sea-print-only p {
+    @include type-style('body-01');
+    max-width: none;
+    margin: 0 0 $spacing-03;
+  }
+
+  .sea-print-standing {
+    border-left: 2pt solid #000;
+    padding-left: $spacing-04;
+  }
+
+  .sea-print-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: $spacing-05;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sea-print-table th,
+  .sea-print-table td {
+    text-align: left;
+    vertical-align: top;
+    padding: 3pt 6pt 3pt 0;
+    border-bottom: 0.5pt solid #999;
+  }
+
+  .sea-print-table th { font-weight: 600; }
+
+  // A row split across a page break is a row read twice or not at all.
+  .sea-print-table tr { break-inside: avoid; }
+
+  // AN IDENTIFIER IS NOT PROSE. `SEA-P-0101` wrapped to three lines on its
+  // hyphens, which makes a part number something a reader has to reassemble
+  // before they can search for it.
+  .sea-print-table td:first-child { white-space: nowrap; }
+}
+
 // ---------------------------------------------------------------- layout --
 // Carbon's Header is fixed at 3rem and out of flow. Everything else starts
 // below it rather than under it.
