@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
 import './globals.scss';
+import { PRODUCT_NAME } from '@/lib/labels';
 import { RunProvider } from '@/components/RunProvider';
 import { Shell } from '@/components/Shell';
 
 export const metadata: Metadata = {
-  title: 'Choke Point',
+  title: PRODUCT_NAME,
   description:
     'Which single points of failure in a bill of materials would actually ' +
     'stop production, and how badly.',

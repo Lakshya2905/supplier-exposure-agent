@@ -2,10 +2,10 @@
 /**
  * The UI Shell: header, left rail, and the run context strip.
  *
- * THE PRODUCT NAME IS THE POINT OF THIS FILE, not decoration. A repo slug in a
- * header undoes every other enterprise signal on the screen, so the tool is
- * called Choke Point and the wordmark is set in Plex, 300 over 600, with no
- * logo: a drawn mark nobody commissioned looks worse than a well-set name.
+ * THE WORDMARK IS SET, NOT DRAWN. Plex at 300 over 600, no logo: a mark nobody
+ * commissioned looks worse than a well-set name. The weight break falls between
+ * what the tool is about and what it is, which is the natural reading of the
+ * name and needs no second colour to carry it.
  *
  * ONE ACCENT, and it is Carbon's. Every link, focus ring, primary button and
  * selected nav item is IBM Blue 60, supplied by the theme rather than typed
@@ -20,6 +20,7 @@ import {
 } from '@carbon/react';
 import { Download, UserAvatar } from '@carbon/react/icons';
 import { useState } from 'react';
+import { PRODUCT_LEAD, PRODUCT_NAME, PRODUCT_TAIL } from '@/lib/labels';
 import { useRun } from './RunProvider';
 import { RunBar } from './RunBar';
 
@@ -45,7 +46,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   return (
     <Theme theme="g10">
-      <Header aria-label="Choke Point">
+      <Header aria-label={PRODUCT_NAME}>
         <SkipToContent />
         <HeaderMenuButton
           aria-label={navOpen ? 'Close menu' : 'Open menu'}
@@ -54,8 +55,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
           isActive={navOpen}
         />
         <HeaderName href="/" prefix="">
-          <span style={{ fontWeight: 300 }}>Choke</span>
-          <span style={{ fontWeight: 600 }}>Point</span>
+          <span style={{ fontWeight: 300 }}>
+            {PRODUCT_LEAD.replace(/ /g, '\u00a0')}&nbsp;
+          </span>
+          <span style={{ fontWeight: 600 }}>{PRODUCT_TAIL}</span>
         </HeaderName>
         <HeaderGlobalBar>
           <div style={{ display: 'flex', alignItems: 'center',
