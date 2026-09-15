@@ -44,14 +44,18 @@ BOOT_TIMEOUT = 120
 # The h1 each surface renders, read from the model rather than retyped, so a
 # reworded question moves the wait with it instead of hanging on a title that no
 # longer exists.
-from src.interface.model import (CONFIRM, EXPOSURE, FIND_OUT,  # noqa: E402
-                                 SURFACE_QUESTION)
+# BOTH HALVES READ FROM THE MODEL, not retyped here. The nav LABEL used to be a
+# literal in this file while the h1 came from the model, so the plain-language
+# pass renamed "Find out" to "What to check" and every rendered-page check
+# errored looking for a button that no longer exists. A rewording should move
+# the wait with it, which it only does if neither end is a copy.
+from src.interface.model import (OVERVIEW_TITLE,  # noqa: E402
+                                 SURFACE_QUESTION, SURFACE_TITLE, SURFACES)
 
-TITLES = {"Dashboard": "Dashboard",
-          "Exposure": SURFACE_QUESTION[EXPOSURE],
-          "Find out": SURFACE_QUESTION[FIND_OUT],
-          "Confirm": SURFACE_QUESTION[CONFIRM]}
-SURFACES = tuple(TITLES)
+
+TITLES = {OVERVIEW_TITLE: OVERVIEW_TITLE,
+          **{SURFACE_TITLE[key]: SURFACE_QUESTION[key] for key in SURFACES}}
+SURFACE_NAMES = tuple(TITLES)
 
 
 def playwright_or_skip():
@@ -324,7 +328,8 @@ def collect():
         with sync_playwright() as driver:
             browser = driver.chromium.launch()
             page = browser.new_page(viewport={"width": 1440, "height": 1000})
-            readings = {name: measure(page, url, name) for name in SURFACES}
+            readings = {name: measure(page, url, name)
+                        for name in SURFACE_NAMES}
             browser.close()
         return readings
     finally:

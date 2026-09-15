@@ -32,9 +32,13 @@ export function labelFor(key: string, served: Record<string, string> = {}) {
 }
 
 /** A dimension's name, in the words used across the app. */
+// SHORT, AND IN THE SAME VOCABULARY AS THE SENTENCES. A tile heading cannot
+// carry "how long until parts flow again from this supplier", so these are the
+// short forms; what they must not be is a SECOND vocabulary, where a heading
+// says "portability" and the sentence under it says "how hard it is to move".
 export const DIMENSION_LABEL: Record<string, string> = {
-  wait_out_days: 'Wait it out',
-  resource_days: 'Resource around it',
+  wait_out_days: 'Wait for this supplier',
+  resource_days: 'Get a new supplier approved',
   blast_radius: 'How much of the build stops',
   buffer_cover: 'How long stock lasts',
   portability: 'How hard to move supplier',
@@ -45,7 +49,7 @@ export const DIMENSION_LABEL: Record<string, string> = {
 export const DIMENSION_UNIT: Record<string, string> = {
   wait_out_days: 'days, quoted / worst case',
   resource_days: 'days',
-  blast_radius: 'finished good units a year',
+  blast_radius: 'finished units a year',
   buffer_cover: 'days',
   portability: 'who owns the tooling',
   concentration: 'other exposed parts',

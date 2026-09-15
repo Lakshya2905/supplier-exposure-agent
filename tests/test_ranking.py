@@ -335,7 +335,7 @@ class TestTheSentence(unittest.TestCase):
         self.assertEqual(cover["value"], [73, 2])
         log = gov.DecisionLog()
         ranking.log_ranked(log, profile, "single_source")
-        self.assertIn("36.5 days of cover", render(list(log)[0]))
+        self.assertIn("36.5 days of stock left", render(list(log)[0]))
 
     def test_an_abstention_appears_as_words_not_a_blank(self):
         from src.governance.render import render
@@ -343,8 +343,8 @@ class TestTheSentence(unittest.TestCase):
         log = gov.DecisionLog()
         ranking.log_ranked(log, profile, "single_source")
         sentence = render(list(log)[0])
-        self.assertIn("no on-hand record", sentence)
-        self.assertIn("no tooling owner recorded", sentence)
+        self.assertIn("no stock count on file", sentence)
+        self.assertIn("no tooling owner on file", sentence)
 
     def test_every_number_in_the_sentence_carries_its_unit(self):
         from src.governance.render import render
@@ -353,7 +353,7 @@ class TestTheSentence(unittest.TestCase):
         ranking.log_ranked(log, profile, "single_source")
         sentence = render(list(log)[0])
         self.assertIn("days", sentence)
-        self.assertIn("finished good units", sentence)
+        self.assertIn("finished units a year", sentence)
 
 
 class TestMagnitudeFindingsCarryTheirThreshold(unittest.TestCase):

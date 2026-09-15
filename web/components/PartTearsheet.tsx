@@ -24,6 +24,13 @@ export interface PartDetail {
   scores: Record<string, DimensionScore>;
   binding: BindingSummary;
   verdict: string;
+  /** The verdict in plain words, from the API's map. Never the raw code
+   *  with its underscores swapped for spaces, which is a code in disguise. */
+  verdictLabel: string;
+  /** Every pattern this part matched, most specific first. The table shows
+   *  only the first, because dominance is subset inclusion and the first
+   *  contains the rest; this is where that claim can be checked. */
+  patterns: string[];
   dimensions: string[];
 }
 
@@ -32,6 +39,27 @@ export function PartPanel({ detail }: { detail: PartDetail }) {
   return (
     <div className="sea-stack">
       <p className="sea-judgment__claim">{detail.row.sentence}</p>
+
+      {detail.patterns.length > 1 && (
+        <section>
+          <h4 className="sea-chart__title">Patterns this part matches</h4>
+          <ul>
+            {detail.patterns.map((pattern, index) => (
+              <li key={pattern} className="sea-section__note"
+                  style={{ marginBottom: '0.25rem' }}>
+                {pattern}
+                {index === 0 && (
+                  <> <Tag type="outline" size="sm">most specific</Tag></>
+                )}
+              </li>
+            ))}
+          </ul>
+          <p className="sea-section__note">
+            The broader ones are contained in the first: every condition they
+            state, it states too.
+          </p>
+        </section>
+      )}
 
       <section>
         <h4 className="sea-chart__title">The six measures, each in its own unit</h4>
@@ -132,7 +160,7 @@ export function PartTearsheet({ detail, open, onClose }: {
       open={open && detail !== null}
       onClose={onClose}
       title={detail?.row.key ?? ''}
-      description={detail?.verdict.replace(/_/g, ' ') ?? ''}
+      description={detail?.verdictLabel ?? ''}
       hasCloseIcon
       closeIconDescription="Close"
       influencerPosition="right"

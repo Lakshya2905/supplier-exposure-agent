@@ -182,7 +182,7 @@ def part_ranked_event():
                 {"dimension": "portability", "unit": "categorical",
                  "completeness": "known", "value": "supplier", "detail": {}},
             ],
-            "archetypes": ["the resourcing trap"]})
+            "archetypes": ["one supplier, supplier-owned tooling"]})
 
 
 class TestGoldens(unittest.TestCase):
@@ -220,7 +220,8 @@ class TestGoldens(unittest.TestCase):
         # was wrong. A reader who never sees "at least" cannot recover it.
         clause = render_module._ranked_clause(
             self._blast_clause(16500, "partial"))
-        self.assertIn("at least 16500", clause)
+        # Grouped, because the sentence is read rather than parsed.
+        self.assertIn("at least 16,500", clause)
 
     def test_a_recorded_zero_under_partial_usage_is_not_read_as_an_absence(self):
         """The collision the fix must not reintroduce.
@@ -334,7 +335,7 @@ class TestGoldens(unittest.TestCase):
 
     def test_the_ranked_sentence_rounds_only_here(self):
         # 389/35 is 11.114..., carried exactly all the way from stage 2.
-        self.assertIn("11.1 days of cover", render(part_ranked_event()))
+        self.assertIn("11.1 days of stock left", render(part_ranked_event()))
 
     def test_a_scored_dimension_always_renders_its_unit(self):
         # A bare number in a review interface is the first step toward somebody

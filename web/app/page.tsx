@@ -14,6 +14,7 @@ import {
 } from '@carbon/react';
 import { useRun } from '@/components/RunProvider';
 import { CountBar, ChartOrAbsence, Distribution } from '@/components/Charts';
+import { RegionMap } from '@/components/RegionMap';
 import { Failed, Loading } from '@/components/States';
 import { STANDING_COPY } from '@/components/Measures';
 import { DIMENSION_LABEL, DIMENSION_UNIT, labelFor } from '@/lib/labels';
@@ -73,11 +74,13 @@ export default function Overview() {
       <section className="sea-section">
         <h3 className="sea-section__heading">Where the suppliers are</h3>
         <p className="sea-section__note">
-          Counts per region, including any region the data names that no map
-          would draw. Grouping parts by region is one of two readings of
-          correlated exposure, and the other is by supplier; they answer
-          different questions and neither settles the other.
+          Grouping parts by region is one of two readings of shared exposure,
+          and the other is by supplier. They answer different questions and
+          neither settles the other. The table below carries every region the
+          data names, including any the map cannot draw.
         </p>
+        <RegionMap result={result} />
+        <div style={{ height: '1.5rem' }} />
         <DataTable rows={overview.regions.map((region) => ({
           id: region.region,
           region: labelFor(region.region, overview.region_labels),

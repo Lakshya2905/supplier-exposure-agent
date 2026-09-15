@@ -20,6 +20,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel
@@ -28,6 +29,7 @@ from .. import binding
 from .. import governance as gov
 from .. import scoring
 from ..governance import store
+from ..governance.render import VERDICT_PROSE
 from ..interface import actions
 from ..interface import dashboard as dash
 from ..interface import model as view
@@ -115,6 +117,17 @@ def overview_payload(result, built):
         "group_sizes": encode(dash.group_sizes(exposure)),
         "field_sizes": encode(dash.field_sizes(built[view.FIND_OUT])),
         "cluster_sizes": encode(dash.cluster_sizes(result.report)),
+        # ONE ROW PER COUNTRY, so a map can fill shapes without the frontend
+        # learning which countries stand for which region. That mapping is a
+        # DRAWING CONVENTION and not a claim about where a supplier is, and the
+        # surface says so; keeping it in Python keeps the convention and its
+        # caveat in the same place.
+        "map_rows": [
+            {"country": code, "name": dash.COUNTRY_NAME.get(code, code),
+             "region": row.region, "region_label": row.label,
+             "suppliers": row.suppliers, "parts": row.parts,
+             "exposed_parts": row.exposed_parts}
+            for row in dash.regions(result) for code in row.countries],
         # THE DISPLAY NAME FOR AN INTERNAL KEY, served rather than hardcoded in
         # the frontend. `south_asia` is the key a cluster is identified by and
         # must stay exactly that on the wire; "South Asia" is what a person
@@ -122,6 +135,11 @@ def overview_payload(result, built):
         # until a region appears on one screen under two spellings, which is
         # what the interface does today.
         "region_labels": encode(dash.REGION_LABEL),
+        # The verdict codes in plain words, from the renderer's own map. Served
+        # rather than copied into the frontend, so the words a heading shows and
+        # the words a sentence uses cannot drift into two vocabularies for one
+        # fact.
+        "verdict_labels": encode(VERDICT_PROSE),
     }
 
 
@@ -312,6 +330,29 @@ def get_decisions():
 def _render(event):
     from ..governance.render import render
     return render(event)
+
+
+@app.get("/api/assets/india-claimed.geojson")
+def india_boundary():
+    """India including the full claimed territory, served from the one copy.
+
+    WHY IT IS SERVED RATHER THAN COPIED INTO THE FRONTEND. Natural Earth's `IND`
+    polygon follows a different convention and stops around 35.5N, and that
+    geometry ships inside the chart library where nothing can reach it, so the
+    only way to draw India complete is to supply the shape. `assets/README.md`
+    carries the source, the CC BY 4.0 licence and the derivation, and
+    `tests/test_map_geometry.py` asserts the northern and eastern reach so a
+    future resimplification cannot quietly clip a claimed region.
+
+    A second copy under `web/public/` would be a second thing to keep in step
+    with that test, and the test can only see one of them.
+    """
+    path = Path("assets/india-claimed.geojson")
+    if not path.exists():
+        raise HTTPException(status_code=404, detail={
+            "error": "the India boundary asset is not in this deployment",
+            "expected_at": str(path)})
+    return FileResponse(path, media_type="application/geo+json")
 
 
 @app.get("/api/health")

@@ -100,6 +100,14 @@ export interface DimensionSeries {
   unbounded: number;
 }
 
+/** One country, filled as a stand-in for the region it was assigned to. The
+ *  assignment is a DRAWING CONVENTION, not a claim about where a supplier is. */
+export interface MapRow {
+  country: string; name: string;
+  region: string; region_label: string;
+  suppliers: number; parts: number; exposed_parts: number;
+}
+
 export interface RegionRow {
   region: string; label: string; countries: string[];
   suppliers: number; parts: number; exposed_parts: number;
@@ -123,6 +131,7 @@ export interface ScoreResult {
     tiles: Array<{ label: string; value: number; unit: string; of: string }>;
     dimension_series: DimensionSeries[];
     regions: RegionRow[];
+    map_rows: MapRow[];
     incidence: {
       parts: string[]; suppliers: string[];
       grid: number[][]; exposed_parts: number;
@@ -132,6 +141,8 @@ export interface ScoreResult {
     field_sizes: Array<[string, number]>;
     cluster_sizes: Array<[string, number, string]>;
     region_labels: Record<string, string>;
+    /** Verdict codes in plain words, from the renderer's own map. */
+    verdict_labels: Record<string, string>;
   };
   verdicts: Record<string, string>;
   profiles: Record<string, Record<string, DimensionScore>>;

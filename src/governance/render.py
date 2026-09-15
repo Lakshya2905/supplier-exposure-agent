@@ -19,6 +19,21 @@ Every rendered event answers, in order:
 An event that cannot answer one of these omits that clause rather than
 inventing it. A renderer that fabricates a plausible number is worse than one
 that says nothing.
+
+THE VOCABULARY IS A PLANNER'S, NOT A MODELLER'S, and that is a correctness
+property rather than a courtesy. The test applied to every string below is
+whether a procurement analyst with no statistics background reads it once and
+knows what to do next. "Abstains instead of imputing" is precise and tells that
+reader nothing; "we do not have this data, so this part is not scored on it"
+tells them the same fact and what it means for them.
+
+WHAT DID NOT GET SIMPLIFIED, AND WHY. Bound direction survives intact. An upper
+bound reads "at most" and a lower bound reads "at least", and they are never
+softened into a shared word like "about" or "roughly". The whole system turns on
+those two pointing opposite ways from the identical missing row: unrecorded
+demand can only REDUCE cover and can only ADD to what is blocked. A reader who
+cannot tell which way a figure is wrong has been given a number and no way to
+use it, which is worse than plain-sounding prose that means nothing.
 """
 from . import (ACT_RESOLVE_CONFLICT,
                EXECUTES, KIND_CLUSTER_CONTINGENT, KIND_CLUSTER_FLAGGED,
@@ -29,13 +44,17 @@ from . import (ACT_RESOLVE_CONFLICT,
                STATUS_APPROVED, STATUS_PROPOSED, STATUS_REJECTED,
                STATUS_SUPERSEDED)
 
+# WHAT THE MEASURE IS, IN THE WORDS SOMEBODY WOULD USE TO ASK FOR IT. The old
+# names were the modelling names: blast radius, buffer cover, portability. Each
+# is exact, each is a term of art, and none of them says what a reader should do
+# about it.
 DIMENSION_PROSE = {
-    "wait_out_days": "the wait-out time",
-    "resource_days": "the resourcing time",
-    "blast_radius": "blast radius",
-    "buffer_cover": "buffer cover",
-    "portability": "portability",
-    "concentration": "concentration",
+    "wait_out_days": "how long until parts flow again from this supplier",
+    "resource_days": "how long to get a new supplier approved",
+    "blast_radius": "how much of the build stops",
+    "buffer_cover": "how long current stock lasts",
+    "portability": "how hard it is to move to another supplier",
+    "concentration": "how many other parts share this supplier or region",
 }
 
 # Concentration reports a count of parts, so the dimension renderer needs the
@@ -44,29 +63,42 @@ DIMENSION_PROSE = {
 # What each completeness state means in words. A bound says which DIRECTION it
 # is wrong in, because "incomplete" alone is the thing that lets a reader take
 # an upper bound for a lower one.
+# A BOUND WRAPS THE FIGURE RATHER THAN TRAILING IT. "11 days, an upper bound"
+# puts the correction after the number, where a reader has already taken the
+# number; "at most 11 days, and possibly less" cannot be read the wrong way
+# because the qualifier arrives first. The direction is never softened into a
+# shared word: which way a figure is wrong is the whole of its usefulness.
+BOUND_SENTENCE = {
+    "upper_bound": ("at most ", ", and possibly less"),
+    "lower_bound": ("at least ", ", and possibly more"),
+}
+
 COMPLETENESS_PROSE = {
     "known": "",
-    "upper_bound": "an upper bound",
-    "lower_bound": "a lower bound",
-    "cannot_tell": "not answerable from the data",
+    "upper_bound": "at most this, and possibly less",
+    "lower_bound": "at least this, and possibly more",
+    "cannot_tell": "not enough data to say",
     # NARROWED with the recovery split. This state is reached only by
     # `wait_out_days`, and what an empty supplier list rules out is the waiting,
     # not the recovering: the resourcing chain is precisely the path such a part
     # still has, and it is reported beside this.
-    "no_recovery_path": "undefined because there is nobody to wait on",
-    "not_applicable": "not applicable to this part",
+    "no_recovery_path": "not a number: there is no supplier to wait for",
+    "not_applicable": "not a question that applies to this part",
 }
 
 VERDICT_PROSE = {
-    "single_source": "one qualified supplier",
-    "single_source_no_lead_time": "one qualified supplier, no lead time on file",
-    "multi_source": "more than one qualified supplier",
-    "multi_source_no_lead_times": "several suppliers, none with a lead time",
-    "hidden_single_source": "several suppliers on paper, only one quotable",
-    "no_qualified_supplier": "no qualified supplier, and the list was checked",
-    "supplier_list_unknown": "supplier list unconfirmed",
+    "single_source": "one supplier",
+    "single_source_no_lead_time": "one supplier, and no lead time on file",
+    "multi_source": "more than one supplier",
+    "multi_source_no_lead_times":
+        "several suppliers, and no lead time on file for any of them",
+    "hidden_single_source":
+        "several suppliers listed, only one can actually quote",
+    "no_qualified_supplier":
+        "no supplier on file, and somebody checked the list",
+    "supplier_list_unknown": "nobody has confirmed the supplier list",
     "made_in_house": "made in-house",
-    "readings_disagree": "two defensible readings that disagree",
+    "readings_disagree": "the data supports two different readings",
 }
 
 STATUS_PROSE = {
@@ -88,20 +120,57 @@ def _sentence_case(text):
     return text[:1].upper() + text[1:] if text else text
 
 
-def describe_verdict(verdict):
+def describe_verdict(verdict, with_code=False):
     """Plain words for a verdict, falling back to the code itself.
 
     An unmapped verdict renders as its raw code rather than as a guess. Silence
     is recoverable; a wrong sentence in a review interface is not.
+
+    `with_code` IS OFF BY DEFAULT AND ON FOR THE DUAL READINGS, which is a
+    distinction about who is reading. A planner working the exposure list does
+    not need "(hidden_single_source)" after the sentence that already says
+    several suppliers are listed and only one can quote; the code is noise that
+    survives every reading. A reviewer resolving a merge is comparing two
+    readings AS readings, and the code is the key those readings join on in the
+    verdict table, so dropping it there would take away the thing being
+    compared.
     """
     if not verdict:
         return ""
     prose = VERDICT_PROSE.get(verdict)
-    return f"{prose} ({verdict})" if prose else verdict
+    if not prose:
+        return verdict
+    return f"{prose} ({verdict})" if with_code else prose
+
+
+def display_subject(subject):
+    """An internal key, spelled the way a person reads it.
+
+    THE KEY IS NEVER REWRITTEN, ONLY PRESENTED. `south_asia` is the identity a
+    cluster is decided against and every row of the decision log joins on that
+    exact string; changing it to make a sentence read well would fork the audit
+    trail from the thing it audits. So this is the last step before paint and
+    nothing downstream of it is stored.
+
+    THE TEST IS AN UNDERSCORE, deliberately narrow. Cluster subjects are either
+    a region key, which is snake_case, or a supplier name as spelled in the
+    file, which carries spaces and its own capitals. Title-casing anything
+    lowercase would rewrite a supplier called `acme`, and a supplier name as
+    spelled IS evidence: the dataset deliberately contains `calder corporation`
+    lowercase, and tidying it would hide the messiness the matcher exists to
+    survive. An underscore does not appear in a supplier name, so it is the one
+    signal that separates a key from a name.
+
+    Closes a real defect: `north_america`, `SOUTH_ASIA` and `south_asia` all
+    appeared on screen, which reads as three different places.
+    """
+    if "_" not in subject:
+        return subject
+    return " ".join(word.capitalize() for word in subject.split("_"))
 
 
 def _subject_clause(event):
-    return f"{event.sku_id}"
+    return display_subject(event.sku_id)
 
 
 def _strings_clause(evidence):
@@ -127,10 +196,11 @@ def _readings_clause(evidence):
     if not (merged and apart):
         return ""
     if merged == apart:
-        return (f"both readings agree on {describe_verdict(merged)}")
+        return (f"both readings agree on "
+                f"{describe_verdict(merged, with_code=True)}")
     return (f"treated as one supplier the part is "
-            f"{describe_verdict(merged)}; treated as two it is "
-            f"{describe_verdict(apart)}")
+            f"{describe_verdict(merged, with_code=True)}; treated as two it is "
+            f"{describe_verdict(apart, with_code=True)}")
 
 
 def _make_readings_clause(evidence):
@@ -145,9 +215,10 @@ def _make_readings_clause(evidence):
     stale, dual = evidence.get("stale_flag"), evidence.get("dual_mode")
     if not (stale and dual):
         return ""
-    return (f"read as a stale make flag the part is {describe_verdict(stale)}; "
-            f"read as genuine in-house capability alongside its suppliers it is "
-            f"{describe_verdict(dual)}")
+    return (f"read as a stale make flag the part is "
+            f"{describe_verdict(stale, with_code=True)}; read as genuine "
+            f"in-house capability alongside its suppliers it is "
+            f"{describe_verdict(dual, with_code=True)}")
 
 
 def _decision_clause(event):
@@ -184,7 +255,12 @@ def _outcome_clause(evidence):
     resulting = evidence.get("resulting_verdict")
     if not resulting:
         return ""
-    return f"the verdict now stands at {describe_verdict(resulting)}"
+    # WITH THE CODE. This clause appears on a human decision record, which is a
+    # governance artefact: the code is the key a later reader joins on to find
+    # what the verdict table said, and the person reading a decision log is the
+    # person who needs it.
+    return (f"the verdict now stands at "
+            f"{describe_verdict(resulting, with_code=True)}")
 
 
 def _dimension_clause(event, evidence):
@@ -208,9 +284,14 @@ def _dimension_clause(event, evidence):
         unit = evidence.get("unit", "")
         measure = f"{event.value} {unit}" if unit and unit != "categorical" \
             else f"{event.value}"
-        sentence = f"{event.sku_id}: {name} is {measure}"
-        if qualifier:
-            sentence += f", {qualifier}"
+        bound = BOUND_SENTENCE.get(completeness)
+        if bound:
+            prefix, suffix = bound
+            sentence = f"{event.sku_id}: {name} is {prefix}{measure}{suffix}"
+        else:
+            sentence = f"{event.sku_id}: {name} is {measure}"
+            if qualifier:
+                sentence += f", {qualifier}"
 
     reasons = evidence.get("reasons") or []
     if reasons:
@@ -238,10 +319,10 @@ def _cluster_clause(event, evidence):
     listing = ", ".join(members)
 
     if event.kind == KIND_CLUSTER_CONTINGENT:
-        opening = (f"{event.sku_id}: {len(members)} exposed parts would {verb} "
+        opening = (f"{display_subject(event.sku_id)}: {len(members)} exposed parts would {verb} "
                    f"only if an unresolved supplier name merge is confirmed")
     else:
-        opening = f"{event.sku_id}: {len(members)} exposed parts {verb}"
+        opening = (f"{display_subject(event.sku_id)}: {len(members)} exposed parts {verb}")
     if listing:
         opening += f" ({listing})"
 
@@ -261,12 +342,21 @@ def _cluster_clause(event, evidence):
 # THE ONLY PLACE ROUNDING HAPPENS. Quantities stay exact Fractions from stage 2
 # to here, so nothing accumulates drift across a three-level explosion.
 def _measure(value):
+    """A figure, rounded once and grouped for reading.
+
+    THOUSANDS SEPARATORS, because "stops 16500 finished units a year" makes a
+    reader count digits and the tile beside it already says 16,500. Applied to
+    whole numbers only: a rounded decimal is short enough to read and grouping
+    it would introduce a second convention for one digit of gain.
+    """
     if isinstance(value, list) and len(value) == 2 and all(
             isinstance(part, int) for part in value):
         numerator, denominator = value
         if denominator == 1:
-            return str(numerator)
+            return f"{numerator:,}"
         return f"{numerator / denominator:.1f}"
+    if isinstance(value, int) and not isinstance(value, bool):
+        return f"{value:,}"
     return str(value)
 
 
@@ -281,35 +371,40 @@ BOUND_WORDS = {
 
 RANKED_CLAUSE = {
     "wait_out_days": "{measure} days quoted lead time",
-    "resource_days": "{prefix}{measure} days to resource",
-    "buffer_cover": "{prefix}{measure} days of cover",
-    "blast_radius": "blocks {prefix}{measure} finished good units",
-    "portability": "{measure}-owned tooling",
-    "concentration": "correlated with {measure} other exposed parts",
+    "resource_days": "{prefix}{measure} days to approve a new supplier",
+    "buffer_cover": "{prefix}{measure} days of stock left",
+    "blast_radius": "stops {prefix}{measure} finished units a year",
+    "portability": "tooling owned by the {measure}",
+    "concentration":
+        "shares a supplier or region with {measure} other exposed parts",
 }
 
 RANKED_ABSENT = {
     "wait_out_days": {
-        "cannot_tell": "no quotable lead time on file",
+        "cannot_tell": "no lead time on file for any supplier",
         # NOT "no recovery path at all" any more, and the narrowing is the
         # point. Nobody to buy from is a statement about the wait-it-out path
         # only; the resourcing path is exactly what such a part still has, and
         # the clause beside this one now says how long it takes.
-        "no_recovery_path": "nobody to wait on: the supplier list is empty",
-        "not_applicable": "made in-house, so no purchase lead time",
+        "no_recovery_path":
+            "no supplier on file to wait for: somebody checked the list",
+        "not_applicable": "made in-house, so there is nothing to order",
     },
     "resource_days": {
-        "cannot_tell": "no stage of the resourcing chain is timed",
+        "cannot_tell":
+            "nobody has timed what approving a new supplier would take",
     },
     "buffer_cover": {
-        "cannot_tell": "no on-hand record, so cover is unknown",
+        "cannot_tell":
+            "no stock count on file, so we cannot say how long stock lasts",
     },
     "portability": {
-        "cannot_tell": "no tooling owner recorded",
+        "cannot_tell": "no tooling owner on file",
     },
     "concentration": {
-        "cannot_tell": "correlation depends on an unresolved supplier merge",
-        "not_applicable": "nobody to be correlated with",
+        "cannot_tell":
+            "depends on two supplier names nobody has confirmed are the same",
+        "not_applicable": "no other parts to share a supplier or region with",
     },
 }
 
@@ -364,17 +459,19 @@ def _resource_clause(clause, value):
     """
     detail = clause.get("detail") or {}
     prefix = BOUND_WORDS.get(clause.get("completeness", ""), "")
-    text = f"{prefix}{_measure(value)} days to resource"
+    text = f"{prefix}{_measure(value)} days to approve a new supplier"
     untimed = detail.get("stages_untimed") or ()
     if untimed:
         count = len(untimed)
-        text += f" with {count} stage{'' if count == 1 else 's'} untimed"
+        step = "step" if count == 1 else "steps"
+        text += f", with {count} {step} nobody has timed"
     retry = detail.get("with_retry_days")
     cycles = detail.get("qualification_cycles")
     if retry is not None and cycles:
-        text += f" ({_measure(retry)} over {cycles} qualification cycles)"
+        text += (f" ({_measure(retry)} days if approval takes "
+                 f"{cycles} attempts)")
     elif cycles is None:
-        text += " (one qualification pass; no cycle count on file)"
+        text += " (counting one attempt, because nobody said how many to plan)"
     return text
 
 
@@ -398,7 +495,10 @@ def _ranked_clause(clause):
         quoted, p95 = detail.get("quoted_days"), detail.get("p95_days")
         if quoted is None:
             return ""
-        return f"{quoted} days quoted lead time ({p95} at p95)"
+        # "p95" IS A STATISTICIAN'S WORD. A planner reading this once needs to
+        # know the second figure is the bad case, not which percentile it sits
+        # at; the percentile is in the evidence panel for anybody who wants it.
+        return f"{quoted} days quoted lead time, {p95} days at worst"
     if dimension == "resource_days":
         return _resource_clause(clause, value)
     if dimension == "buffer_cover" and value == "unbounded":
@@ -416,7 +516,7 @@ def _ranked_clause(clause):
 
 
 def _ranked_sentence(event, evidence):
-    parts = [f"{event.sku_id}: "
+    parts = [f"{display_subject(event.sku_id)}: "
              f"{describe_verdict(evidence.get('verdict', ''))}"]
     for clause in evidence.get("clauses", []):
         rendered = _ranked_clause(clause)
@@ -426,7 +526,10 @@ def _ranked_sentence(event, evidence):
 
     names = evidence.get("archetypes") or []
     if names:
-        sentence += (" This matches " + ", ".join(names) + ".")
+        # "FLAGGED AS", NOT "THIS MATCHES". The pattern names are now short
+        # descriptions rather than coined terms, and "this matches one supplier,
+        # and they own the tooling" reads as a sentence that lost its verb.
+        sentence += (" Flagged as: " + "; ".join(names) + ".")
     return sentence
 
 
@@ -564,22 +667,33 @@ def decision_panel_count(recorded, outstanding):
 
 
 FIELD_PROSE = {
-    "on_hand_units": "an on-hand count",
-    "tooling_owner": "a tooling owner",
-    "verdict": "a confirmed supplier list",
-    "concentration": "a resolved supplier name merge",
-    "wait_out_days": "a lead time record",
-    "resource_days": "a timed resourcing chain",
+    "on_hand_units": "a stock count",
+    "tooling_owner": "who owns the tooling",
+    "verdict": "confirmation that the supplier list is complete",
+    "concentration": "confirmation that two supplier names are the same firm",
+    "wait_out_days": "a lead time",
+    "resource_days": "how long approving a new supplier takes",
 }
 
+# THE PATTERN NAMES, SPELLED AS WHAT THEY ARE. "The resourcing trap" is a term
+# of art this tool invented, and a reader meeting it for the first time has to
+# be told what it means somewhere else. Each name now carries its own
+# definition, which costs a few words per row and saves a glossary.
+#
+# KEPT IN STEP WITH `archetypes.py` BY HAND, and a test asserts the two agree:
+# the catalogue owns the label a surface renders and this owns the label a
+# sentence renders, and a reader seeing one name on a row and another in the
+# sentence about that row has found a bug rather than a synonym.
 ARCHETYPE_PROSE = {
-    "resourcing_trap": "the resourcing trap",
-    "correlated_resourcing_trap": "the correlated resourcing trap",
-    "counted_empty_single_source": "single source, counted empty",
-    "no_quotable_single_source": "single source, nobody quoting",
-    "nobody_to_call": "nobody to call",
-    "headline_exposure": "single source, long lead, thin cover, supplier tooling",
-    "long_lead_single_source": "single source on a long lead time",
+    "resourcing_trap": "one supplier, supplier-owned tooling",
+    "correlated_resourcing_trap":
+        "one supplier, supplier-owned tooling, shared with other parts",
+    "counted_empty_single_source": "one supplier, no stock left",
+    "no_quotable_single_source": "one supplier, nobody quoting",
+    "nobody_to_call": "no supplier on file",
+    "headline_exposure":
+        "one supplier, long lead, low stock, supplier-owned tooling",
+    "long_lead_single_source": "one supplier, long lead",
 }
 
 
@@ -590,28 +704,29 @@ def render_field_request(field_name, part_count, archetype_names):
     Nothing here imputes: the sentence describes a question, not a forecast.
     """
     described = FIELD_PROSE.get(field_name, field_name)
-    patterns = ", ".join(ARCHETYPE_PROSE.get(name, name)
+    patterns = "; ".join(ARCHETYPE_PROSE.get(name, name)
                          for name in archetype_names)
     plural = "part" if part_count == 1 else "parts"
-    return (f"Fetching {described} for {part_count} {plural} would settle "
-            f"whether they match {patterns}.")
+    return (f"Getting {described} for {part_count} {plural} would settle "
+            f"whether they are: {patterns}.")
 
 
 COVERAGE_PROSE = {
     "unplaceable": (
-        "{count} parts have an unconfirmed or unresolved supplier list, so they "
-        "could belong to any cluster here and every membership count on this "
-        "page is a lower bound."),
+        "Nobody has confirmed the supplier list for {count} parts, so any of "
+        "them could belong to the groups on this page. Every count here is "
+        "therefore a floor: the real number can only be higher."),
     "not_applicable": (
-        "{count} parts are not applicable for {dimension}, meaning the question "
-        "does not attach to them rather than that the answer is no."),
+        "{count} parts are not scored on {dimension}. The question does not "
+        "apply to them, which is not the same as the answer being no."),
     "no_thresholds": (
-        "Magnitude archetypes are off. No threshold is set for long lead or "
-        "thin cover, and the system will not choose one. Set them in "
-        "config/archetypes.yaml, where the number is owned and versioned."),
+        "Nobody has said what counts as a long lead time or as thin stock, so "
+        "this tool will not say it either. Set the numbers in "
+        "config/archetypes.yaml, where they carry the name of whoever set "
+        "them."),
     "catalogue": (
-        "Which conjunctions are worth naming is a modelling judgment, so the "
-        "catalogue is confirmed once here rather than once per part."),
+        "Which combinations are worth naming is a judgment, so it is agreed "
+        "once here rather than once for every part."),
 }
 
 

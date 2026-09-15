@@ -406,7 +406,8 @@ class TestExposureSurface(unittest.TestCase):
 
     def test_the_coverage_panel_reports_the_disabled_thresholds(self):
         rendered = text_of(self.app)
-        self.assertIn("Magnitude archetypes are off", rendered)
+        self.assertIn("Nobody has said what counts as a long lead time",
+                      rendered)
         self.assertIn("config/archetypes.yaml", rendered)
 
     def test_the_disabled_threshold_notice_is_not_phrased_as_a_failure(self):
@@ -562,8 +563,13 @@ class TestFindOutSurface(unittest.TestCase):
         surface(app, "find_out")
         cls.app = app
 
-    def test_it_asks_what_to_go_and_find_out(self):
-        self.assertIn("What should I go and find out?", text_of(self.app))
+    def test_it_asks_what_to_check_next(self):
+        # READ FROM THE MODEL rather than retyped. A question spelled in the
+        # painter and again in the test is two copies, and the plain-language
+        # pass moved one of them.
+        from src.interface import model as view
+        self.assertIn(view.SURFACE_QUESTION[view.FIND_OUT],
+                      text_of(self.app))
 
     def test_the_row_is_a_field_not_a_part(self):
         self.assertIn("One row per field to fetch, not per part",
@@ -594,7 +600,9 @@ class TestConfirmSurface(unittest.TestCase):
         cls.app = app
 
     def test_it_asks_whether_the_reviewer_agrees(self):
-        self.assertIn("Do I agree with your model?", text_of(self.app))
+        from src.interface import model as view
+        self.assertIn(view.SURFACE_QUESTION[view.CONFIRM],
+                      text_of(self.app))
 
     def test_it_says_the_system_will_not_decide_these_alone(self):
         self.assertIn("will not make alone", text_of(self.app))

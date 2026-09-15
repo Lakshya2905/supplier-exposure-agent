@@ -1072,7 +1072,11 @@ def render_dashboard(result):
     rule that did not move: every chart draws ONE dimension in ONE unit, and
     nothing here puts two dimensions on one axis.
     """
-    st.title("Dashboard")
+    # READ FROM THE MODEL, so the nav label and the page title cannot
+    # disagree. They did: the nav said "Overview" and the title said
+    # "Dashboard", and every rendered-page check timed out waiting for a
+    # heading that the button it had just clicked did not lead to.
+    st.title(view.OVERVIEW_TITLE)
     st.caption("An overview. Every decision is made on the other three "
                "surfaces, which this page links to and does not replace.")
 
@@ -1234,7 +1238,7 @@ def render_dimension_multiples(result):
                         f"{item.unknown} results say so rather than reporting "
                         f"a number nobody supplied.")
                 note(f"unit: {item.unit}. {item.assessed} assessed, "
-                     f"{item.unknown} not established.")
+                     f"{item.unknown} not enough data to say.")
 
 
 def dimension_figure(item):
@@ -1605,12 +1609,13 @@ def region_filter(result, parts):
                   f"hidden by this filter.")
 
 
-NAV_NAME = {DASHBOARD: "Dashboard", view.EXPOSURE: "Exposure",
-            view.FIND_OUT: "Find out", view.CONFIRM: "Confirm"}
-NAV_SUBTITLE = {DASHBOARD: "the shape of the whole set",
-                view.EXPOSURE: "what is worst",
-                view.FIND_OUT: "what should I go and get",
-                view.CONFIRM: "do I agree with your model"}
+# READ FROM THE MODEL, NEVER RETYPED. A nav label spelled here and a page title
+# spelled there is two copies of one name, and the first rewording moves one of
+# them. See `model.OVERVIEW_TITLE`.
+NAV_NAME = {DASHBOARD: view.OVERVIEW_TITLE,
+            **{key: view.SURFACE_TITLE[key] for key in view.SURFACES}}
+NAV_SUBTITLE = {DASHBOARD: view.OVERVIEW_SUBTITLE,
+                **{key: view.SURFACE_SUBTITLE[key] for key in view.SURFACES}}
 
 
 def main():
