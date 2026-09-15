@@ -30,7 +30,8 @@ import { labelFor } from '@/lib/labels';
 import {
   boundIsTrivial, formatNumber, isUnbounded, toNumber,
 } from '@/lib/measure';
-import type { DimensionScore, Row } from '@/lib/types';
+import { exposedRows } from '@/lib/exposed';
+import type { DimensionScore } from '@/lib/types';
 
 const HEADERS = [
   { key: 'part', header: 'Part' },
@@ -65,20 +66,10 @@ export default function Exposure() {
 
   const rows = useMemo(() => {
     if (!result) return [];
-    const parts: Array<Row & { archetypes: string[] }> = [];
-    const seen = new Map<string, Row & { archetypes: string[] }>();
-    for (const layer of result.surfaces.exposure.layers) {
-      for (const group of layer) {
-        for (const row of group.rows) {
-          const already = seen.get(row.key);
-          if (already) { already.archetypes.push(group.label); continue; }
-          const entry = { ...row, archetypes: [group.label] };
-          seen.set(row.key, entry);
-          parts.push(entry);
-        }
-      }
-    }
-    return parts.map((row) => {
+    // SHARED WITH THE PRINTED SUMMARY. See `lib/exposed.ts`: a part appears in
+    // every group it matches, and the copy of this walk that lived in the
+    // summary forgot to de-duplicate.
+    return exposedRows(result.surfaces.exposure).map((row) => {
       const scores = result.profiles[row.key] ?? {};
       const supplier = row.evidence?.supplier_rows?.[0] as
         Record<string, string> | undefined;
