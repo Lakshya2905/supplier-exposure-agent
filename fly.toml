@@ -1,0 +1,43 @@
+# Fly.io config for the scoring API. `fly launch --no-deploy` then `fly deploy`.
+#
+# The frontend is not here; it is on Vercel from `web/`.
+
+app = "supplier-exposure-api"
+primary_region = "lhr"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  # Both are written at request time and both live on the volume below.
+  SEA_RUNS_DIR = "/data/runs"
+  SEA_DECISIONS_DIR = "/data/decisions"
+  PORT = "8000"
+
+# SEA_API_KEY is a secret and is NOT here. Set it once with:
+#   fly secrets set SEA_API_KEY="$(openssl rand -hex 32)"
+# then copy the same value into the Vercel project as SEA_API_KEY. A key
+# committed to a repository is not a key.
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+
+  # NOT ZERO. Fly's default scales a machine to zero when idle, which is the
+  # sleeping-backend behaviour this project moved off Streamlit to escape: the
+  # first visitor after a quiet hour waits for a cold start, and a link that is
+  # slow the first time is a link people stop clicking.
+  auto_stop_machines = false
+  min_machines_running = 1
+
+  [http_service.checks]
+    [[http_service.checks.http]]
+      path = "/api/health"
+      interval = "30s"
+      timeout = "5s"
+
+# A decision log that resets when a machine restarts is the defect
+# `governance/store.py` was written to close, one layer out.
+[[mounts]]
+  source = "sea_data"
+  destination = "/data"

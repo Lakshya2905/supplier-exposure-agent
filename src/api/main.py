@@ -15,12 +15,13 @@ because it is enforced one layer down, which is where a test can reach it.
 RE-SCORED, NEVER REPLAYED. `GET /api/run/{id}` scores the stored inputs again
 rather than returning a saved payload. See `runs.py` for why.
 """
+import os
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel
@@ -57,7 +58,66 @@ BUILT_IN = {
 }
 DEFAULT_DATASET = "demo"
 
+# ------------------------------------------------------------------- auth --
+# A SHARED SECRET, AND ONLY IF SOMEBODY SETS ONE. Unset, every endpoint is open,
+# which is what a developer on their own machine wants and what every test here
+# runs against. Set, every endpoint except the health check requires it.
+#
+# WHY ANY AT ALL, when the README said this system has none and is not built to
+# have any. That was true of the Streamlit dashboard, which reads a committed
+# demo dataset and writes nothing a stranger can reach. It stopped being true
+# the moment a backend with a decision log and an upload path went on a public
+# address: the audit trail is the thing this product asks to be trusted for, and
+# an open write path lets anybody put a name and a judgment into it.
+#
+# WHAT THIS IS NOT. There are no accounts, no sessions and no roles, and it does
+# not identify anybody: `decided_by` is still whatever the reviewer typed, and
+# the key says only that the request came from a deployment that holds it. A
+# tool whose autonomy claims rest on a named human confirming things eventually
+# needs to know which human, and that is a different piece of work with a
+# different design; this is the lock on the door, not the register at reception.
+#
+# IT CANNOT LIVE IN THE BROWSER. A static frontend ships its environment to
+# every visitor, so a key inlined there is not a secret. The Next.js proxy in
+# `web/app/api/[...path]/route.ts` holds it server-side and the browser never
+# sees it.
+API_KEY_ENV = "SEA_API_KEY"
+API_KEY_HEADER = "X-API-Key"
+
+# Open whatever the key says, because a liveness probe that needs a credential
+# is a liveness probe that reports down when the credential is wrong.
+ALWAYS_OPEN = ("/api/health",)
+
+
+def _configured_key():
+    return (os.environ.get(API_KEY_ENV) or "").strip()
+
+
 app = FastAPI(title="Supplier Exposure Agent", version="2.0")
+
+
+@app.middleware("http")
+async def require_key(request, call_next):
+    """The whole API, or nothing, and never a partial rule.
+
+    Read endpoints could be left open: this dataset is synthetic and nothing in
+    it is a secret. They are not, because "which endpoints are safe to expose"
+    is a judgment that has to be remade every time one is added, and the one
+    added in a hurry is the one nobody remakes it for. One rule with one
+    exception is a rule somebody can hold in their head.
+    """
+    expected = _configured_key()
+    path = request.url.path
+    if (not expected or path in ALWAYS_OPEN
+            or request.method == "OPTIONS"):       # CORS preflight carries no
+        return await call_next(request)            # headers to check
+    if request.headers.get(API_KEY_HEADER, "") != expected:
+        return JSONResponse(status_code=401, content={"detail": {
+            "error": "this deployment requires an API key",
+            "fix": f"Send it as the {API_KEY_HEADER} header. A browser cannot "
+                   f"hold one: a static frontend ships its environment to every "
+                   f"visitor, so the key belongs in a server-side proxy."}})
+    return await call_next(request)
 
 # The frontend is served from a different origin in every environment this will
 # run in. Kept to GET and POST, which is every verb this API has: there is no
@@ -450,5 +510,8 @@ def health():
     """For the host's liveness check. Says which datasets it can actually see,
     because a container that is up and has no data is not healthy."""
     return {"status": "ok",
+            # Whether a key is required, never the key. A client that knows it
+            # needs one before it is refused can say so in its own words.
+            "requires_api_key": bool(_configured_key()),
             "datasets": sorted(name for name, path in BUILT_IN.items()
                                if (path / "bom.csv").exists())}
