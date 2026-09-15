@@ -30,25 +30,22 @@ from .. import changes as diff
 from .. import governance as gov
 from .. import criticality as crit
 from .. import scoring
+from .. import readers
 from ..governance import store
 from ..governance.render import VERDICT_PROSE
 from ..interface import actions
 from ..interface import dashboard as dash
 from ..interface import model as view
 from ..pipeline import DEMO_DIR, WORKING_DIR, run, surfaces
-from ..commitments import COMMITMENTS_FILE
-from ..recovery import RECOVERY_INPUTS_FILE
-from ..subtier import SUB_TIER_FILE
+from .. import contract
 from . import runs
 from .encode import encode
 
-# The files a run is scored from. `recovery_inputs.csv` is optional and the rest
-# are not, and that distinction is the reader's to enforce rather than this
-# file's: `pipeline.run` opens each one and fails on a missing required file.
-# Named here so an upload can be checked against a list somebody can read.
-REQUIRED_FILES = ("bom.csv", "part_master.csv", "demand_plan.csv",
-                  "suppliers.csv", "lead_times.csv", "sources.csv")
-OPTIONAL_FILES = (RECOVERY_INPUTS_FILE, COMMITMENTS_FILE, SUB_TIER_FILE)
+# READ FROM THE CONTRACT, never retyped. Which files are required is stated once
+# in `contract.py` beside what each one holds, and a second list here would be a
+# second place for it to be wrong.
+REQUIRED_FILES = contract.REQUIRED_FILES
+OPTIONAL_FILES = contract.OPTIONAL_FILES
 
 # Datasets already in this repository, by name. A caller naming one of these
 # gets it scored without uploading anything, which is what lets a cold frontend
@@ -173,6 +170,10 @@ def score_payload(result, record):
         "unplaceable_parts": encode(result.report.unplaceable_parts),
         "extracts": encode(result.extracts),
         "dimensions": list(scoring.DIMENSIONS),
+        # Empty on a dataset this repository ships; filled by an upload whose
+        # contract check raised a notice. Declared here so the key always exists
+        # and a client never has to test for its presence.
+        "notices": [],
         # NULL WHEN NOBODY HAS SET ONE, and the interface says so rather than
         # rendering a band nobody owns. The system ships with every threshold
         # commented out on purpose: out of the box it can name the resourcing
@@ -239,17 +240,26 @@ async def score(files: list[UploadFile] = None, dataset: str = Form(None),
             for upload in files:
                 name = Path(upload.filename).name
                 (staging / name).write_bytes(await upload.read())
-            missing = [name for name in REQUIRED_FILES
-                       if not (staging / name).exists()]
-            if missing:
+            # THE WHOLE CONTRACT, BEFORE ANYTHING IS STORED OR SCORED. An
+            # upload that fails it is not written to a run directory: a run is
+            # its inputs, and inputs this system refuses to read are not a run.
+            report = readers.validate(staging)
+            if not report.ok:
                 raise HTTPException(status_code=422, detail={
-                    "error": "required files are missing from the upload",
-                    "missing": missing,
+                    "error": "this extract does not match the input contract, "
+                             "so it was not scored",
+                    "problems": [p.sentence() for p in report.problems],
+                    "notices": [n.sentence() for n in report.notices],
                     "required": list(REQUIRED_FILES),
                     "optional": list(OPTIONAL_FILES)})
             record = runs.record_run(staging, dataset or "uploaded")
-            return _scored(Path(record["data_dir"]), record,
-                           _labels(criticality))
+            payload = _scored(Path(record["data_dir"]), record,
+                              _labels(criticality))
+            # NOTICES SURVIVE A SUCCESSFUL RUN. A column this system ignored is
+            # exactly the thing a user believes was accounted for, and the only
+            # moment they will read about it is the run that succeeded.
+            payload["notices"] = [n.sentence() for n in report.notices]
+            return payload
 
     name = dataset or DEFAULT_DATASET
     if name not in BUILT_IN:

@@ -583,6 +583,8 @@ are ever treated as though they were.
 
 | directory | rule |
 |---|---|
+| `template/` | **empty files with the correct headers**, generated from `src/contract.py` so they cannot drift from the validator. Copy it. |
+| `sample/` | **a labelled worked example**, small enough to read, with all three optional files filled in. It carries no answer key and nothing grades against it. |
 | `evals/` | **frozen and gated.** Inputs and the answer key, committed in one commit under a manifest, never regenerated. Correctness is measured against this and nothing else. |
 | `data/` | **gitignored and regenerated** from the documented seed. What a developer and CI work against. |
 | `demo/` | **committed, display only.** Generated from the same seed and committed so a cold container has something to render on first page load. Never read by the harness or by any test. |
@@ -724,6 +726,102 @@ subtraction would undo:
 The surface groups changes into *worse*, *no verdict*, *better* and *scope
 changed*. Those are four different instructions, not a ranking — and the *no
 verdict* group is the one a diff usually drops.
+
+---
+
+---
+
+## Run this on your own data
+
+One page. No theory.
+
+### 1. Copy the template
+
+`template/` is nine empty files with the correct headers. Six are required and
+three are optional; delete an optional file you have nothing for rather than
+shipping it empty, because an empty order book and no order book are different
+facts here.
+
+| file | typically comes from | holds |
+|---|---|---|
+| `bom.csv` | PLM or ERP bill of materials | one row per parent-child edge |
+| `part_master.csv` | ERP part master | one row per part |
+| `suppliers.csv` | ERP approved vendor list | one row per qualified supplier of a part |
+| `lead_times.csv` | quote history or the AVL | one row per supplier who can quote |
+| `demand_plan.csv` | S&OP or the production plan | annual units per finished good |
+| `sources.csv` | you, by hand | which system each file came out of and when |
+| `recovery_inputs.csv` | NPI or sourcing, optional | how long approving a new supplier takes |
+| `commitments.csv` | the order book, optional | units already promised |
+| `sub_tier_sources.csv` | supplier declarations, optional | where a supplier buys the critical input |
+
+`sample/` is the same nine files filled in, small enough to read, with a README
+saying what every row demonstrates. Read that before filling in yours.
+
+### 2. Three things that will bite you
+
+**A blank is not a zero.** In `on_hand_units`, blank means nobody has counted and
+`0` means somebody counted and found none. The first abstains, the second is the
+worst cover in the dataset. Do not fill blanks with zeros to tidy the file.
+
+**Units are part of the contract.** `quoted_lead_time_days` is calendar days. If
+your system holds weeks, **convert the values** — renaming the header would score
+every lead time at a seventh of its length and nothing would say so. The
+validator catches this one by name.
+
+**A finished good missing from `demand_plan.csv` is load-bearing.** It makes
+usage *partial* rather than zero, which is what turns cover into an upper bound
+and blocked units into a lower one.
+
+### 3. Score it
+
+Upload through **Data and coverage → Score your own extract**, or:
+
+```bash
+curl -X POST http://localhost:8000/api/score \
+  -F "dataset=March extract" \
+  -F "files=@bom.csv" -F "files=@part_master.csv" \
+  -F "files=@suppliers.csv" -F "files=@lead_times.csv" \
+  -F "files=@demand_plan.csv" -F "files=@sources.csv"
+```
+
+**It will refuse the first attempt, and the refusal is the useful part.** Every
+problem names the file, the column, the row where there is one, and what the
+column should contain:
+
+```
+lead_times.csv, column 'quoted_lead_time_days': this file offers
+'quoted_lead_time_weeks', which is the same measure in a different unit. This
+system reads 'quoted_lead_time_days', in days: the quoted purchase lead time, in
+calendar days. Convert the values; renaming the header alone would score weeks
+as days.
+```
+
+Nothing is coerced and no default is inferred. A column this system does not read
+is reported as **ignored** rather than dropped silently, because a column you
+added expecting it to be used is exactly the one you will assume was counted.
+
+### 4. What comes out
+
+Five surfaces. **Overview** is the shape of the set and decides nothing.
+**Exposure** is one row per part with every figure in its own unit. **What to
+check** is one row per *field*, ranked by how many parts one fetch would settle.
+**Review** is the judgments a person has to make. **What changed** compares two
+runs.
+
+Every table exports CSV. The run summary exports PDF, with the provenance and
+the digests on the first page, because a PDF outlives the screen it came from.
+
+### 5. Optional, and worth the hour
+
+- **`criticality` on the part master** scopes a run to the tiers you care about.
+  A twelve-thousand-line BOM is not reviewable line by line, and the tool says
+  out loud which parts it did not examine.
+- **`recovery_inputs.csv`** turns "how long to get a new supplier approved" from
+  *not enough data to say* into a figure with the untimed steps named.
+- **`commitments.csv`** turns "how much of the build stops" into "and this much
+  of it is already promised".
+- **`sub_tier_sources.csv`** finds the correlation nothing else can see: two
+  suppliers, two regions, one mill behind both.
 
 ---
 

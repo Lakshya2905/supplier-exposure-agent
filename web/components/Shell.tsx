@@ -23,6 +23,7 @@ import { useState } from 'react';
 import { PRODUCT_LEAD, PRODUCT_NAME, PRODUCT_TAIL } from '@/lib/labels';
 import { useRun } from './RunProvider';
 import { RunBar } from './RunBar';
+import { RunSummary } from './RunSummary';
 
 const NAV = [
   { href: '/', label: 'Overview', hint: 'the shape of the whole set' },
@@ -131,6 +132,15 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <RunBar />
         <main id="main-content" className="sea-main">{children}</main>
       </div>
+
+      {/* OUTSIDE `.sea-main`, WHICH THE PRINT STYLESHEET HIDES. Nested inside
+          it the summary inherited `display: none` from its parent, computed
+          `display: block` on itself, and printed a blank page: the element was
+          there, the text was there, and the height was zero.
+
+          Out here it is also printable from every surface, which is what a
+          reader hitting Export PDF on the Exposure page means. */}
+      {result && <RunSummary result={result} />}
     </Theme>
   );
 }

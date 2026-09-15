@@ -20,10 +20,11 @@ from .explosion import explode, rows_by_part
 from .identify import identify_all
 from .interface import model as view
 from .commitments import COMMITMENTS_FILE
+from .contract import ContractError
 from .readers import (read_bom, read_commitments, read_demand_plan,
                       read_demand_rows, read_lead_times, read_part_master,
                       read_recovery_inputs, read_sources,
-                      read_sub_tier_sources, read_suppliers)
+                      read_sub_tier_sources, read_suppliers, validate)
 from .recovery import RECOVERY_INPUTS_FILE
 from .subtier import SUB_TIER_FILE, tiers_for
 from .scoring import score_part
@@ -96,7 +97,8 @@ def _dependencies(verdicts, suppliers, lead_times):
     return dict(dependencies)
 
 
-def run(data_dir=None, config_path="config/archetypes.yaml", criticality=None):
+def run(data_dir=None, config_path="config/archetypes.yaml", criticality=None,
+        check_contract=True):
     """Score a dataset, optionally scoped to a set of criticality labels.
 
     `criticality` is a SET OF LABELS to assess, or None for everything. See
@@ -112,6 +114,18 @@ def run(data_dir=None, config_path="config/archetypes.yaml", criticality=None):
     independence, and independence is the reassuring answer.
     """
     data_dir = Path(data_dir) if data_dir is not None else default_data_dir()
+
+    # THE CONTRACT IS CHECKED BEFORE ANYTHING IS READ, and it raises rather than
+    # scoring what it can. A header spelled `parent` instead of `parent_part`
+    # used to surface as `KeyError: 'parent_part'` from inside pandas: the
+    # column name, with no file, no row and no statement of what the column is
+    # for. `check_contract=False` exists for a caller that has already checked,
+    # and for nothing else: it is not a way to score data the contract refuses.
+    if check_contract:
+        report = validate(data_dir)
+        if not report.ok:
+            raise ContractError(report)
+
     edges = read_bom(data_dir / "bom.csv")
     parts = read_part_master(data_dir / "part_master.csv")
     demand = read_demand_plan(data_dir / "demand_plan.csv")

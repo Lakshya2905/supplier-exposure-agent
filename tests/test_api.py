@@ -203,9 +203,61 @@ class TestScoringInputs(unittest.TestCase):
                        "text/csv"))])
         self.assertEqual(response.status_code, 422)
         detail = response.json()["detail"]
-        self.assertIn("part_master.csv", detail["missing"])
-        self.assertNotIn("bom.csv", detail["missing"])
+        said = " ".join(detail["problems"])
+        self.assertIn("part_master.csv", said)
+        self.assertIn("required file is missing", said)
         self.assertIn("recovery_inputs.csv", detail["optional"])
+
+    def test_an_upload_with_a_wrong_unit_is_refused_as_a_wrong_unit(self):
+        """The refusal an enterprise most needs, over the wire.
+
+        Renaming `_weeks` to `_days` makes the file load and scores every lead
+        time at a seventh of its length, silently. The refusal says so.
+        """
+        files = []
+        for path in sorted(FROZEN.glob("*.csv")):
+            raw = path.read_bytes()
+            if path.name == "lead_times.csv":
+                raw = raw.replace(b"quoted_lead_time_days",
+                                  b"quoted_lead_time_weeks", 1)
+            files.append(("files", (path.name, raw, "text/csv")))
+        response = client.post("/api/score", files=files)
+        self.assertEqual(response.status_code, 422)
+        said = " ".join(response.json()["detail"]["problems"])
+        self.assertIn("different unit", said)
+        self.assertIn("renaming the header alone", said)
+
+    def test_a_refused_upload_is_not_recorded_as_a_run(self):
+        """A run is its inputs, and inputs this system refuses are not a run.
+
+        Storing them would put a run id in the history that nothing can ever
+        score, and `GET /api/run/{id}` would answer 200 for a dataset the API
+        had already rejected.
+        """
+        before = len(client.get("/api/runs").json()["runs"])
+        client.post("/api/score", files=[
+            ("files", ("bom.csv", b"nope\n", "text/csv"))])
+        self.assertEqual(len(client.get("/api/runs").json()["runs"]), before)
+
+    def test_an_ignored_column_survives_a_successful_run_as_a_notice(self):
+        """The moment a user will read it is the run that worked.
+
+        A column this system ignored is exactly the thing somebody believes was
+        accounted for, and a notice attached only to failures would never be
+        seen by the person who needs it.
+        """
+        files = []
+        for path in sorted(FROZEN.glob("*.csv")):
+            raw = path.read_bytes()
+            if path.name == "bom.csv":
+                head, rest = raw.split(b"\n", 1)
+                raw = head + b",abc_class\n" + b"\n".join(
+                    line + b"," for line in rest.split(b"\n") if line)
+            files.append(("files", (path.name, raw, "text/csv")))
+        response = client.post("/api/score", files=files)
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertTrue(any("abc_class" in notice
+                            for notice in response.json()["notices"]))
 
     def test_an_upload_is_scored_from_the_bytes_it_was_given(self):
         files = [("files", (path.name, path.read_bytes(), "text/csv"))

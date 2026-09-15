@@ -1,0 +1,9 @@
+# SAMPLE-P-02 has two qualified suppliers and only one that can quote, which is
+# a hidden single source. "Calder Corp" here is "Calder Corporation" in
+# suppliers.csv; the tool reconciles them and shows that it did.
+part_number,supplier_name,quoted_lead_time_days,lead_time_p95_days
+SAMPLE-P-01,Northgate Castings,45,60
+SAMPLE-P-02,Vantage Works,30,40
+SAMPLE-P-05,Northgate Castings,45,60
+SAMPLE-P-06,Pinehurst Tooling,20,28
+SAMPLE-P-07,Calder Corp,90,140

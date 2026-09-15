@@ -47,6 +47,30 @@ def optional_int(text):
     return None if text == "" else int(text)
 
 
+def read_rows(path):
+    """(headers, rows) for the contract checker, as strings and nothing else.
+
+    A SEPARATE ENTRY POINT rather than a reuse of the typed readers, because the
+    contract has to look at a file the typed readers would refuse: that is the
+    whole point of checking it first. Everything comes back as it was written,
+    so the checker sees `'12.5'` and can say it is not a whole number instead of
+    meeting a ValueError from somewhere inside pandas.
+    """
+    frame = _frame(path)
+    return tuple(frame.columns), [dict(row) for _, row in frame.iterrows()]
+
+
+def validate(data_dir):
+    """The whole contract, against a directory. Raises nothing; reports.
+
+    Lives here rather than in `contract` so that module opens no files: it
+    decides what is wrong and this decides how a CSV becomes rows, which is what
+    lets one implementation check an upload and a directory alike.
+    """
+    from .contract import check_dataset
+    return check_dataset(Path(data_dir), read_rows)
+
+
 def read_part_master(path):
     """part_number -> dict, with on_hand_units as int or None.
 
