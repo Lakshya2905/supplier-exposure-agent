@@ -40,13 +40,18 @@ individual finding rather than of the stage that produced it. The same stage
 executes on one part and defers on the next.
 
 **Executes.** BOM explosion, the supplier join, exposure identification, and the
-four per-part scoring dimensions where their inputs are present. Deterministic,
+five per-part scoring dimensions where their inputs are present. Deterministic,
 reproducible, and checkable against the evidence panel. At seed 42, 1021 of the
-1480 dimension results execute, that being 296 scored parts across 5 dimensions.
+1776 dimension results execute, that being 296 scored parts across 6 measures.
 
 **Recommends.** Anything whose answer depends on a judgment a reasonable person
-could make differently. 459 results defer, in two distinct ways: 163 because an
+could make differently. 755 results defer, in two distinct ways: 459 because an
 input is missing, and 296 because concentration carries the ceiling below.
+
+296 of those missing inputs are the whole of `resource_days`, and that is the
+system working rather than failing. No dataset in this repository carries a
+resourcing duration, so the tool says so for every part instead of producing a
+recovery figure that looks complete. See **Recovery is two measures** below.
 
 **Recommends permanently.** Concentration grouping, and the archetype catalogue.
 Correlated exposure can be defined as same supplier, same region, or same tier,
@@ -196,11 +201,149 @@ back in part-number order, and that swapping their values does not move them.
 
 ---
 
+## Recovery is two measures
+
+A program manager read the tool and asked one question: for "how long it would
+take to recover if that source went away", what time and activities does that
+account for? The answer was purchase lead time. His reply is the specification
+for this section:
+
+> Your explanation of recovery time is exactly right, and very difficult to
+> estimate as tooling and qualification can vary significantly by part (and
+> doesn't always go smoothly).
+
+Two claims, and each breaks a different assumption. Varying by part breaks the
+idea that one number covers it. Not always going smoothly breaks the idea that
+even a known part has ONE number, because a failed qualification adds a cycle.
+
+So recovery is two named measures and they are never merged:
+
+| measure | what it answers | where it comes from |
+|---|---|---|
+| `wait_out_days` | how long to sit the disruption out with the source you already have | `lead_times.csv`, quoted and p95 |
+| `resource_days` | how long to bring an alternative source to production | `recovery_inputs.csv`, a chain of stages |
+
+`wait_out_days` is what the tool used to call `lead_time_to_recover`. The name
+was the problem: it promised both halves of the brief's dimension and delivered
+the purchase lead time.
+
+### The chain
+
+`resource_days` sums the stages of actually replacing a source:
+
+| stage | confidence class |
+|---|---|
+| finding and qualifying an alternate source | judgment |
+| tooling dedicated to the part | knowable |
+| engineering transfer of drawings and specs | judgment |
+| first article inspection | judgment |
+| qualification and reliability testing | judgment |
+| ramp to rate | judgment |
+
+**Three confidence classes, kept apart.** A purchase lead time was *reported* by
+somebody with a system of record behind them. A tooling lead time is *knowable*:
+nobody has supplied it, but a toolmaker could. A qualification duration is a
+*judgment*, and no amount of asking turns it into a measurement. The chain keeps
+each class's subtotal separately and names the weakest class it drew on. The
+stages still add, because they happen one after another and elapsed days really
+do add; what is refused is any statistic **across** the classes. A mean of 180
+judgment days and 120 knowable days is 150 days of nothing. The reported class
+never enters the chain at all, because it lives in the other measure.
+
+**A gap makes it a bound, not a number.** An untimed stage is `cannot_tell` for
+that stage and never zero, so the total under-counts by whatever it takes. The
+chain is then a lower bound and the sentence names the stages nobody timed. A
+chain with **no** timed stage is not a bound at all: zero is the trivial lower
+bound of any duration, so it would promise a figure and deliver nothing. That
+case abstains, which is the same repair the renderer already carries for a
+blocked volume that could not be counted.
+
+**The retry is modelled, never assumed.** Where a reviewer supplies how many
+qualification cycles to plan for, the output carries both readings: the days if
+it passes first time and the days across the cycles planned for. Where that
+input is absent the tool does not quietly count one pass; it says the assumption
+is unrecorded and the total is a lower bound for that reason alone. One fixture
+row exists only to prove this: every stage on its path is timed, the cycle count
+is the single thing missing, and the chain is still a bound.
+
+**A cycle count, not a first-pass yield.** Either would have satisfied the ask.
+A yield is a probability, and turning one into a duration needs a model of how
+failures distribute. That model is a judgment, and computing it here would
+attribute it to nobody. A cycle count is the same judgment made by a person who
+owns it, which is where every other threshold in this system lives.
+
+**Tooling stays categorical as well.** `tooling_owner` still feeds `portability`
+unchanged. It additionally decides whether the tooling stage is on the path at
+all: supplier-owned tooling does not come with you, company-owned tooling moves,
+and an unrecorded owner means nobody knows which, so it bounds the total. A
+stage that does not happen and a stage nobody timed both contribute zero days
+and mean opposite things, so they are counted separately and named separately.
+
+### What the split makes sayable
+
+A part with no qualified supplier used to report "no recovery path at all". That
+was true of waiting and false of recovering: an empty supplier list is precisely
+the case where resourcing is the only path there is. The two measures now say so
+in one sentence. The same holds for a part made in-house: you cannot place a
+purchase order on your own factory, so `wait_out_days` is not applicable, but
+you can qualify an outside source for the part it makes, so `resource_days`
+answers. `resource_days` does not take the verdict as an input at all, which is
+the clearest evidence the two were different questions.
+
+### Why cover is not subtracted from recovery
+
+Both are in days, so the obvious next move is `buffer_cover - resource_days` and
+a statement about whether you run out before the replacement arrives. **It is
+deliberately not built, and the reason is not arithmetic tidiness.**
+
+The two quantities carry different uncertainty and subtracting them destroys
+both. Cover is an upper bound wherever demand is partial, and `cannot_tell`
+wherever there is no on-hand record. Recovery is a lower bound wherever a stage
+is untimed, and `cannot_tell` where none is. Subtract a lower bound from an
+upper bound and the error compounds in one direction: the result overstates the
+margin every time, and it does so most for exactly the parts with the least data
+behind them. A number carrying "at most 11 days minus at least 300 days" is not
+a shortfall of 289 days; it is two bounds and an unknown wearing a minus sign.
+
+There is a second objection that would survive even with complete data. Cover
+buys time against the source you have; recovery is what you spend replacing it.
+Comparing them assumes you start resourcing on the day the source fails, which
+is a decision a person makes, not a fact the data contains.
+
+So the tool reports the measures side by side, in the same sentence, in the same
+unit, and leaves the comparison to the reader who knows which of those they are
+doing. **If this position is wrong, the thing to change is the uncertainty
+handling, not the subtraction:** a difference of two bounds could be reported
+honestly as an interval, and that is a different feature from the one this
+declines to build.
+
+### What it still cannot do
+
+The chain is timed **per part, never per candidate alternate source**. How long
+qualification takes depends on which alternative you go to, and nothing in this
+schema represents a candidate source. This is the known gap below, and it is
+unrepresentable in the same way the first one was.
+
+The chain is also **sequential**: it adds stages that overlap in real
+programmes, so it overstates a schedule somebody has already crashed. That error
+does not cancel against the under-count from untimed stages, and neither is
+netted off against the other.
+
+`recovery_inputs.csv` is **not described by `sources.csv`** in any dataset here,
+so its values do not appear in the evidence panel with a system of record and an
+as-of. The workings are still reachable: every stage duration, its class and
+whether it was timed ride on the decision event and are named in the rendered
+sentence. A deployment that supplies the file should add its manifest row too.
+
+---
+
 ## What the system refuses to do
 
-**No composite score.** Five dimensions in four units: days, finished good units,
+**No composite score.** Six measures in four units: days, finished good units,
 parts, and a categorical. There is no total, no overall, no weighted sum, and no
-place to put one.
+place to put one. Three of the six are in days and none of them is added to
+another: a wait-out time, a resourcing time and a cover figure answer three
+different questions, and sharing a unit does not make them one quantity.
 
 **No normalised scale.** This is the half that matters. Twenty-six days and three
 assemblies cannot be added by anybody, but "0.8 lead-time risk" and "0.6 blast
@@ -274,13 +417,26 @@ grouping can see, because the data has no representation of internal capacity at
 all. Made-in-house parts are therefore `NOT_APPLICABLE` for concentration while
 still carrying real correlated risk.
 
-**Lead time to recover does not include qualification time.** The brief defines
-it as how long to qualify an alternative or wait out the disruption. The data
-carries quoted and p95 purchase lead times, so this dimension answers the second
-half only. There is no qualification-lead-time field anywhere in the schema, so
-the first half is not merely uncomputed, it is unrepresentable. A part with a 30
-day purchase lead time whose only supplier needs 40 weeks to qualify a
-replacement scores identically to one that can be resourced in a fortnight.
+**The resourcing chain is timed per part, not per candidate alternate source.**
+How long qualification takes depends on which alternative you go to: a supplier
+already running the process next door and one that has to buy the capability are
+not the same programme. The practitioner's point that qualification varies
+significantly by part is equally a point that it varies by source. Nothing in
+this schema represents a candidate source, so `resource_days` times a generic
+alternative, as though every candidate were interchangeable. A part with one
+near drop-in second source and a part whose only candidate needs a new process
+score identically.
+
+This gap REPLACED one, and the predecessor is worth recording because it is what
+`resource_days` exists to close. It read: "lead time to recover does not include
+qualification time. There is no qualification-lead-time field anywhere in the
+schema, so the first half is not merely uncomputed, it is unrepresentable. A
+part with a 30 day purchase lead time whose only supplier needs 40 weeks to
+qualify a replacement scores identically to one that can be resourced in a
+fortnight." Those two parts now score differently, a test asserts it by name,
+and the durations live in `recovery_inputs.csv`. The gap moved one layer down
+rather than closing: the schema can now say how long qualification takes, and
+still cannot say who it would be with.
 
 **Fractional quantities and units of measure are not supported.** Every
 `qty_per_parent` is a whole number of pieces, so a BOM line of 0.5 metres of
@@ -430,6 +586,18 @@ intended. The sixth is `sources.csv`, the extract manifest: it says which system
 each file came out of and when it was pulled, which is what lets an evidence
 record cite a system of record and an as-of instead of the interface inventing
 one at render time. `tests/fixtures/` is committed and frozen.
+
+A seventh input, `recovery_inputs.csv`, is **optional and absent from every
+dataset here**. It carries the resourcing-chain durations, and no generator in
+this repository writes one: a qualification duration is a judgment, and a
+generator emitting one would be inventing the very input the tool exists to
+report it does not have. Where the file is absent every part reports
+`resource_days` as cannot-tell and names the stages nobody has timed. Individual
+columns are optional too, one at a time, which is what keeps the frozen eval
+inputs readable: they predate the file, and a reader that demanded the new
+columns would make the frozen set unreadable rather than incomplete. The worked
+chains live in the hand-authored fixture `tests/fixtures/tiny_recovery.csv`,
+with the arithmetic in a comment block above the data.
 
 The dashboard has no authentication and is not built to have any.
 

@@ -8,7 +8,10 @@ all but a BOUND: usage that is partially known.
 import pandas as pd
 import pytest
 
+from src import recovery as R
 from src.generate_data import generate
+from src.readers import read_recovery_inputs
+from src.scoring import CANNOT_TELL, LOWER_BOUND, resource_days
 from src.synthetic.config import FORBIDDEN_REGION_TOKENS, GeneratorConfig
 from src.synthetic.model import (ANNUAL_UNITS, FINISHED_GOOD_PART,
                                  ON_HAND_UNITS, PART_NUMBER, SOURCE_TYPE,
@@ -134,3 +137,68 @@ class TestRegionsSurviveReading:
         assert frame[SUPPLIER_REGION].notna().all()
         for token in FORBIDDEN_REGION_TOKENS:
             assert token not in set(frame[SUPPLIER_REGION].astype(str))
+
+
+class TestTheResourcingChainIsNeverDefaulted:
+    """The fourth unknown, added with the recovery split.
+
+    `recovery_inputs.csv` is optional, so every way it can be absent has to
+    surface as unknown rather than as a duration nobody supplied. There are
+    three such ways and they are separate facts: no file, no column, no cell.
+    """
+
+    def write(self, path, text):
+        path.write_text(text, encoding="utf-8")
+        return path
+
+    def test_a_missing_file_reads_as_nothing_timed_not_as_a_timed_zero(
+            self, tmp_path):
+        assert read_recovery_inputs(tmp_path / "recovery_inputs.csv") == {}
+        score = resource_days("P", "supplier", None)
+        assert score.completeness == CANNOT_TELL
+        assert score.value is None
+        assert score.value != 0
+
+    def test_a_missing_column_is_tolerated_one_column_at_a_time(self, tmp_path):
+        """What keeps the frozen eval inputs readable.
+
+        They predate this file entirely. A reader demanding the full column set
+        would make an older dataset unreadable rather than incomplete, which is
+        a different and worse failure.
+        """
+        path = self.write(tmp_path / "recovery_inputs.csv",
+                          "part_number,tooling_lead_time_days\nP,120\n")
+        rows = read_recovery_inputs(path)
+        assert rows == {"P": {"tooling_lead_time_days": 120}}
+        score = resource_days("P", "supplier", rows["P"])
+        assert score.completeness == LOWER_BOUND
+        assert score.value == 120
+        assert R.QUALIFICATION_TEST in score.detail["stages_untimed"]
+
+    def test_a_blank_cell_and_a_recorded_zero_stay_different(self, tmp_path):
+        """One `int(x or 0)` here and a stage nobody timed becomes instant."""
+        path = self.write(
+            tmp_path / "recovery_inputs.csv",
+            "part_number,alternate_source_days,ramp_to_rate_days\n"
+            "BLANK,,5\n"
+            "ZERO,0,5\n")
+        rows = read_recovery_inputs(path)
+        assert "alternate_source_days" not in rows["BLANK"]
+        assert rows["ZERO"]["alternate_source_days"] == 0
+
+        blank = resource_days("BLANK", "company", rows["BLANK"])
+        zero = resource_days("ZERO", "company", rows["ZERO"])
+        assert blank.value == zero.value == 5
+        assert R.ALTERNATE_SOURCE in blank.detail["stages_untimed"]
+        assert R.ALTERNATE_SOURCE in zero.detail["stages_timed"]
+
+    def test_the_shipped_dataset_carries_no_resourcing_durations(
+            self, generated):
+        """Stated as a test so it cannot quietly stop being true.
+
+        A generator that emitted a qualification duration would be inventing the
+        judgment the tool exists to report it does not have, and the eval floors
+        would then rest on a number the generator made up.
+        """
+        _, _, out = generated
+        assert not (out / "recovery_inputs.csv").exists()

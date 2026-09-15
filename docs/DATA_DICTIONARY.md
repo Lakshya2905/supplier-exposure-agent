@@ -53,6 +53,40 @@ whose suppliers nobody recorded (an unknown).
 
 `sourcing_list_status` gates the verdict only. It never enters scoring.
 
+## recovery_inputs.csv
+
+**Optional, and written by no generator in this repository.** Every column is
+optional as well, one at a time. The durations are the stages of bringing an
+alternative source to production, and they are read by `resource_days`.
+
+| column | type | notes |
+|---|---|---|
+| `part_number` | str | |
+| `alternate_source_days` | int or blank | finding and qualifying an alternate source. Judgment |
+| `tooling_lead_time_days` | int or blank | tooling dedicated to the part. Knowable |
+| `engineering_transfer_days` | int or blank | drawings, specs, redesign. Judgment |
+| `first_article_days` | int or blank | first article inspection. Judgment |
+| `qualification_test_days` | int or blank | qualification and reliability testing. Judgment |
+| `ramp_to_rate_days` | int or blank | ramp to rate. Judgment |
+| `qualification_cycles` | int or blank | how many cycles to plan for. **Blank is not one cycle** |
+
+Blank means the stage is UNTIMED and the chain total becomes a lower bound
+naming it. A recorded `0` is a stage somebody timed at zero days and enters the
+sum, exactly as `on_hand_units` distinguishes a counted zero from no record.
+
+A blank `qualification_cycles` is the one people get wrong. It does not mean one
+pass. It means nobody has said, so the total counts one pass and is a lower
+bound for that reason alone, and the sentence says so.
+
+`tooling_owner` in `part_master.csv` decides whether the tooling stage is on the
+path at all: `supplier` means it applies, `company` means it does not happen and
+contributes nothing without bounding the total, and blank means nobody knows
+which, so it bounds.
+
+Whether this file appears in `sources.csv` matters. The evidence layer refuses to
+cite a file the extract manifest does not describe, so a deployment supplying
+this one should add its manifest row.
+
 ## suppliers.csv
 
 | column | type | notes |

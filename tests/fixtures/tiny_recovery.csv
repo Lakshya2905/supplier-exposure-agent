@@ -1,0 +1,59 @@
+# HAND-AUTHORED FIXTURE. Never generated, never regenerated.
+#
+# Companion to tiny_scoring_bom.csv and tiny_part_master.csv. This is the
+# OPTIONAL resourcing-chain input: how long each stage of standing an
+# alternative source up would take. No generator in this repository writes a
+# file like this, and that is deliberate. A qualification duration is a
+# judgment, so a generator emitting one would be inventing the very input the
+# tool exists to report it does not have.
+#
+# Read with: pd.read_csv(path, comment="#")
+#
+# A BLANK CELL MEANS UNTIMED, NEVER ZERO DAYS. That is the same rule
+# on_hand_units follows, for the same reason: a stage somebody timed at zero is
+# a measurement and an unfilled cell is not, and one `or 0` fuses them forever.
+#
+# WHICH STAGES ARE ON THE PATH depends on tooling_owner in tiny_part_master.csv:
+#   supplier  the tooling does not come with you, so the tooling stage APPLIES
+#   company   company tooling moves to the new source, so it DOES NOT APPLY and
+#             adds nothing without making the total a bound
+#   blank     nobody knows whether it applies, so it bounds the total
+#
+# WHAT EACH ROW IS HERE TO PROVE
+#   SHARED-M01    every stage on the path timed AND a cycle count on file. The
+#                 only KNOWN chain here: nothing is assumed.
+#   ZEROUSE-M01   supplier tooling with NO tooling lead time. The chain is a
+#                 LOWER BOUND and the sentence names tooling as the gap.
+#   ONLY-M01      no qualification duration, and no cycle count either. LOWER
+#                 BOUND, and tooling is off the path rather than missing.
+#   ONLY-M02      every applicable stage timed and NO cycle count. Still a LOWER
+#                 BOUND, because counting one pass is an assumption nobody made.
+#                 This is the row that proves the retry is not defaulted.
+#   MISSING-M01   tooling owner BLANK, so whether retooling is on the path is
+#                 itself unknown. Three cycles planned for.
+#   ORPHAN-M01    NO ROW AT ALL. Nothing is timed, so the chain is not a bound:
+#                 zero is the trivial lower bound of any duration and would
+#                 promise a figure while delivering nothing. It abstains.
+#
+# EXPECTED FIRST-PASS TOTALS, worked by hand (sum of the timed stages):
+#   SHARED-M01    45 + 120 + 30 + 20 + 60 + 25 = 300   known
+#                 judgment 45+30+20+60+25 = 180, knowable 120, and 180+120 = 300
+#   ZEROUSE-M01   30 +   -  + 15 + 10 + 40 + 20 = 115  lower bound, tooling
+#   ONLY-M01      35 +  n/a + 20 + 10 +  -  + 15 =  80 lower bound, qual + cycles
+#   ONLY-M02      25 +  n/a + 10 +  5 + 50 + 10 = 100  lower bound, cycles only
+#   MISSING-M01   40 +   -  +  - +  -  + 30 +  - =  70 lower bound, 4 untimed
+#   ORPHAN-M01    nothing timed                        cannot tell
+#
+# EXPECTED WITH-RETRY TOTALS (first pass + (cycles - 1) x the qualification and
+# reliability test, which is the only stage a failed qualification repeats):
+#   SHARED-M01    300 + 1 x 60 = 360    over 2 cycles
+#   ZEROUSE-M01   115 + 0 x 40 = 115    1 cycle planned, so it equals first pass
+#   ONLY-M01      no cycle count on file             none
+#   ONLY-M02      no cycle count on file             none
+#   MISSING-M01    70 + 2 x 30 = 130    over 3 cycles
+part_number,alternate_source_days,tooling_lead_time_days,engineering_transfer_days,first_article_days,qualification_test_days,ramp_to_rate_days,qualification_cycles
+SHARED-M01,45,120,30,20,60,25,2
+ZEROUSE-M01,30,,15,10,40,20,1
+ONLY-M01,35,,20,10,,15,
+ONLY-M02,25,,10,5,50,10,
+MISSING-M01,40,,,,30,,3

@@ -278,7 +278,7 @@ class TestDocIntegrity(unittest.TestCase):
         markers = {
             "tier correlation is unrepresentable": "tier",
             "in-house concentration is not modelled": "in-house",
-            "qualification-lead-time field": "qualification lead time",
+            "not per candidate alternate source": "candidate sources",
             "fractional quantities": "fractional quantities",
         }
         for marker, label in markers.items():

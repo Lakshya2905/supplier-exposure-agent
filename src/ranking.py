@@ -51,7 +51,8 @@ DEFAULT_ORDER_LABEL = "ordered by part number, and the order carries no meaning"
 # which way is bad, never where bad begins.
 WORSE_IS = {
     scoring.BUFFER_COVER: "lower",
-    scoring.LEAD_TIME_TO_RECOVER: "higher",
+    scoring.WAIT_OUT_DAYS: "higher",
+    scoring.RESOURCE_DAYS: "higher",
     scoring.BLAST_RADIUS: "higher",
     scoring.CONCENTRATION: "higher",
     scoring.PORTABILITY: "categorical",
@@ -192,8 +193,13 @@ def rank_by(profiles, dimension):
                     if score.value in PORTABILITY_ORDER else len(
                         PORTABILITY_ORDER))
             return (worst_first, rank, profile.part_number)
-        if dimension == scoring.LEAD_TIME_TO_RECOVER:
+        if dimension == scoring.WAIT_OUT_DAYS:
             measure = score.detail.get("quoted_days", 0)
+        elif dimension == scoring.RESOURCE_DAYS:
+            # THE FIRST-PASS TOTAL, matching the quoted-rather-than-p95 choice
+            # above: each dimension ranks on the reading it reports as its
+            # value, so the order cannot disagree with the number beside it.
+            measure = score.value if score.value is not None else 0
         elif dimension == scoring.BUFFER_COVER:
             measure = _cover_key(score)
         else:
@@ -258,7 +264,8 @@ def sentence_evidence(profile, verdict, memberships=()):
 
     return {
         "verdict": verdict,
-        "clauses": [c for c in (clause(scoring.LEAD_TIME_TO_RECOVER),
+        "clauses": [c for c in (clause(scoring.WAIT_OUT_DAYS),
+                                clause(scoring.RESOURCE_DAYS),
                                 clause(scoring.BUFFER_COVER),
                                 clause(scoring.BLAST_RADIUS),
                                 clause(scoring.PORTABILITY),

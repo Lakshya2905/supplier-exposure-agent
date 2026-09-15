@@ -1,8 +1,20 @@
 """Exposure scoring across separate dimensions. No composite, ever.
 
-FIVE DIMENSIONS, FIVE SLOTS, NO TOTAL. There is no weighted sum here and there
-is no place to put one. The guarantee is structural rather than a matter of
-discipline, and it rests on two properties that have to hold together:
+SIX MEASURES, SIX SLOTS, NO TOTAL. There is no summed-with-coefficients score
+here and there is no place to put one.
+
+SIX, NOT FIVE, AND THE SIXTH IS A SPLIT RATHER THAN AN ADDITION. The brief names
+five dimensions and defines the first as "how long to qualify an alternative or
+wait out the disruption". That is two questions sharing one name, and they have
+different answers, different inputs and different confidence: waiting it out is
+a purchase lead time somebody reported, while resourcing is a chain of
+activities most of which nobody has timed. `wait_out_days` and `resource_days`
+are therefore separate measures, each with its own completeness and its own
+autonomy. Merging them back into one figure would put a reported number and an
+estimate under one heading, which is the composite in miniature.
+
+The no-total guarantee is structural rather than a matter of discipline, and it
+rests on two properties that have to hold together:
 
   1. no function returns a scalar combining dimensions, and the container
      exposes no total, no overall, no score, and no __add__
@@ -25,6 +37,7 @@ from dataclasses import dataclass, field
 from fractions import Fraction
 
 from . import governance as gov
+from . import recovery as R
 from .demand import USAGE_CANNOT_TELL, USAGE_KNOWN, USAGE_PARTIAL
 from .synthetic import verdicts as V
 
@@ -94,14 +107,18 @@ FORBIDDEN_UNIT_WORDS = ("score", "index", "rating", "percent", "percentile",
                         "points", "ratio", "risk")
 
 # --------------------------------------------------------------- dimensions --
-LEAD_TIME_TO_RECOVER = "lead_time_to_recover"
+# THE TWO HALVES OF RECOVERY, NAMED SEPARATELY. `lead_time_to_recover` was one
+# name over two questions and it overclaimed: it answered only the wait-it-out
+# half while carrying a name that promised both.
+WAIT_OUT_DAYS = "wait_out_days"
+RESOURCE_DAYS = "resource_days"
 BLAST_RADIUS = "blast_radius"
 BUFFER_COVER = "buffer_cover"
 PORTABILITY = "portability"
 CONCENTRATION = "concentration"
 
-DIMENSIONS = (LEAD_TIME_TO_RECOVER, BLAST_RADIUS, BUFFER_COVER, PORTABILITY,
-              CONCENTRATION)
+DIMENSIONS = (WAIT_OUT_DAYS, RESOURCE_DAYS, BLAST_RADIUS, BUFFER_COVER,
+              PORTABILITY, CONCENTRATION)
 
 # Portability values. Categorical, so no arithmetic is possible on them at all.
 TOOLING_COMPANY = "company"
@@ -188,19 +205,28 @@ class ExposureProfile:
     either would be a lie about a stage that has not run.
     """
     part_number: str
-    lead_time_to_recover: DimensionScore
+    wait_out_days: DimensionScore
+    resource_days: DimensionScore
     blast_radius: DimensionScore
     buffer_cover: DimensionScore
     portability: DimensionScore
     concentration: object = None      # reserved for stage 5
 
     def scored(self):
-        """The four dimensions stage 4 fills. Never summed, only iterated."""
-        return (self.lead_time_to_recover, self.blast_radius,
+        """The five dimensions stage 4 fills. Never summed, only iterated.
+
+        `wait_out_days` and `resource_days` sit here as two entries rather than
+        one, and they are both in days. THAT DOES NOT MAKE THEM ADDABLE: one is
+        what a disruption costs if you ride it out with the source you have, the
+        other what it costs to replace that source, and a part does both of
+        those only in the sense that a person can do either. Adding them would
+        answer a question nobody asked.
+        """
+        return (self.wait_out_days, self.resource_days, self.blast_radius,
                 self.buffer_cover, self.portability)
 
     def all_scores(self):
-        """The four, plus concentration once stage 5 has filled its slot.
+        """The five, plus concentration once stage 5 has filled its slot.
 
         ADDED, never substituted. `scored()` keeps its stage 4 meaning of "the
         dimensions that are properties of the part alone", because stage 5 may
@@ -213,10 +239,15 @@ class ExposureProfile:
         return tuple(s for s in self.scored() if not s.is_settled)
 
 
-# ------------------------------------------------------- lead time to recover --
+# ------------------------------------------------------------- wait out days --
 
-def lead_time_to_recover(part_number, verdict, lead_times):
+def wait_out_days(part_number, verdict, lead_times):
     """Days to wait out the disruption, quoted and p95 together.
+
+    HALF OF RECOVERY, AND THE NAME NOW SAYS SO. This used to be called
+    `lead_time_to_recover`, which promised the whole of the brief's first
+    dimension and delivered the purchase lead time. The other half is
+    `resource_days`, and the two never combine.
 
     BOTH COLUMNS ARE RETURNED, NOT ONE. Choosing quoted over p95 is a judgment,
     and at this stage the two produce different durations but not different
@@ -237,7 +268,7 @@ def lead_time_to_recover(part_number, verdict, lead_times):
         # Rendering this as "cannot tell" would understate the single most
         # serious finding in the dataset as a gap in the spreadsheet.
         return DimensionScore(
-            part_number=part_number, dimension=LEAD_TIME_TO_RECOVER,
+            part_number=part_number, dimension=WAIT_OUT_DAYS,
             value=None, unit=DAYS, completeness=NO_RECOVERY_PATH,
             reasons=("the supplier list was verified and contains nobody, so "
                      "there is no recovery path to time rather than a missing "
@@ -249,7 +280,7 @@ def lead_time_to_recover(part_number, verdict, lead_times):
         # there is not going to be one, so a lane that keeps showing in-house
         # parts is asking a reviewer to fetch data that does not exist.
         return DimensionScore(
-            part_number=part_number, dimension=LEAD_TIME_TO_RECOVER,
+            part_number=part_number, dimension=WAIT_OUT_DAYS,
             value=None, unit=DAYS, completeness=NOT_APPLICABLE,
             reasons=("the part is made in-house, so there is no purchase lead "
                      "time to recover over; this dimension does not apply "
@@ -257,7 +288,7 @@ def lead_time_to_recover(part_number, verdict, lead_times):
 
     if not pairs:
         return DimensionScore(
-            part_number=part_number, dimension=LEAD_TIME_TO_RECOVER,
+            part_number=part_number, dimension=WAIT_OUT_DAYS,
             value=None, unit=DAYS, completeness=CANNOT_TELL,
             reasons=("no supplier for this part has a lead time record, so how "
                      "long recovery would take is not recorded anywhere",))
@@ -266,7 +297,7 @@ def lead_time_to_recover(part_number, verdict, lead_times):
         # A lead time exists, but the list it came from is unconfirmed, so the
         # fastest recovery path may belong to a supplier nobody wrote down.
         return DimensionScore(
-            part_number=part_number, dimension=LEAD_TIME_TO_RECOVER,
+            part_number=part_number, dimension=WAIT_OUT_DAYS,
             value=None, unit=DAYS, completeness=CANNOT_TELL,
             reasons=("the supplier list is unconfirmed, so a shorter recovery "
                      "path may exist through a supplier that was never "
@@ -275,7 +306,7 @@ def lead_time_to_recover(part_number, verdict, lead_times):
     quoted = min(pair[0] for pair in pairs)
     p95 = min(pair[1] for pair in pairs)
     return DimensionScore(
-        part_number=part_number, dimension=LEAD_TIME_TO_RECOVER,
+        part_number=part_number, dimension=WAIT_OUT_DAYS,
         value=(quoted, p95), unit=DAYS, completeness=KNOWN,
         reasons=(f"the fastest qualified supplier quotes {quoted} days, and "
                  f"{p95} days at p95",),
@@ -414,6 +445,107 @@ def buffer_cover(part_number, on_hand_units, usage):
                 "daily_consumption": daily, "unbounded": False})
 
 
+# ------------------------------------------------------------ resource days --
+
+def _stage_phrase(timings):
+    """Stage labels as prose, in chain order. Names the stages, never counts."""
+    return ", ".join(timing.stage.label for timing in timings)
+
+
+def resource_days(part_number, tooling_owner, stages=None):
+    """Days to bring an ALTERNATIVE source to production. A chain, not a lookup.
+
+    THE VERDICT IS NOT AN INPUT HERE, and its absence from the signature is the
+    clearest evidence the split was right. Waiting it out depends entirely on
+    what the supplier list says: no supplier means no wait to time, in-house
+    means no purchase order to place. Resourcing does not. A part nobody
+    supplies is exactly the part that has to be resourced, and a part made
+    in-house can be given to an outside source. So where `wait_out_days` reports
+    `no_recovery_path` or `not_applicable`, this one still answers, and those
+    two readings together are what the old single dimension could not say.
+
+    THE STATES, AND WHY EACH ONE RATHER THAN THE NEXT:
+
+      known        every stage on the path is timed AND the cycle count is on
+                   file, so nothing is being assumed
+      lower_bound  a stage on the path has no duration, or the cycle count is
+                   absent so the total silently assumes one pass. Either way the
+                   true figure is higher and the sentence says which
+      cannot_tell  nothing on the path is timed. Not a bound: zero is the
+                   trivial lower bound of any duration, so calling this one
+                   would promise a figure and deliver nothing
+
+    A stage that DOES NOT HAPPEN is not a stage nobody timed. Company-owned
+    tooling moves to the new source, so the tooling stage is off the path and
+    contributes nothing without making the total a bound. An unrecorded tooling
+    owner is the opposite: nobody knows whether it is on the path, so it bounds.
+    """
+    built = R.chain(tooling_owner, stages)
+    timed, untimed, skipped = built.timed, built.untimed, built.skipped
+    first_pass = built.first_pass_days
+    with_retry = built.with_retry_days
+
+    detail = {
+        "days_by_stage": {t.stage.key: t.days for t in timed},
+        # THE CLASSES STAY APART. Each subtotal is days of one kind of claim,
+        # and there is nothing here that reduces them to a single figure.
+        "days_by_class": built.days_by_class,
+        "weakest_class": built.weakest_class,
+        "stages_timed": tuple(t.stage.key for t in timed),
+        "stages_untimed": tuple(t.stage.key for t in untimed),
+        "stages_not_applicable": tuple(t.stage.key for t in skipped),
+        "qualification_cycles": built.cycles,
+        "first_pass_days": first_pass,
+        "with_retry_days": with_retry,
+    }
+
+    if first_pass is None:
+        return DimensionScore(
+            part_number=part_number, dimension=RESOURCE_DAYS, value=None,
+            unit=DAYS, completeness=CANNOT_TELL,
+            reasons=("no stage of the resourcing chain has a duration on file, "
+                     "so how long it would take to stand an alternative source "
+                     "up is not recorded anywhere; the untimed stages are "
+                     + _stage_phrase(untimed),),
+            detail=detail)
+
+    reasons = []
+    if untimed:
+        reasons.append(
+            f"resourcing takes at least {first_pass} days across "
+            f"{_stage_phrase(timed)}, and that is a lower bound because "
+            f"nobody has timed {_stage_phrase(untimed)}")
+    else:
+        reasons.append(f"resourcing takes {first_pass} days across "
+                       f"{_stage_phrase(timed)}")
+
+    if built.cycles is None:
+        reasons.append(
+            "how many qualification cycles to plan for is not on file, so this "
+            "counts one pass and is a lower bound for that reason as well")
+    elif with_retry is None:
+        reasons.append(
+            f"{built.cycles} qualification cycles are planned for, and the "
+            f"stage that repeats has no duration on file, so what a second "
+            f"cycle adds cannot be said")
+    else:
+        planned = (f"the {built.cycles} cycles" if built.cycles > 1
+                   else "the single cycle")
+        reasons.append(
+            f"{first_pass} days if qualification passes first time, "
+            f"{with_retry} days across {planned} planned for")
+
+    if skipped:
+        reasons.append(f"{_stage_phrase(skipped)} is off the path for this part "
+                       f"and adds nothing, which is not the same as untimed")
+
+    completeness = LOWER_BOUND if (untimed or built.cycles is None) else KNOWN
+    return DimensionScore(
+        part_number=part_number, dimension=RESOURCE_DAYS, value=first_pass,
+        unit=DAYS, completeness=completeness, reasons=tuple(reasons),
+        detail=detail)
+
+
 # ---------------------------------------------------------------- portability --
 
 def portability(part_number, tooling_owner):
@@ -445,12 +577,19 @@ def portability(part_number, tooling_owner):
 # ------------------------------------------------------------------ profile --
 
 def score_part(part_number, verdict, rows, usage, on_hand_units, tooling_owner,
-               lead_times):
-    """All four dimensions for one part. Concentration stays reserved."""
+               lead_times, recovery_stages=None):
+    """All five dimensions for one part. Concentration stays reserved.
+
+    `recovery_stages` is the part's row of `recovery_inputs.csv`, or None where
+    no such file exists. None is not an empty plan: it means nobody has supplied
+    a single stage duration, and `resource_days` says so rather than reporting a
+    chain of zeroes.
+    """
     return ExposureProfile(
         part_number=part_number,
-        lead_time_to_recover=lead_time_to_recover(part_number, verdict,
-                                                  lead_times),
+        wait_out_days=wait_out_days(part_number, verdict, lead_times),
+        resource_days=resource_days(part_number, tooling_owner,
+                                    recovery_stages),
         blast_radius=blast_radius(part_number, rows, usage),
         buffer_cover=buffer_cover(part_number, on_hand_units, usage),
         portability=portability(part_number, tooling_owner),
