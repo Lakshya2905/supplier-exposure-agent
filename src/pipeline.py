@@ -12,16 +12,20 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import archetypes as A
+from . import criticality as crit
 from . import ranking
 from .concentration import analyse, fill_profiles
 from .demand import usage_by_part
 from .explosion import explode, rows_by_part
 from .identify import identify_all
 from .interface import model as view
-from .readers import (read_bom, read_demand_plan, read_demand_rows,
-                      read_lead_times, read_part_master, read_recovery_inputs,
-                      read_sources, read_suppliers)
+from .commitments import COMMITMENTS_FILE
+from .readers import (read_bom, read_commitments, read_demand_plan,
+                      read_demand_rows, read_lead_times, read_part_master,
+                      read_recovery_inputs, read_sources,
+                      read_sub_tier_sources, read_suppliers)
 from .recovery import RECOVERY_INPUTS_FILE
+from .subtier import SUB_TIER_FILE, tiers_for
 from .scoring import score_part
 from .synthetic import verdicts as V
 
@@ -64,6 +68,10 @@ class Result:
     # and when they were pulled without reopening an evidence panel.
     extracts: dict = None
     data_dir: object = None
+    # Which parts this run assessed and which it did not. Present even on an
+    # unscoped run, where it records that nothing was left out, because "we
+    # assessed everything" is a claim a reader should be able to see made.
+    scope: object = None
 
 
 def _dependencies(verdicts, suppliers, lead_times):
@@ -88,7 +96,21 @@ def _dependencies(verdicts, suppliers, lead_times):
     return dict(dependencies)
 
 
-def run(data_dir=None, config_path="config/archetypes.yaml"):
+def run(data_dir=None, config_path="config/archetypes.yaml", criticality=None):
+    """Score a dataset, optionally scoped to a set of criticality labels.
+
+    `criticality` is a SET OF LABELS to assess, or None for everything. See
+    `criticality.py` for why it is a set rather than a cut-off, and why the
+    default is the inclusive one.
+
+    THE SCOPE FILTERS WHAT IS PRESENTED, NOT WHAT CORRELATION IS COMPUTED OVER.
+    Two parts share a supplier whether or not somebody scoped this run to one of
+    them, so clusters are built from every exposed part and their membership may
+    name parts this run did not assess. The alternative understates shared
+    exposure in proportion to how tightly a reviewer scoped, which is the error
+    direction this system refuses everywhere else: a missed correlation reads as
+    independence, and independence is the reassuring answer.
+    """
     data_dir = Path(data_dir) if data_dir is not None else default_data_dir()
     edges = read_bom(data_dir / "bom.csv")
     parts = read_part_master(data_dir / "part_master.csv")
@@ -102,6 +124,13 @@ def run(data_dir=None, config_path="config/archetypes.yaml"):
     # stage of the resourcing chain, and `resource_days` reports that rather
     # than a chain of zeroes.
     recovery_stages = read_recovery_inputs(data_dir / RECOVERY_INPUTS_FILE)
+    # ALSO OPTIONAL. Absent, no tier grouping is built and every other reading
+    # is unchanged; present, it makes visible the correlation where two
+    # different companies turn out to be one supplier a hop down.
+    sub_tier_sources = read_sub_tier_sources(data_dir / SUB_TIER_FILE)
+    # None where no order book exists, which is NOT an empty order book. See
+    # `readers.read_commitments`.
+    commitments = read_commitments(data_dir / COMMITMENTS_FILE)
 
     rows = rows_by_part(explode(edges, known_parts=set(parts)))
     usage = usage_by_part(rows, demand)
@@ -116,7 +145,12 @@ def run(data_dir=None, config_path="config/archetypes.yaml"):
     findings = identify_all(part_master, supplier_names, lead_time_names)
     verdicts = {finding.subject: finding.verdict for finding in findings}
 
-    report = analyse(verdicts, _dependencies(verdicts, suppliers, lead_times))
+    dependencies = _dependencies(verdicts, suppliers, lead_times)
+    report = analyse(verdicts, dependencies,
+                     tiers=tiers_for(
+                         {part: [name for name, _ in pairs]
+                          for part, pairs in dependencies.items()},
+                         sub_tier_sources))
 
     profiles = {}
     for part, record in sorted(parts.items()):
@@ -128,8 +162,21 @@ def run(data_dir=None, config_path="config/archetypes.yaml"):
             tooling_owner=record["tooling_owner"],
             lead_times=[(quoted, p95)
                         for _, quoted, p95, _ in lead_times.get(part, ())],
-            recovery_stages=recovery_stages.get(part))
+            recovery_stages=recovery_stages.get(part),
+            commitments=commitments)
     profiles = fill_profiles(profiles, report)
+
+    # SCOPED AFTER SCORING, not before. Explosion needs the whole tree to reach
+    # a finished good, demand needs every parent, and correlation needs every
+    # exposed part; a filter applied at the top would quietly change all three.
+    # OVER THE SCOREABLE PARTS, not the whole part master. A finished good has
+    # no supplier and is never scored, so counting it as "not assessed because
+    # of the scope" would blame the scope for an exclusion the BOM already made.
+    scope = crit.scope_for({part: parts[part] for part in profiles},
+                           criticality)
+    in_scope = set(scope.parts_in_scope)
+    profiles = {part: profile for part, profile in profiles.items()
+                if part in in_scope}
 
     evidence = {
         part: view.evidence_for(part, suppliers.get(part, ()), rows[part],
@@ -145,7 +192,7 @@ def run(data_dir=None, config_path="config/archetypes.yaml"):
     return Result(verdicts=verdicts, profiles=profiles, report=report,
                   evidence=evidence, memberships=memberships,
                   catalogue=catalogue, thresholds=thresholds,
-                  extracts=extracts, data_dir=data_dir)
+                  extracts=extracts, data_dir=data_dir, scope=scope)
 
 
 def surfaces(result):

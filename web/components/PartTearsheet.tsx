@@ -62,7 +62,9 @@ export function PartPanel({ detail }: { detail: PartDetail }) {
       )}
 
       <section>
-        <h4 className="sea-chart__title">The six measures, each in its own unit</h4>
+        <h4 className="sea-chart__title">
+          The seven measures, each in its own unit
+        </h4>
         <Measures scores={detail.scores} order={detail.dimensions} />
         <p className="sea-standing">{STANDING_COPY}</p>
       </section>

@@ -54,14 +54,16 @@ export default function Overview() {
 
       <section className="sea-section">
         <h3 className="sea-section__heading">
-          The six measures, each in its own unit
+          The seven measures, each in its own unit
         </h3>
         <p className="sea-section__note">
-          Six separate axes on purpose. No chart here puts two measures
+          Seven separate axes on purpose. No chart here puts two measures
           together, because there is no unit in which days and finished-good
-          units are the same quantity. Three of them are in days and they are
-          still three axes: waiting a disruption out, resourcing around it and
-          covering it from stock are different questions that share a unit.
+          units are the same quantity. Three of them are in days and two more
+          are in finished-good units, and they are still five separate axes:
+          waiting a disruption out, resourcing around it and covering it from
+          stock are different questions that share a unit, as are annual demand
+          stopped and promised orders missed.
         </p>
         <div className="sea-charts">
           {overview.dimension_series.map((series) => (
@@ -128,6 +130,9 @@ export default function Overview() {
 
       <section className="sea-section">
         <h3 className="sea-section__heading">What this run did not assess</h3>
+        {/* THE SCOPE FIRST, because it is the largest thing a run can leave
+            out and the one a reader is least likely to guess. */}
+        <p className="sea-section__note">{result.scope.sentence}</p>
         <p className="sea-section__note">
           These are properties of the data and of deliberate design decisions,
           not faults. A part counted here was not scored on that question, and

@@ -53,6 +53,7 @@ export const DIMENSION_LABEL: Record<string, string> = {
   wait_out_days: 'Wait for this supplier',
   resource_days: 'Get a new supplier approved',
   blast_radius: 'How much of the build stops',
+  committed_at_risk: 'Promised orders missed',
   buffer_cover: 'How long stock lasts',
   portability: 'How hard to move supplier',
   concentration: 'Shared with other parts',
@@ -63,10 +64,35 @@ export const DIMENSION_UNIT: Record<string, string> = {
   wait_out_days: 'days, quoted / worst case',
   resource_days: 'days',
   blast_radius: 'finished units a year',
+  committed_at_risk: 'promised units',
   buffer_cover: 'days',
   portability: 'who owns the tooling',
   concentration: 'other exposed parts',
 };
+
+/** What each kind of change is, in the words a planner would use.
+ *
+ *  KEYED BY KIND, NEVER DERIVED FROM A SIGN. "Became unknown" has no sign, and a
+ *  UI that inferred direction from a delta would have nowhere to put it. */
+export const CHANGE_LABEL: Record<string, string> = {
+  newly_exposed: 'Now down to one supplier',
+  no_longer_exposed: 'No longer down to one supplier',
+  verdict_changed: 'Supplier situation changed',
+  measure_moved: 'A figure moved',
+  became_unknown: 'We can no longer say',
+  became_known: 'We can now say',
+  entered_scope: 'Newly assessed',
+  left_scope: 'Not assessed this time',
+  cluster_grew: 'More parts share this',
+  cluster_shrank: 'Fewer parts share this',
+  cluster_appeared: 'Parts started sharing this',
+};
+
+/** Kinds that are about the SCOPE rather than about the world.
+ *
+ *  A part that was not assessed did not get better, and separating these is
+ *  what stops somebody improving the numbers by scoping harder. */
+export const SCOPE_KINDS = ['entered_scope', 'left_scope'];
 
 export const SURFACE_LABEL = {
   overview: 'Overview',

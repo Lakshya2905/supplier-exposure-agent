@@ -29,6 +29,7 @@ const NAV = [
   { href: '/exposure', label: 'Exposure', hint: 'what is worst' },
   { href: '/check', label: 'What to check', hint: 'what one fetch settles' },
   { href: '/review', label: 'Review', hint: 'judgments waiting for a person' },
+  { href: '/changes', label: 'What changed', hint: 'two runs, compared' },
   { href: '/decisions', label: 'Decision log', hint: 'who decided what' },
 ];
 

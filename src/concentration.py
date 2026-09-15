@@ -58,12 +58,18 @@ UNPLACEABLE_VERDICTS = (V.SUPPLIER_LIST_UNKNOWN, V.READINGS_DISAGREE)
 # Parts with nobody to be correlated with. Not a gap in the data.
 NO_SUPPLIER_VERDICTS = (V.MADE_IN_HOUSE, V.NO_QUALIFIED_SUPPLIER)
 
-# Grouping bases. Tier is the brief's third definition and is UNREPRESENTABLE:
-# there is no tier field anywhere in the schema, so it is a declared absence
-# rather than a silent omission. See the known gap in test_concentration.py.
+# Grouping bases. All three of the brief's definitions, since the sub-tier
+# source field arrived; before it, tier was a declared absence.
 BY_SUPPLIER = "supplier"
 BY_REGION = "region"
-BASES = (BY_SUPPLIER, BY_REGION)
+# THE THIRD READING, and the one the brief named that the schema could not hold.
+# Two parts bought from two different companies are not independent if both of
+# those companies buy the critical input from the same place, and no amount of
+# supplier or region grouping can see it. It needs one optional field naming
+# where a supplier sources that input, which is the smallest thing that makes
+# the reading representable: no supplier graph, no tiers below the second.
+BY_TIER = "tier"
+BASES = (BY_SUPPLIER, BY_REGION, BY_TIER)
 
 # Agreement between the two readings. THIS IS THE FINDING, not a defect report.
 BOTH = "both"
@@ -71,6 +77,16 @@ SUPPLIER_ONLY = "supplier_only"
 REGION_ONLY = "region_only"
 NEITHER = "neither"
 AGREEMENT_CLASSES = (BOTH, SUPPLIER_ONLY, REGION_ONLY, NEITHER)
+
+# WHICH READINGS `agreement` IS ABOUT, stated rather than assumed. It is the
+# supplier-versus-region comparison the README calls a COMPLEMENTARY
+# disagreement, and adding a third basis does not silently widen it: a part
+# correlated only by sub-tier source is `neither` here, which is true of
+# supplier and region and would be a lie if read as "not correlated at all".
+#
+# So `correlated_bases` carries the whole truth and this carries the pair. A
+# test asserts a tier-only part has both, so the two cannot mislead together.
+AGREEMENT_SCOPE = (BY_SUPPLIER, BY_REGION)
 
 # Used when one reading is settled and the other is not. The agreement class is
 # NOT computed rather than defaulting the unknown side to "not concentrated",
@@ -137,6 +153,10 @@ class ConcentrationScore(DimensionScore):
     agreement: str = UNDETERMINED
     supplier_cluster: str = ""
     region_cluster: str = ""
+    tier_cluster: str = ""
+    # EVERY basis under which this part is correlated, not just the two
+    # `agreement` compares. See AGREEMENT_SCOPE.
+    correlated_bases: tuple = ()
 
     @property
     def autonomy(self):
@@ -193,13 +213,20 @@ def _group(part_keys):
     return {key: tuple(sorted(members)) for key, members in grouped.items()}
 
 
-def analyse(verdicts, dependencies, threshold=DEFAULT_THRESHOLD):
-    """Cluster exposed parts under both readings and classify the agreement.
+def analyse(verdicts, dependencies, threshold=DEFAULT_THRESHOLD, tiers=None):
+    """Cluster exposed parts under every reading, and classify the agreement.
 
     `dependencies` maps a part to the ((supplier_name, region), ...) it actually
     depends on: for a single-source part its one supplier, for a hidden single
     source the one supplier that can actually quote. `verdicts` comes from
     stage 3.
+
+    `tiers` maps a part to where its supplier sources the critical input, and is
+    OPTIONAL. Absent, no tier cluster is built and nothing else changes, which
+    is every dataset this repository generates. A part missing from the mapping
+    is a part whose supplier has not said, and it simply does not join a tier
+    group: it is not placed in an "unknown" group, because two suppliers who
+    have both declined to say are not thereby buying from the same place.
     """
     exposed = {part for part, verdict in verdicts.items()
                if verdict in EXPOSED_VERDICTS and dependencies.get(part)}
@@ -215,7 +242,9 @@ def analyse(verdicts, dependencies, threshold=DEFAULT_THRESHOLD):
     # Supplier grouping, under both readings. Region grouping needs only one:
     # a region is a controlled value read straight from the row, so an
     # unresolved NAME merge cannot move a part between regions.
+    supplied_tiers = tiers or {}
     certain_by_part, merged_by_part, region_by_part = {}, {}, {}
+    tier_by_part = {}
     for part in sorted(exposed):
         pairs = dependencies[part]
         certain_by_part[part] = {_supplier_key(certain_clusters, name)
@@ -224,10 +253,16 @@ def analyse(verdicts, dependencies, threshold=DEFAULT_THRESHOLD):
                                 for name, _ in pairs}
         region_by_part[part] = {region.strip() for _, region in pairs
                                 if region and region.strip()}
+        source = (supplied_tiers.get(part) or "").strip()
+        # An empty set, not a set containing "": a part with no sub-tier source
+        # on file joins nothing, and `_group` would otherwise build a group of
+        # every part nobody has answered for and call it a correlation.
+        tier_by_part[part] = {source} if source else set()
 
     certain_groups = _group(certain_by_part)
     merged_groups = _group(merged_by_part)
     region_groups = _group(region_by_part)
+    tier_groups = _group(tier_by_part)
 
     clusters = []
     for key, members in sorted(certain_groups.items()):
@@ -276,9 +311,21 @@ def analyse(verdicts, dependencies, threshold=DEFAULT_THRESHOLD):
             reasons=(f"a disruption reaching {key} reaches all of them, "
                      f"whichever company each one buys from",)))
 
+    # THE READING NEITHER OF THE OTHER TWO CAN SEE. These parts may be bought
+    # from different companies in different regions and still fail together,
+    # because the companies buy the critical input from the same place.
+    for key, members in sorted(tier_groups.items()):
+        clusters.append(Cluster(
+            key=key, basis=BY_TIER, members=members, completeness=KNOWN,
+            members_if_merged=members,
+            reasons=(f"every supplier behind these parts sources the critical "
+                     f"input from {key}, so they are not independent of each "
+                     f"other however many companies are named on the parts",)))
+
     scores = _score_parts(verdicts, dependencies, exposed, certain_by_part,
                           merged_by_part, region_by_part, certain_groups,
-                          merged_groups, region_groups)
+                          merged_groups, region_groups, tier_by_part,
+                          tier_groups)
 
     reasons = ()
     if unplaceable:
@@ -309,7 +356,7 @@ def _largest(groups, keys):
 
 def _score_parts(verdicts, dependencies, exposed, certain_by_part,
                  merged_by_part, region_by_part, certain_groups, merged_groups,
-                 region_groups):
+                 region_groups, tier_by_part=None, tier_groups=None):
     """Per part, because the question is per part even though the finding is not.
 
     Membership is read under BOTH supplier readings and the difference decides
@@ -334,10 +381,13 @@ def _score_parts(verdicts, dependencies, exposed, certain_by_part,
         if_merged = _largest(merged_groups, merged_by_part.get(part, ()))
         regions = region_by_part.get(part, ())
         region_size = _largest(region_groups, regions)
+        sources = (tier_by_part or {}).get(part, ())
+        tier_size = _largest(tier_groups or {}, sources)
 
         supplier_hit = confirmed >= MINIMUM_CORRELATION
         merged_hit = if_merged >= MINIMUM_CORRELATION
         region_hit = region_size >= MINIMUM_CORRELATION
+        tier_hit = tier_size >= MINIMUM_CORRELATION
         region_known = bool(regions)
 
         # THE AGREEMENT CLASS IS REPORTED UNDER THE CONFIRMED READING. What an
@@ -364,14 +414,25 @@ def _score_parts(verdicts, dependencies, exposed, certain_by_part,
         if merged_hit and region_known:
             agreement_if_merged = BOTH if region_hit else SUPPLIER_ONLY
 
+        correlated = tuple(basis for basis, hit in (
+            (BY_SUPPLIER, supplier_hit), (BY_REGION, region_hit),
+            (BY_TIER, tier_hit)) if hit)
+
         scores[part] = ConcentrationScore(
             part_number=part, dimension=CONCENTRATION,
-            value=max(confirmed, region_size), unit=PARTS,
+            # THE LARGEST GROUP UNDER ANY READING. A part correlated with two
+            # under one grouping and nine under another is exposed to nine; the
+            # smaller figure would understate it, and understating exposure is
+            # the direction this system refuses.
+            value=max(confirmed, region_size, tier_size), unit=PARTS,
             completeness=completeness, agreement=agreement,
             supplier_cluster=min(certain_by_part.get(part, ("",))),
             region_cluster=min(regions) if regions else "",
+            tier_cluster=min(sources) if sources else "",
+            correlated_bases=correlated,
             reasons=(_reason_for(agreement, completeness, confirmed,
-                                 if_merged, region_size, region_known),),
+                                 if_merged, region_size, region_known,
+                                 tier_size),),
             detail={"supplier_cluster_size": confirmed,
                     "supplier_cluster_size_if_merged": if_merged,
                     "region_cluster_size": region_size,
@@ -410,7 +471,7 @@ def _not_applicable(part, verdict):
 
 
 def _reason_for(agreement, completeness, confirmed, if_merged, region_size,
-                region_known):
+                region_known, tier_size=0):
     if completeness == CANNOT_TELL:
         return (f"this part sits in a concentrated group of {if_merged} only if "
                 f"an unresolved supplier name merge is confirmed; under the "
@@ -437,6 +498,15 @@ def _reason_for(agreement, completeness, confirmed, if_merged, region_size,
                 f"correlated cannot be read from the data")
     else:
         base = "concentration could not be classified"
+    # THE THIRD READING IS APPENDED, NEVER FOLDED INTO THE AGREEMENT. `agreement`
+    # compares supplier with region and says so; a part correlated only by
+    # sub-tier source reads "neither" there, which is true of those two, and
+    # this clause is what stops that being the whole sentence.
+    if tier_size >= MINIMUM_CORRELATION:
+        base += (f". Separately, {tier_size} exposed parts depend on suppliers "
+                 f"that all source the critical input from the same place, so "
+                 f"they are not independent of each other however many "
+                 f"companies are named on them")
     if completeness == LOWER_BOUND:
         base += (f", and the supplier group would reach {if_merged} parts if an "
                  f"unresolved name merge is confirmed")

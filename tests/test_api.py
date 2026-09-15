@@ -258,6 +258,101 @@ class TestRunsAreReScoredNotReplayed(unittest.TestCase):
         self.assertIn("a run is its inputs", response.json()["detail"]["error"])
 
 
+class TestScopingARun(unittest.TestCase):
+    """Criticality over the wire: a set of labels, never a cut-off."""
+
+    def test_an_unscoped_run_says_it_assessed_everything(self):
+        payload = scored_through_the_api()
+        self.assertFalse(payload["scope"]["is_scoped"])
+        self.assertIn("Every part", payload["scope"]["sentence"])
+
+    def test_a_scope_that_matches_nothing_says_what_it_left_out(self):
+        """The failure mode worth catching: a silently empty screen.
+
+        A caller who asks for a tier this extract does not contain gets no
+        parts, and the difference between "nothing is exposed" and "nothing was
+        assessed" is the whole point of carrying the scope.
+        """
+        response = client.post("/api/score", data={"dataset": "frozen",
+                                                   "criticality": "A,B"})
+        payload = response.json()
+        self.assertEqual(payload["run"]["counts"]["parts_scored"], 0)
+        self.assertTrue(payload["scope"]["is_scoped"])
+        self.assertIn("not examined", payload["scope"]["sentence"])
+        self.assertEqual(payload["scope"]["included"], ["A", "B"])
+
+    def test_an_empty_criticality_parameter_is_not_an_empty_scope(self):
+        # "?criticality=" is somebody who left the box blank, and scoring
+        # nothing at all is never what they meant.
+        payload = client.post("/api/score", data={"dataset": "frozen",
+                                                  "criticality": ""}).json()
+        self.assertFalse(payload["scope"]["is_scoped"])
+
+    def test_scoping_never_reaches_a_score(self):
+        # `criticality` decides which parts are presented. No DimensionScore has
+        # ever heard of it, and the payload is where that would first show.
+        payload = scored_through_the_api()
+        for scores in payload["profiles"].values():
+            for score in scores.values():
+                self.assertNotIn("criticality", score["detail"])
+
+
+class TestComparingTwoRuns(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.first = scored_through_the_api()
+        files = [("files", (path.name, path.read_bytes(), "text/csv"))
+                 for path in sorted(FROZEN.glob("*.csv"))]
+        cls.second = client.post("/api/score", files=files,
+                                 data={"dataset": "the same bytes"}).json()
+
+    def compare(self, before, after):
+        return client.get("/api/changes",
+                          params={"before": before, "after": after})
+
+    def test_the_same_data_twice_produces_no_changes(self):
+        """The control, and it is not trivial.
+
+        A diff that reports churn between one dataset and a copy of it is
+        comparing something other than the answers, and every count after that
+        is noise a reader learns to ignore.
+        """
+        answer = self.compare(self.first["run"]["id"],
+                              self.second["run"]["id"]).json()
+        self.assertEqual(answer["changes"], [])
+        self.assertEqual(answer["counts"], {})
+
+    def test_both_sides_carry_their_provenance(self):
+        """Two runs of different datasets are not a trend.
+
+        "Cover fell across the board" means one thing between two Mondays and
+        another between an ERP extract and a hand-built spreadsheet, so the
+        comparison says which two it read.
+        """
+        answer = self.compare(self.first["run"]["id"],
+                              self.second["run"]["id"]).json()
+        for side in ("before", "after"):
+            self.assertIn("dataset", answer[side])
+            self.assertIn("provenance", answer[side])
+            self.assertIn("parts_assessed", answer[side]["provenance"])
+
+    def test_worsened_and_unjudged_are_counted_separately(self):
+        answer = self.compare(self.first["run"]["id"],
+                              self.second["run"]["id"]).json()
+        self.assertIn("worsened", answer)
+        self.assertIn("unjudged", answer)
+
+    def test_an_unknown_run_on_either_side_names_which_side(self):
+        for before, after, side in (
+                ("nosuchrun", self.first["run"]["id"], "before"),
+                (self.first["run"]["id"], "nosuchrun", "after")):
+            response = self.compare(before, after)
+            with self.subTest(side=side):
+                self.assertEqual(response.status_code, 404)
+                self.assertEqual(response.json()["detail"]["side"], side)
+
+
 class TestDecisions(unittest.TestCase):
     """Every refusal `actions.apply` makes must still be made."""
 

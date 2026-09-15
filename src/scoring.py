@@ -113,12 +113,20 @@ FORBIDDEN_UNIT_WORDS = ("score", "index", "rating", "percent", "percentile",
 WAIT_OUT_DAYS = "wait_out_days"
 RESOURCE_DAYS = "resource_days"
 BLAST_RADIUS = "blast_radius"
+# WHAT STOPS, AND WHAT WAS PROMISED, ARE TWO QUESTIONS. Blast radius counts
+# annual demand for the finished goods a part feeds; this counts the orders
+# already committed to a customer. They share a unit and answer differently: a
+# part can block enormous annual volume with nothing promised this quarter, or
+# tiny volume that is entirely spoken for next week, and a planner does
+# something different about each. Optional, and cannot-tell where nobody has
+# supplied an order book.
+COMMITTED_AT_RISK = "committed_at_risk"
 BUFFER_COVER = "buffer_cover"
 PORTABILITY = "portability"
 CONCENTRATION = "concentration"
 
-DIMENSIONS = (WAIT_OUT_DAYS, RESOURCE_DAYS, BLAST_RADIUS, BUFFER_COVER,
-              PORTABILITY, CONCENTRATION)
+DIMENSIONS = (WAIT_OUT_DAYS, RESOURCE_DAYS, BLAST_RADIUS, COMMITTED_AT_RISK,
+              BUFFER_COVER, PORTABILITY, CONCENTRATION)
 
 # Portability values. Categorical, so no arithmetic is possible on them at all.
 TOOLING_COMPANY = "company"
@@ -208,12 +216,13 @@ class ExposureProfile:
     wait_out_days: DimensionScore
     resource_days: DimensionScore
     blast_radius: DimensionScore
+    committed_at_risk: DimensionScore
     buffer_cover: DimensionScore
     portability: DimensionScore
     concentration: object = None      # reserved for stage 5
 
     def scored(self):
-        """The five dimensions stage 4 fills. Never summed, only iterated.
+        """The six dimensions stage 4 fills. Never summed, only iterated.
 
         `wait_out_days` and `resource_days` sit here as two entries rather than
         one, and they are both in days. THAT DOES NOT MAKE THEM ADDABLE: one is
@@ -223,10 +232,10 @@ class ExposureProfile:
         answer a question nobody asked.
         """
         return (self.wait_out_days, self.resource_days, self.blast_radius,
-                self.buffer_cover, self.portability)
+                self.committed_at_risk, self.buffer_cover, self.portability)
 
     def all_scores(self):
-        """The five, plus concentration once stage 5 has filled its slot.
+        """The six, plus concentration once stage 5 has filled its slot.
 
         ADDED, never substituted. `scored()` keeps its stage 4 meaning of "the
         dimensions that are properties of the part alone", because stage 5 may
@@ -553,6 +562,87 @@ def resource_days(part_number, tooling_owner, stages=None):
         detail=detail)
 
 
+# ------------------------------------------------------ committed at risk --
+
+def committed_at_risk(part_number, rows, commitments):
+    """Orders already promised that this part would stop.
+
+    `commitments` maps a finished good to units already committed to a customer,
+    or None where no order book was supplied at all. THOSE TWO ARE DIFFERENT and
+    the branch below separates them before any arithmetic, exactly as
+    `buffer_cover` separates a missing on-hand record from a counted zero.
+
+    THE BOUND DIRECTION IS THE SAME AS BLAST RADIUS'S, and for the same reason:
+    committed units sit in the numerator, so a finished good with no row in the
+    order book can only ADD to what is at risk. A partial order book therefore
+    gives a lower bound, never an upper one.
+
+    NOTHING RECORDED IS NOT A BOUND OF ZERO. Where none of the finished goods
+    this part feeds appears in the order book, zero is the trivial lower bound
+    of any non-negative quantity: it would promise a figure and deliver nothing.
+    That case abstains, which is the repair `render._blocked_volume_absent`
+    already carries for the volumetric half of blast radius.
+    """
+    goods = sorted({row.finished_good for row in rows})
+
+    if commitments is None:
+        return DimensionScore(
+            part_number=part_number, dimension=COMMITTED_AT_RISK, value=None,
+            unit=FINISHED_GOOD_UNITS, completeness=CANNOT_TELL,
+            reasons=("no order book was supplied, so we cannot say what "
+                     "promised orders this part would stop",),
+            detail={"finished_goods_blocked": len(goods)})
+
+    if not goods:
+        # A part that feeds no finished good stops no promised order. Settled
+        # rather than unknown: with an order book in hand, "nothing depends on
+        # it" is an answer. Unreachable on real input, where stage 2 guarantees
+        # every part reaches a finished good, and reachable in a fixture, which
+        # is where a degenerate case is usually met first.
+        return DimensionScore(
+            part_number=part_number, dimension=COMMITTED_AT_RISK, value=0,
+            unit=FINISHED_GOOD_UNITS, completeness=KNOWN,
+            reasons=("this part feeds no finished good, so no promised order "
+                     "depends on it",),
+            detail={"finished_goods_blocked": 0})
+
+    recorded = {good: commitments[good] for good in goods
+                if good in commitments}
+    missing = [good for good in goods if good not in commitments]
+    total = sum(recorded.values())
+    detail = {"finished_goods_blocked": len(goods),
+              "finished_goods_with_orders": tuple(sorted(recorded)),
+              "finished_goods_without_orders": tuple(missing),
+              "committed_units": total}
+
+    if not recorded:
+        return DimensionScore(
+            part_number=part_number, dimension=COMMITTED_AT_RISK, value=None,
+            unit=FINISHED_GOOD_UNITS, completeness=CANNOT_TELL,
+            reasons=(f"none of the {len(goods)} finished good(s) this part "
+                     f"feeds appears in the order book, so what is promised "
+                     f"against them is not recorded. That is not the same as "
+                     f"nothing being promised",),
+            detail=detail)
+
+    if missing:
+        return DimensionScore(
+            part_number=part_number, dimension=COMMITTED_AT_RISK, value=total,
+            unit=FINISHED_GOOD_UNITS, completeness=LOWER_BOUND,
+            reasons=(f"{total} promised units would stop, counting only the "
+                     f"{len(recorded)} of {len(goods)} finished good(s) that "
+                     f"appear in the order book. The real figure can only be "
+                     f"higher: orders nobody recorded still stop",),
+            detail=detail)
+
+    return DimensionScore(
+        part_number=part_number, dimension=COMMITTED_AT_RISK, value=total,
+        unit=FINISHED_GOOD_UNITS, completeness=KNOWN,
+        reasons=(f"{total} promised units would stop, across every one of the "
+                 f"{len(goods)} finished good(s) this part feeds",),
+        detail=detail)
+
+
 # ---------------------------------------------------------------- portability --
 
 def portability(part_number, tooling_owner):
@@ -585,8 +675,12 @@ def portability(part_number, tooling_owner):
 # ------------------------------------------------------------------ profile --
 
 def score_part(part_number, verdict, rows, usage, on_hand_units, tooling_owner,
-               lead_times, recovery_stages=None):
-    """All five dimensions for one part. Concentration stays reserved.
+               lead_times, recovery_stages=None, commitments=None):
+    """All six dimensions for one part. Concentration stays reserved.
+
+    `commitments` maps a finished good to units already promised, or None where
+    no order book exists. None is not an empty order book: see
+    `committed_at_risk`.
 
     `recovery_stages` is the part's row of `recovery_inputs.csv`, or None where
     no such file exists. None is not an empty plan: it means nobody has supplied
@@ -599,6 +693,7 @@ def score_part(part_number, verdict, rows, usage, on_hand_units, tooling_owner,
         resource_days=resource_days(part_number, tooling_owner,
                                     recovery_stages),
         blast_radius=blast_radius(part_number, rows, usage),
+        committed_at_risk=committed_at_risk(part_number, rows, commitments),
         buffer_cover=buffer_cover(part_number, on_hand_units, usage),
         portability=portability(part_number, tooling_owner),
     )

@@ -21,7 +21,8 @@ from src import scoring
 from src.concentration import ConcentrationScore
 from src.demand import USAGE_KNOWN, Usage
 from src.scoring import (ExposureProfile, blast_radius, buffer_cover,
-                         portability, resource_days, wait_out_days)
+                         committed_at_risk, portability, resource_days,
+                         wait_out_days)
 
 TIMED = {"alternate_source_days": 10, "tooling_lead_time_days": 20,
          "engineering_transfer_days": 30, "first_article_days": 40,
@@ -37,7 +38,7 @@ _UNSPECIFIED = object()
 
 def profile(verdict="single_source", lead_times=((30, 45),), on_hand=100,
             tooling="company", usage=1000, stages=_UNSPECIFIED,
-            cluster_size=None):
+            cluster_size=None, commitments=_UNSPECIFIED):
     use = Usage("P", Fraction(usage), USAGE_KNOWN)
     built = ExposureProfile(
         part_number="P",
@@ -45,6 +46,8 @@ def profile(verdict="single_source", lead_times=((30, 45),), on_hand=100,
         resource_days=resource_days(
             "P", tooling, TIMED if stages is _UNSPECIFIED else stages),
         blast_radius=blast_radius("P", (), use),
+        committed_at_risk=committed_at_risk(
+            "P", (), {} if commitments is _UNSPECIFIED else commitments),
         buffer_cover=buffer_cover("P", on_hand, use),
         portability=portability("P", tooling))
     if cluster_size is None:

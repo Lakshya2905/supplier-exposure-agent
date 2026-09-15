@@ -151,6 +151,9 @@ export interface ScoreResult {
   unplaceable_parts: string[];
   extracts: Record<string, [string, string]>;
   dimensions: string[];
+  /** What this run assessed and what it did not. Present even when nothing was
+   *  left out, because "we looked at everything" is a claim worth seeing made. */
+  scope: Scope;
   /** Reviewer-owned magnitude thresholds, or null when nobody has set any.
    *  Null is the shipped state and is not a gap: the system can name the
    *  structural patterns and cannot say "long lead" until a person says what
@@ -170,6 +173,42 @@ export interface BindingSummary {
   blocks: BindingEntry[];
   nothing_binds: boolean;
   no_terminal_state: Record<string, string>;
+}
+
+export interface Scope {
+  labels: string[];
+  included: string[];
+  parts_in_scope: string[];
+  parts_excluded: string[];
+  counts: Record<string, number>;
+  is_scoped: boolean;
+  excluded_labels: string[];
+  sentence: string;
+}
+
+/** One thing that is different between two runs.
+ *
+ *  `worsened` IS THREE-VALUED and the third value is the point: a measure that
+ *  stopped being answerable has not worsened and has not improved, and a UI
+ *  that renders `!worsened` as "improved" reintroduces at the last moment the
+ *  collapse both runs avoided. */
+export interface Change {
+  kind: string;
+  subject: string;
+  dimension: string;
+  before: Measure;
+  after: Measure;
+  worsened: boolean | null;
+  detail: Record<string, Measure>;
+}
+
+export interface Comparison {
+  before: RunRecord & { provenance: Record<string, Measure> };
+  after: RunRecord & { provenance: Record<string, Measure> };
+  changes: Change[];
+  counts: Record<string, number>;
+  worsened: number;
+  unjudged: number;
 }
 
 export interface DecisionEvent {

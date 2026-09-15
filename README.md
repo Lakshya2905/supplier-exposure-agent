@@ -42,16 +42,18 @@ executes on one part and defers on the next.
 **Executes.** BOM explosion, the supplier join, exposure identification, and the
 five per-part scoring dimensions where their inputs are present. Deterministic,
 reproducible, and checkable against the evidence panel. At seed 42, 1021 of the
-1776 dimension results execute, that being 296 scored parts across 6 measures.
+2072 dimension results execute, that being 296 scored parts across 7 measures.
 
 **Recommends.** Anything whose answer depends on a judgment a reasonable person
-could make differently. 755 results defer, in two distinct ways: 459 because an
+could make differently. 1051 results defer, in two distinct ways: 755 because an
 input is missing, and 296 because concentration carries the ceiling below.
 
-296 of those missing inputs are the whole of `resource_days`, and that is the
-system working rather than failing. No dataset in this repository carries a
-resourcing duration, so the tool says so for every part instead of producing a
-recovery figure that looks complete. See **Recovery is two measures** below.
+592 of those missing inputs are the whole of `resource_days` and the whole of
+`committed_at_risk`, and that is the system working rather than failing. No
+dataset in this repository carries a resourcing duration or an order book, so the
+tool says so for every part instead of producing figures that look complete. See
+**Recovery is two measures** and **Four things a bill of materials this size
+needs** below.
 
 **Recommends permanently.** Concentration grouping, and the archetype catalogue.
 Correlated exposure can be defined as same supplier, same region, or same tier,
@@ -339,11 +341,13 @@ sentence. A deployment that supplies the file should add its manifest row too.
 
 ## What the system refuses to do
 
-**No composite score.** Six measures in four units: days, finished good units,
+**No composite score.** Seven measures in four units: days, finished good units,
 parts, and a categorical. There is no total, no overall, no weighted sum, and no
-place to put one. Three of the six are in days and none of them is added to
-another: a wait-out time, a resourcing time and a cover figure answer three
-different questions, and sharing a unit does not make them one quantity.
+place to put one. Three of the seven are in days and two more are in finished
+good units, and none of them is added to another: a wait-out time, a resourcing
+time and a cover figure answer three different questions, as do annual demand
+stopped and promised orders missed. Sharing a unit does not make two measures one
+quantity.
 
 **No normalised scale.** This is the half that matters. Twenty-six days and three
 assemblies cannot be added by anybody, but "0.8 lead-time risk" and "0.6 blast
@@ -405,11 +409,21 @@ parts carry that note at seed 42.
 Each is a strict xfail, so the gap stays visible, CI stays green, and the test
 fails loudly the day somebody closes it without noticing. Verbatim:
 
-**Tier correlation is unrepresentable.** The brief names same-supplier,
-same-region and same-tier as three definitions of correlated. There is no tier
-field anywhere in the schema, so the third reading cannot be computed at all.
-Choosing two of three is a scoping decision and should not look like the data
-happened to support exactly the right two.
+**Sub-tier visibility stops one level down.** The optional
+`sub_tier_sources.csv` names where a supplier sources the critical input, and
+says nothing about where **that** source buys it. Two parts whose sub-tier
+suppliers are different companies both buying from one tier-3 mill are
+correlated in fact and independent here. The schema holds one hop, so the
+reading cannot recurse.
+
+This gap REPLACED one, and the predecessor is worth recording because it is what
+the sub-tier field closed. It read: "Tier correlation is unrepresentable. The
+brief names same-supplier, same-region and same-tier as three definitions of
+correlated. There is no tier field anywhere in the schema, so the third reading
+cannot be computed at all." The third reading now exists, its xfail is a passing
+test, and the gap moved one layer down: the schema can now say who a supplier
+buys from, and still cannot say who **they** buy from. That is the layer the
+market research puts at roughly 42% of companies, and almost nobody passes it.
 
 **In-house concentration is not modelled.** A part made on one internal line or
 cell is a single point of failure that neither supplier grouping nor region
@@ -600,6 +614,116 @@ chains live in the hand-authored fixture `tests/fixtures/tiny_recovery.csv`,
 with the arithmetic in a comment block above the data.
 
 The dashboard has no authentication and is not built to have any.
+
+---
+
+---
+
+## Four things a bill of materials this size needs
+
+All four are **optional and degrade to the behaviour that shipped without them**.
+No dataset in this repository carries any of their inputs, so the shipped demo
+looks exactly as it did and each feature says so rather than inventing a figure.
+
+### Criticality: tier before assessing, and never score by it
+
+Standard practice is to tier a BOM by criticality before assessing any of it.
+Scoring three hundred lines equally is fine; scoring twelve thousand equally is
+unusable. An optional `criticality` column on `part_master.csv` scopes a run.
+
+The care is in what it is **not**:
+
+- **Read, never derived.** The tool does not compute criticality from blast
+  radius, from spend, or from anything else. A tier inferred from the measures
+  is a weighted sum of them wearing a letter, and it arrives with no owner.
+- **Never in a score.** `sourcing_list_status` gates the verdict only,
+  `annual_spend_usd` is display-only, and this joins that list. No
+  `DimensionScore` has heard of it, and `test_criticality.py` asserts the
+  absence rather than trusting it.
+- **Not ordered here.** Scope is a **set** of labels, never a cut-off above or
+  below a level, because a cut-off asserts an ordering the tool was never told.
+  The UI is checkboxes for the same reason: a slider would be that assertion
+  drawn.
+- **Excluding is not assessing.** A part outside the scope was not examined,
+  which is different from a part examined and found fine. The run strip, the
+  coverage panel and the payload all carry the count and the labels.
+
+A part with no criticality on file is **unclassified and stays in scope**. That
+is the one default here and it is the inclusive one: dropping the parts nobody
+has got round to classifying would shrink the assessment to the curated slice
+and report a clean result for the rest.
+
+### One sub-tier field, which closes the tier gap
+
+Roughly 95% of companies can see their own suppliers and fewer than half can see
+one level below. An optional `sub_tier_sources.csv` names where a supplier
+sources the critical input — one column, no supply-chain graph, a question a
+buyer can ask on a call.
+
+It makes the brief's third definition of correlated computable. Two parts bought
+from two different companies in two different regions are not independent if both
+companies buy from the same place, and neither supplier grouping nor region
+grouping can see it. `concentration.BY_TIER` now does.
+
+**`agreement` was not quietly widened.** It compares supplier with region and
+says so, so a part correlated only by sub-tier source reads `neither` there —
+true of those two readings, and a lie if read as "not correlated at all". So
+`correlated_bases` carries every basis under which a part is correlated, and a
+test asserts a tier-only part has both, so the pair cannot mislead together.
+
+**A supplier with no entry groups with nobody.** Two suppliers who have both
+declined to say are not thereby buying from the same place, and a group built
+out of that absence would be a correlation manufactured from a gap and then
+handed to somebody to confirm.
+
+### Committed orders: exposure connected to consequence
+
+Blast radius counts annual demand for the finished goods a part feeds, which
+answers how much of the build stops. It does not answer what a disruption
+**costs**. An optional `commitments.csv` adds `committed_at_risk`: orders already
+promised that this part would stop.
+
+They are two measures in one unit, not one measure with a multiplier. A part can
+block enormous annual volume with nothing committed this quarter, and another can
+block a trickle that is entirely spoken for next week; a planner does something
+different about each.
+
+**Units, not money, and that is deliberate.** `annual_spend_usd` is unscored here
+because ranking by what a part costs us is the cost optimisation agent's job.
+Revenue at risk is a near neighbour of that, so this counts **promised units**:
+an obligation already made, in the same unit as the rest of the volumetric
+reading, with no price in it. A company wanting the money can multiply outside
+this system, where the price list and the argument about it both live.
+
+The bound direction matches blast radius's, for the same reason: committed units
+sit in the numerator, so a finished good absent from the order book can only
+**add**. Nothing recorded at all abstains rather than reporting a lower bound of
+zero, since zero is the trivial lower bound of any non-negative quantity.
+
+### What changed: two runs, compared
+
+A single run answers "what is exposed". The question asked on a Monday is "what
+is exposed that was not last week", and answering it by reading two screens side
+by side is how a new single source goes unnoticed for a month.
+
+**The four ways a diff lies**, each of which both runs got right and the
+subtraction would undo:
+
+1. **An unknown is not a decrease.** Cover that went from 40 days to "no stock
+   count on file" has not fallen to zero. `worsened` is three-valued so this case
+   has somewhere to go; forcing it into a boolean would make it true or false and
+   both are assertions nobody can support.
+2. **A bound is not a measurement.** Two upper bounds can both fall while the
+   true figures rise, so a change involving one is reported **with** its
+   direction and **without** a verdict.
+3. **A part that left the scope did not get better.** Otherwise the exposure
+   count improves by narrowing the question.
+4. **Two runs of different data are not a trend.** The comparison states which
+   datasets it read and how many parts each assessed.
+
+The surface groups changes into *worse*, *no verdict*, *better* and *scope
+changed*. Those are four different instructions, not a ranking — and the *no
+verdict* group is the one a diff usually drops.
 
 ---
 

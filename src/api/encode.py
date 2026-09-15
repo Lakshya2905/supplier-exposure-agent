@@ -56,6 +56,9 @@ EXTRA_PROPERTIES = {
     "Cluster": ("size", "is_concentrated", "autonomy"),
     "Coverage": ("is_empty",),
     "Transformation": ("changes_supplier_count",),
+    "Scope": ("is_scoped", "excluded_labels"),
+    "Chain": ("first_pass_days", "with_retry_days", "days_by_class",
+              "weakest_class"),
 }
 
 

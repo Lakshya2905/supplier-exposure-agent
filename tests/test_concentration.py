@@ -110,6 +110,26 @@ class TestArityNotMagnitude(unittest.TestCase):
                           completeness="known")
         self.assertTrue(cluster.is_concentrated)
 
+    # Words that have NO legitimate use in this module. Any occurrence is a
+    # band.
+    BANNED_OUTRIGHT = ("severity", "band", "bands", "HIGH", "LOW", "MEDIUM")
+
+    # Words that WOULD be banding vocabulary and are not, here, because the
+    # sub-tier reading arrived and brought the domain's own words with it. Each
+    # is allowed only in the forms listed, so a NEW use still fails.
+    #
+    # This is the corrections log's recurring hazard handled rather than
+    # dodged: a system that refuses concepts by name contains those names in its
+    # refusals, so a scan has to tell a guard from a breach. Deleting "tier"
+    # from the list would have been the easy fix and would have left nothing
+    # watching for `TIER_HIGH`.
+    ALLOWED_FORMS = {
+        "tier": ("BY_TIER", "tier_by_part", "tier_groups", "tier_size",
+                 "tier_hit", "tier_cluster", "supplied_tiers", "tiers",
+                 "'tier'", '"tier"'),
+        "critical": ("the critical input", "critical input from"),
+    }
+
     def test_no_banding_constant_exists_anywhere_in_the_module(self):
         # CODE ONLY, docstrings and comments stripped, as at stage 4: the
         # docstrings explain at length why there is no band.
@@ -119,13 +139,31 @@ class TestArityNotMagnitude(unittest.TestCase):
         # here fails on correct code and teaches the next person to delete the
         # test rather than fix the violation.
         import re
-        for banding_word in ("severity", "critical", "band", "bands", "HIGH",
-                             "LOW", "MEDIUM", "tier"):
+        for banding_word in self.BANNED_OUTRIGHT:
             with self.subTest(word=banding_word):
                 self.assertIsNone(
                     re.search(rf"\b{banding_word}\b", joined),
                     f"{banding_word!r} appears in concentration code; "
                     f"severity is carried by the raw count, never banded")
+
+    def test_the_domains_own_words_appear_only_as_grouping_vocabulary(self):
+        """"tier" is a GROUPING BASIS here, and would be a band anywhere else.
+
+        The guard is not dropped for it, it is narrowed: every occurrence has to
+        be one of the declared forms, so `TIER_HIGH` or a `critical_score` still
+        fails. A word that means two things needs a scan that knows which one is
+        in front of it.
+        """
+        import re
+        joined = code_of(C)
+        for word, allowed in self.ALLOWED_FORMS.items():
+            for match in re.finditer(rf"\b{word}\w*", joined):
+                context = joined[max(0, match.start() - 8):match.end() + 12]
+                with self.subTest(word=word, found=match.group()):
+                    self.assertTrue(
+                        any(form in context for form in allowed),
+                        f"{match.group()!r} is not one of the declared "
+                        f"grouping forms for {word!r}, so it may be a band")
 
     def test_severity_is_carried_by_the_raw_count_with_a_unit(self):
         for score in fixture_report().scores.values():
@@ -494,7 +532,7 @@ class TestFillingTheReservedSlot(unittest.TestCase):
         filled = dataclasses.replace(
             self.build_profile(),
             concentration=fixture_report().scores["CON-P01"])
-        self.assertEqual(len(filled.scored()), 5)
+        self.assertEqual(len(filled.scored()), 6)
         self.assertNotIn("concentration",
                          [s.dimension for s in filled.scored()])
 
@@ -502,8 +540,8 @@ class TestFillingTheReservedSlot(unittest.TestCase):
         profile = self.build_profile()
         filled = dataclasses.replace(
             profile, concentration=fixture_report().scores["CON-P01"])
-        self.assertEqual(len(profile.all_scores()), 5)
-        self.assertEqual(len(filled.all_scores()), 6)
+        self.assertEqual(len(profile.all_scores()), 6)
+        self.assertEqual(len(filled.all_scores()), 7)
         self.assertIn("concentration",
                       [s.dimension for s in filled.all_scores()])
 
@@ -513,37 +551,33 @@ class TestFillingTheReservedSlot(unittest.TestCase):
         self.assertIsNotNone(filled["CON-P01"].concentration)
 
 
-# ------------------------------------------------------------- known gaps ----
-@pytest.mark.xfail(strict=True, reason=(
-    "Tier correlation is UNREPRESENTABLE. The brief names same-supplier, "
-    "same-region and same-tier as three definitions of correlated. There is no "
-    "tier field anywhere in the schema, so the third reading cannot be "
-    "computed at all. Choosing two of three is a scoping decision and should "
-    "not look like the data happened to support exactly the right two."))
+# --------------------------------------------------------- a gap, closed ----
+# WAS A STRICT XFAIL, AND IS NOW A TEST. It read: "Tier correlation is
+# UNREPRESENTABLE. The brief names same-supplier, same-region and same-tier as
+# three definitions of correlated. There is no tier field anywhere in the
+# schema, so the third reading cannot be computed at all."
+#
+# The schema now has one optional field naming where a supplier sources the
+# critical input, which is the smallest thing that makes the reading
+# representable, and the assertion below is the xfail's own body unchanged. Its
+# docstring said the property a gap test needs is that it "must be closable by
+# implementing the gap and by nothing else", and that is what happened: the
+# `tiers=` parameter and the grouping arrived together.
+#
+# The gap did not vanish, it moved one layer down. See the xfail beneath this.
 def test_concentration_can_group_by_tier():
-    """BEHAVIOURAL, and deliberately not `hasattr`.
+    """Two exposed parts sharing a sub-tier source and nothing else.
 
-    The predecessor asserted `hasattr(model, "SUPPLIER_TIER")`. A bare constant
-    satisfies that, which flips a strict xfail to XPASS and turns the gate red
-    while the reading is still absent, so the cheapest way back to green is to
-    define a name and ship no capability. That is the failing test teaching
-    somebody to satisfy the letter, and it is corrections-log entries 1, 2, 3
-    and 6 in test form: a proxy standing in for the property.
-
-    This asserts the reading by USING it. Two exposed parts share a tier and
-    share nothing else, so only a tier grouping can see the correlation. The
-    tier arrives as a `tiers=` mapping, which is the shape the input would take
-    if the reading existed, so the failure names the missing capability directly
-    ("unexpected keyword argument 'tiers'") rather than crashing on a tuple
-    width. It becomes passable exactly when somebody adds the parameter AND the
-    grouping, which is the property a gap test needs: it must be closable by
-    implementing the gap and by nothing else.
+    Different companies, different regions, and they still fail together
+    because both companies buy the critical input from one place. Neither
+    supplier grouping nor region grouping can see it, which is the whole reason
+    the third reading exists.
     """
     verdicts = {"SHARED-T1": "single_source", "SHARED-T2": "single_source"}
     dependencies = {"SHARED-T1": (("Alpha Works", "europe"),),
                     "SHARED-T2": (("Beta Industries", "south_asia"),)}
     report = analyse(verdicts, dependencies,
-                     tiers={"SHARED-T1": "tier_2", "SHARED-T2": "tier_2"})
+                     tiers={"SHARED-T1": "Foundry X", "SHARED-T2": "Foundry X"})
 
     bases = {cluster.basis for cluster in report.clusters}
     assert "tier" in bases, (
@@ -551,6 +585,90 @@ def test_concentration_can_group_by_tier():
         "nothing else cannot be seen as correlated")
     tiers = [c for c in report.clusters if c.basis == "tier"]
     assert set(tiers[0].members) == {"SHARED-T1", "SHARED-T2"}
+
+
+def test_a_tier_only_correlation_cannot_be_read_as_no_correlation():
+    """The pair of fields that must not mislead together.
+
+    `agreement` compares supplier with region and says so, so a part correlated
+    only by sub-tier source reads `neither` there. That is true of those two
+    readings and would be a lie about the part, which is why
+    `correlated_bases` carries every basis and why both are asserted here: a
+    consumer reading only the first must not be able to conclude "independent".
+    """
+    verdicts = {"SHARED-T1": "single_source", "SHARED-T2": "single_source"}
+    dependencies = {"SHARED-T1": (("Alpha Works", "europe"),),
+                    "SHARED-T2": (("Beta Industries", "south_asia"),)}
+    report = analyse(verdicts, dependencies,
+                     tiers={"SHARED-T1": "Foundry X", "SHARED-T2": "Foundry X"})
+
+    score = report.scores["SHARED-T1"]
+    assert score.agreement == C.NEITHER
+    assert score.correlated_bases == (C.BY_TIER,)
+    assert score.value == 2
+    assert "same place" in score.reasons[0]
+
+
+def test_absent_sub_tier_sources_group_nothing():
+    """Two suppliers who have both declined to say are not thereby the same.
+
+    Grouping the parts nobody has answered for would manufacture a correlation
+    out of an absence, which is the missing-versus-zero collapse in its most
+    expensive form: a cluster that does not exist, presented for confirmation.
+    """
+    verdicts = {"A": "single_source", "B": "single_source"}
+    dependencies = {"A": (("Alpha Works", "europe"),),
+                    "B": (("Beta Industries", "south_asia"),)}
+    report = analyse(verdicts, dependencies, tiers={"A": "", "B": None})
+    assert not [c for c in report.clusters if c.basis == "tier"]
+    assert report.scores["A"].correlated_bases == ()
+
+
+def test_a_dataset_with_no_sub_tier_field_behaves_exactly_as_before():
+    # Every dataset this repository generates. The reading is optional and its
+    # absence changes nothing else.
+    verdicts = {"A": "single_source", "B": "single_source"}
+    dependencies = {"A": (("Alpha Works", "europe"),),
+                    "B": (("Alpha Works", "europe"),)}
+    with_none = analyse(verdicts, dependencies)
+    with_empty = analyse(verdicts, dependencies, tiers={})
+    assert [c.key for c in with_none.clusters] == [c.key for c in
+                                                   with_empty.clusters]
+    assert not [c for c in with_none.clusters if c.basis == "tier"]
+
+
+# ------------------------------------------------------------- known gaps ----
+@pytest.mark.xfail(strict=True, reason=(
+    "Sub-tier visibility stops one level down. The optional field names where a "
+    "supplier sources the critical input, and says nothing about where THAT "
+    "source buys it. Two parts whose sub-tier suppliers are different companies "
+    "both buying from one tier-3 mill are correlated in fact and independent "
+    "here. The schema holds one hop, so the reading cannot recurse: this is the "
+    "same shape as the gap it replaced, one layer further down, and it is the "
+    "layer the market research says roughly 42% of companies reach and almost "
+    "nobody passes."))
+def test_concentration_can_group_below_the_sub_tier_source():
+    """BEHAVIOURAL, and deliberately not `hasattr`.
+
+    Two parts, two suppliers, two DIFFERENT sub-tier sources, and both of those
+    sources buy from one place further down. Only a reading that can follow a
+    second hop sees it. The chain arrives as a `sub_tier_of=` mapping, which is
+    the shape the input would take if the reading existed, so the failure names
+    the missing capability rather than crashing on a value.
+    """
+    verdicts = {"DEEP-1": "single_source", "DEEP-2": "single_source"}
+    dependencies = {"DEEP-1": (("Alpha Works", "europe"),),
+                    "DEEP-2": (("Beta Industries", "south_asia"),)}
+    report = analyse(
+        verdicts, dependencies,
+        tiers={"DEEP-1": "Foundry X", "DEEP-2": "Foundry Y"},
+        sub_tier_of={"Foundry X": "Ural Mill", "Foundry Y": "Ural Mill"})
+
+    deep = [c for c in report.clusters if c.basis == "tier"
+            and c.key == "Ural Mill"]
+    assert deep and set(deep[0].members) == {"DEEP-1", "DEEP-2"}, (
+        "two parts whose sub-tier suppliers both buy from one mill are not "
+        "seen as correlated, because the reading stops after one hop")
 
 
 @pytest.mark.xfail(strict=True, reason=(

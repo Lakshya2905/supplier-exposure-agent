@@ -54,6 +54,7 @@ WORSE_IS = {
     scoring.WAIT_OUT_DAYS: "higher",
     scoring.RESOURCE_DAYS: "higher",
     scoring.BLAST_RADIUS: "higher",
+    scoring.COMMITTED_AT_RISK: "higher",
     scoring.CONCENTRATION: "higher",
     scoring.PORTABILITY: "categorical",
 }
@@ -268,6 +269,7 @@ def sentence_evidence(profile, verdict, memberships=()):
                                 clause(scoring.RESOURCE_DAYS),
                                 clause(scoring.BUFFER_COVER),
                                 clause(scoring.BLAST_RADIUS),
+                                clause(scoring.COMMITTED_AT_RISK),
                                 clause(scoring.PORTABILITY),
                                 clause(scoring.CONCENTRATION)) if c],
         "archetypes": list(memberships),
