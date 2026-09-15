@@ -23,6 +23,7 @@
  */
 import { Button } from '@carbon/react';
 import { Printer } from '@carbon/react/icons';
+import { exposedRows } from '@/lib/exposed';
 import { DIMENSION_LABEL, DIMENSION_UNIT, labelFor } from '@/lib/labels';
 import { STANDING_COPY } from './Measures';
 import type { ScoreResult } from '@/lib/types';
@@ -108,12 +109,16 @@ export function RunSummary({ result }: { result: ScoreResult }) {
           <tr><th>Part</th><th>Finding</th></tr>
         </thead>
         <tbody>
-          {result.surfaces.exposure.layers.flatMap((layer) =>
-            layer.flatMap((group) => group.rows)).map((row) => (
-              <tr key={row.key}>
-                <td>{row.key}</td>
-                <td>{row.sentence}</td>
-              </tr>
+          {/* ONE ROW PER PART. This re-walked the layers and listed fourteen
+              parts twice, with identical sentences, because a part appears in
+              every group it matches. On screen that was duplicate React keys;
+              on paper it was a summary claiming more exposed parts than there
+              are. */}
+          {exposedRows(result.surfaces.exposure).map((row) => (
+            <tr key={row.key}>
+              <td>{row.key}</td>
+              <td>{row.sentence}</td>
+            </tr>
           ))}
         </tbody>
       </table>
