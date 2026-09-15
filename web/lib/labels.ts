@@ -16,6 +16,19 @@
  * the mechanism.
  */
 
+/** The product name, in ONE place.
+ *
+ * It was spelled in the page metadata and again in the header wordmark, which
+ * is two copies of one name. That is the shape of a defect this repository has
+ * already had twice: the nav label and the page title were two copies, and
+ * renaming one timed out every rendered-page check. The wordmark splits the
+ * name for its weight break and therefore needs the halves, so both are here
+ * and the whole is derived rather than retyped.
+ */
+export const PRODUCT_LEAD = 'Supplier Exposure';
+export const PRODUCT_TAIL = 'Agent';
+export const PRODUCT_NAME = `${PRODUCT_LEAD} ${PRODUCT_TAIL}`;
+
 /** Underscores out, first letters up. For keys nothing authoritative names. */
 export function titleCase(key: string): string {
   return key
