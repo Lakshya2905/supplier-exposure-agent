@@ -233,7 +233,7 @@ class TestRankByDimension(unittest.TestCase):
     def test_lead_time_ranks_longest_first(self):
         profiles = [build("AA-P-01", lead_times=((10, 12),)),
                     build("BB-P-02", lead_times=((300, 400),))]
-        ranked, _ = ranking.rank_by(profiles, scoring.LEAD_TIME_TO_RECOVER)
+        ranked, _ = ranking.rank_by(profiles, scoring.WAIT_OUT_DAYS)
         self.assertEqual([p.part_number for p in ranked],
                          ["BB-P-02", "AA-P-01"])
 
@@ -241,7 +241,7 @@ class TestRankByDimension(unittest.TestCase):
         profiles = [build("AA-P-01", lead_times=((300, 400),)),
                     build("BB-P-02", verdict="no_qualified_supplier",
                           lead_times=())]
-        ranked, _ = ranking.rank_by(profiles, scoring.LEAD_TIME_TO_RECOVER)
+        ranked, _ = ranking.rank_by(profiles, scoring.WAIT_OUT_DAYS)
         self.assertEqual(ranked[0].part_number, "BB-P-02")
 
     def test_ties_fall_back_to_the_arbitrary_stable_order(self):

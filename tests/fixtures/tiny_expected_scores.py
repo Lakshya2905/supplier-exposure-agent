@@ -82,6 +82,49 @@ EXPECTED_COVER_COMPLETENESS = {
     "ZEROUSE-M01": "known",        # unbounded is settled too
 }
 
+# part -> first-pass resourcing chain total in days, hand-summed in the comment
+# block at the top of tiny_recovery.csv. None where nothing is timed, which is
+# an abstention rather than a total of zero.
+EXPECTED_RESOURCE_DAYS = {
+    "SHARED-M01": 300,      # 45 + 120 + 30 + 20 + 60 + 25
+    "ONLY-M01": 80,         # 35 + 20 + 10 + 15, tooling off the path
+    "ONLY-M02": 100,        # 25 + 10 + 5 + 50 + 10, tooling off the path
+    "MISSING-M01": 70,      # 40 + 30
+    "ORPHAN-M01": None,     # no row at all
+    "ZEROUSE-M01": 115,     # 30 + 15 + 10 + 40 + 20, tooling untimed
+}
+
+EXPECTED_RESOURCE_COMPLETENESS = {
+    "SHARED-M01": "known",        # every stage timed AND a cycle count on file
+    "ONLY-M01": "lower_bound",    # no qualification duration, no cycle count
+    "ONLY-M02": "lower_bound",    # every stage timed; the CYCLE COUNT is absent
+    "MISSING-M01": "lower_bound", # four stages untimed, tooling among them
+    "ORPHAN-M01": "cannot_tell",  # nothing timed is not a bound
+    "ZEROUSE-M01": "lower_bound", # supplier tooling with no tooling lead time
+}
+
+# part -> days if qualification takes the number of cycles somebody planned for.
+# None where no cycle count is on file, which is NOT the same as one cycle.
+EXPECTED_RESOURCE_WITH_RETRY = {
+    "SHARED-M01": 360,      # 300 + 1 x 60, over 2 cycles
+    "ONLY-M01": None,       # no cycle count
+    "ONLY-M02": None,       # no cycle count
+    "MISSING-M01": 130,     # 70 + 2 x 30, over 3 cycles
+    "ORPHAN-M01": None,
+    "ZEROUSE-M01": 115,     # 115 + 0 x 40, one cycle planned for
+}
+
+# part -> days per confidence class. KEPT APART: the classes are three different
+# kinds of claim and nothing in the system combines them into one figure.
+EXPECTED_RESOURCE_DAYS_BY_CLASS = {
+    "SHARED-M01": {"judgment": 180, "knowable": 120},
+    "ONLY-M01": {"judgment": 80},
+    "ONLY-M02": {"judgment": 100},
+    "MISSING-M01": {"judgment": 70},
+    "ORPHAN-M01": {},
+    "ZEROUSE-M01": {"judgment": 115},
+}
+
 EXPECTED_PORTABILITY = {
     "SHARED-M01": "supplier",
     "ONLY-M01": "company",

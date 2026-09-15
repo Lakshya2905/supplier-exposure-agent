@@ -182,7 +182,7 @@ CORRELATED = Condition(
 
 def _lead_time_at_least(days):
     def test(context):
-        score = _score(context, "lead_time_to_recover")
+        score = _score(context, "wait_out_days")
         if score is None:
             return UNKNOWN
         if score.completeness == scoring.NO_RECOVERY_PATH:
@@ -327,7 +327,7 @@ def magnitude_catalogue(thresholds):
             conditions=(
                 SINGLE_SOURCE,
                 Condition(name="long_lead", kind=MAGNITUDE,
-                          depends_on="lead_time_to_recover",
+                          depends_on="wait_out_days",
                           describe=(f"quoted lead time is {lead_days} days or "
                                     f"more, a threshold set in archetypes.yaml "
                                     f"{version}"),
@@ -347,7 +347,7 @@ def magnitude_catalogue(thresholds):
             conditions=(
                 SINGLE_SOURCE,
                 Condition(name="long_lead", kind=MAGNITUDE,
-                          depends_on="lead_time_to_recover",
+                          depends_on="wait_out_days",
                           describe=(f"quoted lead time is {lead_days} days or "
                                     f"more, a threshold set in archetypes.yaml "
                                     f"{version}"),

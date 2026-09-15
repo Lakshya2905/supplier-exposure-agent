@@ -16,8 +16,11 @@ explicitly below. Nothing is inferred.
 default, which would silently delete a region from stage 5's concentration
 analysis.
 """
+from pathlib import Path
+
 import pandas as pd
 
+from .recovery import INPUT_FIELDS as RECOVERY_INPUT_FIELDS
 from .synthetic.model import (ANNUAL_UNITS, CHILD_PART, FINISHED_GOOD_PART,
                               LEAD_TIME_P95_DAYS, ON_HAND_UNITS, PARENT_PART,
                               PART_NUMBER, QTY_PER_PARENT,
@@ -130,6 +133,39 @@ def read_sources(path):
     return {row[SOURCE_FILE]: (row[SYSTEM_OF_RECORD].strip(),
                                row[RETRIEVED_AT].strip())
             for _, row in frame.iterrows()}
+
+
+def read_recovery_inputs(path):
+    """part_number -> {stage field: days or cycles}. OPTIONAL, and often absent.
+
+    THE FILE IS ALLOWED NOT TO EXIST, and its absence is a fact rather than an
+    error: no dataset this repository generates carries resourcing durations,
+    because a qualification duration is a judgment and a generator that emitted
+    one would be inventing the very input the tool is supposed to report it
+    lacks. A missing file returns an empty mapping, and every part then reports
+    `resource_days` as cannot-tell, naming the stages nobody has timed.
+
+    COLUMNS ARE OPTIONAL TOO, one at a time. A file carrying only
+    `tooling_lead_time_days` is valid and times one stage. That tolerance is
+    what keeps the frozen eval inputs readable: they predate this file, and a
+    reader that demanded the new columns would make the frozen set unreadable
+    rather than incomplete.
+
+    Blank means NO RECORD and is dropped, so the stage reads untimed. A recorded
+    `0` is kept, exactly as `on_hand_units` keeps a counted zero: a stage
+    somebody timed at zero days is a measurement, and an unfilled cell is not.
+    """
+    path = Path(path)
+    if not path.exists():
+        return {}
+    frame = _frame(path)
+    fields = [field for field in RECOVERY_INPUT_FIELDS if field in frame.columns]
+    rows = {}
+    for _, row in frame.iterrows():
+        values = {field: optional_int(row[field]) for field in fields}
+        rows[row[PART_NUMBER]] = {field: value for field, value in values.items()
+                                  if value is not None}
+    return rows
 
 
 def read_bom(path):

@@ -168,6 +168,20 @@ CONSOLE_CSS = """
       font-size: var(--ui-sm); line-height: 1.5; max-width: 104ch;
       color: var(--text-note); margin: 0 0 var(--space-sm) 0;
   }
+  /* A MEASURE NOBODY HAS ESTABLISHED, standing where its chart would stand.
+     Same height as chart_layout's default, so a dimension with no figures
+     keeps the footprint of one that has them: an absence that shrinks reads as
+     less important than a value, and here it is the finding. Dashed rule, the
+     same FORM cue absence carries on a chip, and no dimming. */
+  div.absent-measure {
+      min-height: 240px; display: flex; align-items: center;
+      padding: var(--space-md); box-sizing: border-box;
+      border: 1px dashed var(--border-ui); border-radius: 3px;
+  }
+  div.absent-measure p {
+      font-size: var(--ui-sm); line-height: 1.5; margin: 0;
+      color: var(--text-body);
+  }
   .stCaption, [data-testid="stCaptionContainer"] p {
       font-size: var(--ui-xs) !important; color: var(--text-caption) !important;
       line-height: 1.5; max-width: 104ch;
@@ -560,6 +574,18 @@ def finding(sentence):
 
 def note(text):
     st.markdown(f"<p class='note'>{text}</p>", unsafe_allow_html=True)
+
+
+def absent_measure(text):
+    """Where a chart would go for a dimension nothing has established.
+
+    NOT AN EMPTY CHART. A histogram with no values still draws an axis anchored
+    at zero, and an axis under a full heading reads as "every part scored low"
+    rather than "no part has a figure at all". Those are different claims and
+    one of them is false.
+    """
+    st.markdown(f"<div class='absent-measure'><p>{text}</p></div>",
+                unsafe_allow_html=True)
 
 
 def decision_log():
@@ -961,7 +987,8 @@ MAP_BORDER = "#C7CED6"
 # One hue per dimension. NOMINAL: the dimensions have no order, so neither does
 # this list, and no hue here is darker or stronger than another by intent.
 DIMENSION_HUE = {
-    "lead_time_to_recover": "#2F6E9E",
+    "wait_out_days": "#2F6E9E",
+    "resource_days": "#3F7F7A",
     "blast_radius": "#7A4E9E",
     "buffer_cover": "#1F7A66",
     "portability": "#8A6A1F",
@@ -1175,10 +1202,13 @@ def render_dimension_multiples(result):
     comparison the units do not support. Retiring the encoding rule allowed the
     charts; it did not make days and finished-good units the same thing.
     """
-    st.subheader("The five dimensions, each in its own unit")
-    st.caption("Five separate axes on purpose. No chart here puts two "
-               "dimensions together, because there is no unit in which days "
-               "and finished-good units are the same quantity.")
+    st.subheader("The six measures, each in its own unit")
+    st.caption("Six separate axes on purpose. No chart here puts two measures "
+               "together, because there is no unit in which days and "
+               "finished-good units are the same quantity. Three of them are "
+               "in days and they are still three axes: waiting a disruption "
+               "out, resourcing around it and covering it from stock are "
+               "different questions that happen to share a unit.")
 
     series = dash.dimension_series(result)
     for chunk_start in range(0, len(series), 3):
@@ -1188,9 +1218,21 @@ def render_dimension_multiples(result):
         for column, item in zip(st.columns(3), chunk):
             with column:
                 st.markdown(f"###### {item.dimension.replace('_', ' ')}")
-                st.plotly_chart(dimension_figure(item),
-                                width="stretch",
-                                key=f"dim-{item.dimension}")
+                if item.assessed:
+                    st.plotly_chart(dimension_figure(item),
+                                    width="stretch",
+                                    key=f"dim-{item.dimension}")
+                else:
+                    # NOT AN EMPTY CHART. A histogram with no values still
+                    # draws an axis from zero, and an axis under a full-looking
+                    # heading reads as "every part scored low" rather than "no
+                    # part has a figure". The absence is stated in words at the
+                    # same footprint, per DESIGN.md: absence is never dimmed,
+                    # never zero and never blank.
+                    absent_measure(
+                        f"No part has an established figure for this measure. "
+                        f"{item.unknown} results say so rather than reporting "
+                        f"a number nobody supplied.")
                 note(f"unit: {item.unit}. {item.assessed} assessed, "
                      f"{item.unknown} not established.")
 

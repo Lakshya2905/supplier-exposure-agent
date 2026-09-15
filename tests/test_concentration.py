@@ -362,7 +362,7 @@ class TestNotApplicable(unittest.TestCase):
         reason = self.report.scores["CON-P18"].reasons[0]
         self.assertIn("correlation needs someone to correlate with", reason)
         self.assertIn("not a downgrade", reason)
-        self.assertIn("lead time to recover", reason)
+        self.assertIn("wait out days", reason)
 
     def test_made_in_house_says_why_and_names_the_gap(self):
         reason = self.report.scores["CON-P17"].reasons[0]
@@ -494,7 +494,7 @@ class TestFillingTheReservedSlot(unittest.TestCase):
         filled = dataclasses.replace(
             self.build_profile(),
             concentration=fixture_report().scores["CON-P01"])
-        self.assertEqual(len(filled.scored()), 4)
+        self.assertEqual(len(filled.scored()), 5)
         self.assertNotIn("concentration",
                          [s.dimension for s in filled.scored()])
 
@@ -502,8 +502,8 @@ class TestFillingTheReservedSlot(unittest.TestCase):
         profile = self.build_profile()
         filled = dataclasses.replace(
             profile, concentration=fixture_report().scores["CON-P01"])
-        self.assertEqual(len(profile.all_scores()), 4)
-        self.assertEqual(len(filled.all_scores()), 5)
+        self.assertEqual(len(profile.all_scores()), 5)
+        self.assertEqual(len(filled.all_scores()), 6)
         self.assertIn("concentration",
                       [s.dimension for s in filled.all_scores()])
 

@@ -130,7 +130,7 @@ class DimensionSeries:
 def _number(value):
     """A figure as a float, or a tuple of them, or None.
 
-    `lead_time_to_recover` carries a (quoted, p95) PAIR rather than a scalar,
+    `wait_out_days` carries a (quoted, p95) PAIR rather than a scalar,
     because a lead time with no tail is half a lead time. The first version of
     this function returned None for it, which counted all 188 settled figures as
     unknown and drew an empty chart under a full-looking heading. Both halves

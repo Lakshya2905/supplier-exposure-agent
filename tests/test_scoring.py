@@ -14,6 +14,10 @@ from pathlib import Path
 
 from codescan import code_of
 from fixtures.tiny_expected_scores import (EXPECTED_BLAST_RADIUS_COMPLETENESS,
+                                           EXPECTED_RESOURCE_COMPLETENESS,
+                                           EXPECTED_RESOURCE_DAYS,
+                                           EXPECTED_RESOURCE_DAYS_BY_CLASS,
+                                           EXPECTED_RESOURCE_WITH_RETRY,
                                            EXPECTED_BLOCKED_UNITS,
                                            EXPECTED_COVER_COMPLETENESS,
                                            EXPECTED_COVER_DAYS,
@@ -23,15 +27,24 @@ from src import governance as gov
 from src import scoring
 from src.demand import (Usage, usage_by_part, USAGE_CANNOT_TELL, USAGE_KNOWN,
                         USAGE_PARTIAL)
+from src import recovery as R
 from src.explosion import explode, rows_by_part
-from src.readers import read_bom, read_demand_plan, read_part_master
+from src.readers import (read_bom, read_demand_plan, read_part_master,
+                         read_recovery_inputs)
 from src.scoring import (CANNOT_TELL, DAYS, KNOWN, LOWER_BOUND, NOT_APPLICABLE,
                          NO_RECOVERY_PATH, UPPER_BOUND, DimensionScore,
                          ExposureProfile, abstention_lane, blast_radius,
-                         buffer_cover, lead_time_to_recover, portability,
-                         score_part)
+                         buffer_cover, portability, resource_days, score_part,
+                         wait_out_days)
 
 FIXTURES = Path(__file__).parent / "fixtures"
+
+# Every stage timed and a cycle count on file, written by hand. Used where a
+# test needs a SETTLED chain and nothing else about the chain matters.
+TIMED = {"alternate_source_days": 10, "tooling_lead_time_days": 20,
+         "engineering_transfer_days": 30, "first_article_days": 40,
+         "qualification_test_days": 50, "ramp_to_rate_days": 60,
+         "qualification_cycles": 1}
 
 
 def fixture_profiles():
@@ -40,6 +53,7 @@ def fixture_profiles():
     demand = read_demand_plan(FIXTURES / "tiny_demand.csv")
     parts = read_part_master(FIXTURES / "tiny_part_master.csv")
     usage = usage_by_part(rows, demand)
+    stages = read_recovery_inputs(FIXTURES / "tiny_recovery.csv")
     profiles = {}
     for part in SCORED_PARTS:
         record = parts[part]
@@ -47,7 +61,7 @@ def fixture_profiles():
             part_number=part, verdict="single_source", rows=rows[part],
             usage=usage[part], on_hand_units=record["on_hand_units"],
             tooling_owner=record["tooling_owner"],
-            lead_times=[(30, 45)])
+            lead_times=[(30, 45)], recovery_stages=stages.get(part))
     return profiles
 
 
@@ -263,51 +277,51 @@ class TestPortability(unittest.TestCase):
         self.assertEqual(score.autonomy, gov.RECOMMENDS)
 
 
-class TestLeadTimeToRecover(unittest.TestCase):
+class TestWaitOutDays(unittest.TestCase):
     """Hard-coded expectations; the verdict strings are literals."""
 
     def test_both_lead_time_columns_are_returned_not_one(self):
-        score = lead_time_to_recover("P", "single_source", [(30, 45)])
+        score = wait_out_days("P", "single_source", [(30, 45)])
         self.assertEqual(score.value, (30, 45))
         self.assertEqual(score.detail["quoted_days"], 30)
         self.assertEqual(score.detail["p95_days"], 45)
 
     def test_the_fastest_supplier_sets_the_recovery_time(self):
-        score = lead_time_to_recover("P", "multi_source", [(60, 90), (30, 45)])
+        score = wait_out_days("P", "multi_source", [(60, 90), (30, 45)])
         self.assertEqual(score.value, (30, 45))
 
     def test_no_lead_time_record_abstains(self):
-        score = lead_time_to_recover("P", "single_source_no_lead_time", [])
+        score = wait_out_days("P", "single_source_no_lead_time", [])
         self.assertEqual(score.completeness, CANNOT_TELL)
         self.assertEqual(score.autonomy, gov.RECOMMENDS)
 
     def test_no_qualified_supplier_is_not_an_abstention(self):
         # Undefined by absence, not missing from the spreadsheet. Rendering it
         # as "cannot tell" would understate the most serious finding here.
-        score = lead_time_to_recover("P", "no_qualified_supplier", [])
+        score = wait_out_days("P", "no_qualified_supplier", [])
         self.assertEqual(score.completeness, NO_RECOVERY_PATH)
         self.assertEqual(score.autonomy, gov.EXECUTES)
 
     def test_made_in_house_does_not_apply_rather_than_being_unknown(self):
         # A lane that keeps showing in-house parts asks a reviewer to fetch
         # data that does not exist anywhere and never will.
-        score = lead_time_to_recover("P", "made_in_house", [])
+        score = wait_out_days("P", "made_in_house", [])
         self.assertEqual(score.completeness, NOT_APPLICABLE)
         self.assertEqual(score.autonomy, gov.EXECUTES)
 
     def test_the_three_no_value_states_stay_distinct(self):
         states = {
-            lead_time_to_recover("P", "single_source_no_lead_time", []
+            wait_out_days("P", "single_source_no_lead_time", []
                                  ).completeness,
-            lead_time_to_recover("P", "no_qualified_supplier", []).completeness,
-            lead_time_to_recover("P", "made_in_house", []).completeness,
+            wait_out_days("P", "no_qualified_supplier", []).completeness,
+            wait_out_days("P", "made_in_house", []).completeness,
         }
         self.assertEqual(len(states), 3,
                          "all three have no value, and collapsing any two "
                          "would tell a reviewer the wrong thing to do next")
 
     def test_an_unconfirmed_supplier_list_abstains_even_with_a_lead_time(self):
-        score = lead_time_to_recover("P", "supplier_list_unknown", [(30, 45)])
+        score = wait_out_days("P", "supplier_list_unknown", [(30, 45)])
         self.assertEqual(score.completeness, CANNOT_TELL)
 
     def test_nothing_here_bands_a_duration(self):
@@ -315,11 +329,277 @@ class TestLeadTimeToRecover(unittest.TestCase):
         # returns raw durations so its autonomy claim does not rest on one.
         # CODE ONLY: the docstring explains why there is no banding, so a raw
         # source scan would flag the explanation rather than a violation.
-        code = code_of(lead_time_to_recover)
+        code = code_of(wait_out_days)
         for banding_word in ("long_lead", "is_long", "band", "tier",
                              "severity", "critical"):
             with self.subTest(word=banding_word):
                 self.assertNotIn(banding_word, code)
+
+
+
+class TestResourceDays(unittest.TestCase):
+    """The resourcing chain. Expectations hand-summed in tiny_recovery.csv."""
+
+    def setUp(self):
+        self.profiles = fixture_profiles()
+
+    def test_chain_totals_match_the_hand_summed_values(self):
+        for part in SCORED_PARTS:
+            with self.subTest(part=part):
+                self.assertEqual(self.profiles[part].resource_days.value,
+                                 EXPECTED_RESOURCE_DAYS[part])
+
+    def test_chain_completeness_matches(self):
+        for part in SCORED_PARTS:
+            with self.subTest(part=part):
+                self.assertEqual(
+                    self.profiles[part].resource_days.completeness,
+                    EXPECTED_RESOURCE_COMPLETENESS[part])
+
+    # ------------------------------------------- the four required chains --
+    def test_a_chain_with_every_stage_present_is_known(self):
+        score = self.profiles["SHARED-M01"].resource_days
+        self.assertEqual(score.completeness, KNOWN)
+        self.assertEqual(score.value, 300)
+        self.assertEqual(score.detail["stages_untimed"], ())
+        self.assertEqual(score.autonomy, gov.EXECUTES)
+
+    def test_a_chain_with_tooling_missing_is_a_lower_bound_naming_tooling(self):
+        # Supplier-owned tooling, so retooling IS on the path, and nobody has
+        # said how long it takes. The total under-counts by exactly that.
+        score = self.profiles["ZEROUSE-M01"].resource_days
+        self.assertEqual(score.completeness, LOWER_BOUND)
+        self.assertEqual(score.value, 115)
+        self.assertEqual(score.detail["stages_untimed"],
+                         (R.TOOLING,))
+        self.assertIn("tooling", score.reasons[0])
+        self.assertIn("lower bound", score.reasons[0])
+
+    def test_a_chain_with_qualification_missing_is_a_lower_bound(self):
+        score = self.profiles["ONLY-M01"].resource_days
+        self.assertEqual(score.completeness, LOWER_BOUND)
+        self.assertEqual(score.value, 80)
+        self.assertIn(R.QUALIFICATION_TEST, score.detail["stages_untimed"])
+        self.assertIn("qualification and reliability testing", score.reasons[0])
+
+    def test_a_present_retry_cycle_reports_both_readings(self):
+        score = self.profiles["SHARED-M01"].resource_days
+        self.assertEqual(score.detail["qualification_cycles"], 2)
+        self.assertEqual(score.detail["with_retry_days"], 360)
+        sentence = " ".join(score.reasons)
+        self.assertIn("300 days if qualification passes first time", sentence)
+        self.assertIn("360 days across the 2 cycles", sentence)
+
+    def test_an_absent_retry_cycle_is_said_rather_than_assumed(self):
+        """The row that exists to prove one pass is never the default.
+
+        ONLY-M02 has every stage on its path timed. The only thing missing is
+        how many qualification cycles to plan for, and that alone keeps the
+        total a bound: counting one pass is an assumption, and an assumption
+        nobody made must not be made here.
+        """
+        score = self.profiles["ONLY-M02"].resource_days
+        self.assertEqual(score.detail["stages_untimed"], ())
+        self.assertIsNone(score.detail["qualification_cycles"])
+        self.assertIsNone(score.detail["with_retry_days"])
+        self.assertEqual(score.completeness, LOWER_BOUND)
+        self.assertIn("not on file", " ".join(score.reasons))
+
+    def test_with_retry_totals_match_the_hand_computed_values(self):
+        for part in SCORED_PARTS:
+            with self.subTest(part=part):
+                self.assertEqual(
+                    self.profiles[part].resource_days.detail["with_retry_days"],
+                    EXPECTED_RESOURCE_WITH_RETRY[part])
+
+    # ------------------------------------------------ nothing timed at all --
+    def test_nothing_timed_abstains_rather_than_bounding_at_zero(self):
+        """Zero is the trivial lower bound of any duration.
+
+        Reporting "at least 0 days to resource" would be a true statement
+        carrying no information, dressed as a measurement. It is the same defect
+        `render._blocked_volume_absent` exists to repair for blast radius.
+        """
+        score = self.profiles["ORPHAN-M01"].resource_days
+        self.assertEqual(score.completeness, CANNOT_TELL)
+        self.assertIsNone(score.value)
+        self.assertNotEqual(score.value, 0)
+        self.assertEqual(score.autonomy, gov.RECOMMENDS)
+
+    def test_a_missing_stage_is_never_read_as_zero_days(self):
+        """The same asymmetry as a blank on-hand count, in days.
+
+        Both chains below total 200 days. One got there because somebody timed
+        finding an alternate source at zero, which is a measurement; the other
+        because nobody timed it at all, which is a gap. The totals are identical
+        and the states are not, which is the whole distinction: one `or 0`
+        anywhere in the chain would fuse them and the bound would vanish.
+        """
+        timed_zero = resource_days("P", "supplier",
+                                   dict(TIMED, alternate_source_days=0))
+        untimed = resource_days(
+            "P", "supplier",
+            {k: v for k, v in TIMED.items() if k != R.ALTERNATE_SOURCE})
+
+        self.assertEqual(timed_zero.value, untimed.value)
+        self.assertEqual(timed_zero.value, 200)
+        self.assertIn(R.ALTERNATE_SOURCE, timed_zero.detail["stages_timed"])
+        self.assertEqual(timed_zero.detail["days_by_stage"][R.ALTERNATE_SOURCE],
+                         0)
+        self.assertEqual(timed_zero.completeness, KNOWN)
+
+        self.assertIn(R.ALTERNATE_SOURCE, untimed.detail["stages_untimed"])
+        self.assertEqual(untimed.completeness, LOWER_BOUND)
+
+    # -------------------------------------------------------- applicability --
+    def test_company_tooling_takes_the_stage_off_the_path(self):
+        # Not the same as untimed: company tooling moves to the new source, so
+        # the stage does not happen and contributes nothing WITHOUT bounding.
+        score = self.profiles["ONLY-M02"].resource_days
+        self.assertEqual(score.detail["stages_not_applicable"], (R.TOOLING,))
+        self.assertNotIn(R.TOOLING, score.detail["stages_untimed"])
+        self.assertEqual(score.completeness, LOWER_BOUND)   # the cycle count
+
+    def test_an_unrecorded_tooling_owner_bounds_rather_than_skipping(self):
+        score = self.profiles["MISSING-M01"].resource_days
+        self.assertIn(R.TOOLING, score.detail["stages_untimed"])
+        self.assertEqual(score.detail["stages_not_applicable"], ())
+
+    # ---------------------------------------------------- confidence classes --
+    def test_each_confidence_class_keeps_its_own_subtotal(self):
+        for part in SCORED_PARTS:
+            with self.subTest(part=part):
+                self.assertEqual(
+                    self.profiles[part].resource_days.detail["days_by_class"],
+                    EXPECTED_RESOURCE_DAYS_BY_CLASS[part])
+
+    def test_the_classes_are_not_averaged_into_one_figure(self):
+        """The subtotals partition the total. Nothing blends them.
+
+        Summing sequential stages is an elapsed duration and is legitimate.
+        What is refused is any statistic ACROSS the classes: a mean of 180
+        judgment days and 120 knowable days is 150 days of nothing.
+        """
+        score = self.profiles["SHARED-M01"].resource_days
+        by_class = score.detail["days_by_class"]
+        self.assertEqual(sum(by_class.values()), score.value)
+        self.assertEqual(len(by_class), 2)
+        code = code_of(resource_days) + code_of(R.Chain)
+        for blended in ("mean", "average", "/ len(", "statistics"):
+            with self.subTest(word=blended):
+                self.assertNotIn(blended, code)
+
+    def test_the_total_names_the_weakest_class_it_rests_on(self):
+        # One judgment in the chain makes the total a judgment, however many
+        # quoted days sit beside it.
+        score = self.profiles["SHARED-M01"].resource_days
+        self.assertEqual(score.detail["weakest_class"], R.JUDGMENT)
+        self.assertIn(R.KNOWABLE, score.detail["days_by_class"])
+
+    def test_a_purchase_lead_time_never_enters_the_chain(self):
+        """The reported class stays in the other measure, always.
+
+        `wait_out_days` is the only duration in this system that somebody
+        reported, and the chain must not absorb it: a total mixing a quoted lead
+        time with an estimate is the composite this project refuses, expressed
+        in days.
+        """
+        for part in SCORED_PARTS:
+            classes = self.profiles[part].resource_days.detail["days_by_class"]
+            with self.subTest(part=part):
+                self.assertNotIn(R.REPORTED, classes)
+        self.assertNotIn("lead_time", code_of(resource_days))
+
+    def test_a_cycle_count_below_one_is_refused_rather_than_clamped(self):
+        # Zero cycles would make the retry total SHORTER than the first-pass
+        # total, which is a wrong answer rather than a missing one. Clamping it
+        # would put a number nobody supplied into the one measure whose claim is
+        # that it never does that.
+        with self.assertRaises(ValueError):
+            resource_days("P", "supplier", dict(TIMED, qualification_cycles=0))
+        with self.assertRaises(ValueError):
+            resource_days("P", "supplier", dict(TIMED, qualification_cycles=-2))
+
+    def test_one_planned_cycle_reads_as_one_cycle(self):
+        score = resource_days("P", "supplier", TIMED)
+        self.assertIn("the single cycle planned for", " ".join(score.reasons))
+
+    # ------------------------------------------------------- no banding here --
+    def test_nothing_here_bands_a_duration(self):
+        code = code_of(resource_days)
+        for banding_word in ("long_lead", "is_long", "band", "tier",
+                             "severity", "critical"):
+            with self.subTest(word=banding_word):
+                self.assertNotIn(banding_word, code)
+
+
+class TestTheTwoHalvesOfRecoveryStaySeparate(unittest.TestCase):
+    """The practitioner's point, expressed as tests.
+
+    "Tooling and qualification vary significantly by part, and it doesn't always
+    go smoothly." Two parts identical in purchase lead time can be a fortnight
+    or forty weeks apart in what it takes to replace the source, and the old
+    single dimension could not say so.
+    """
+
+    def test_two_parts_with_the_same_lead_time_can_differ_on_resourcing(self):
+        slow = resource_days("SLOW", "supplier",
+                             {"qualification_test_days": 280,
+                              "qualification_cycles": 1})
+        fast = resource_days("FAST", "supplier",
+                             {"qualification_test_days": 14,
+                              "qualification_cycles": 1})
+        wait = wait_out_days("SLOW", "single_source", [(30, 45)])
+        self.assertEqual(wait.value,
+                         wait_out_days("FAST", "single_source",
+                                       [(30, 45)]).value)
+        self.assertNotEqual(slow.value, fast.value)
+
+    def test_the_two_measures_are_never_added(self):
+        profile = fixture_profiles()["SHARED-M01"]
+        with self.assertRaises(TypeError):
+            profile.wait_out_days + profile.resource_days
+
+    def test_they_carry_separate_completeness_and_separate_autonomy(self):
+        """One part, one settled measure, one abstention, at the same moment.
+
+        This is what a single `lead_time_to_recover` slot could not express, and
+        it is why the split is two dimensions rather than two numbers in one.
+        """
+        profile = fixture_profiles()["ORPHAN-M01"]
+        self.assertEqual(profile.wait_out_days.completeness, KNOWN)
+        self.assertEqual(profile.wait_out_days.autonomy, gov.EXECUTES)
+        self.assertEqual(profile.resource_days.completeness, CANNOT_TELL)
+        self.assertEqual(profile.resource_days.autonomy, gov.RECOMMENDS)
+
+    def test_an_empty_supplier_list_still_reports_a_resourcing_time(self):
+        """Nobody to buy from is the case where resourcing is the ONLY path.
+
+        `wait_out_days` reports no recovery path, which is true of waiting.
+        Reporting the same of the chain would say the part cannot be recovered
+        at all, which is the opposite of what an empty supplier list means.
+        """
+        wait = wait_out_days("P", "no_qualified_supplier", [])
+        chain = resource_days("P", "supplier", TIMED)
+        self.assertEqual(wait.completeness, NO_RECOVERY_PATH)
+        self.assertEqual(chain.completeness, KNOWN)
+        self.assertEqual(chain.value, 210)      # 10+20+30+40+50+60, hand-summed
+
+    def test_an_in_house_part_still_reports_a_resourcing_time(self):
+        # You cannot place a purchase order on your own factory, but you can
+        # qualify an outside source for the part it makes.
+        wait = wait_out_days("P", "made_in_house", [])
+        chain = resource_days("P", "supplier", TIMED)
+        self.assertEqual(wait.completeness, NOT_APPLICABLE)
+        self.assertEqual(chain.completeness, KNOWN)
+
+    def test_the_verdict_is_not_an_input_to_the_chain(self):
+        # Structural rather than asserted by example: resourcing does not depend
+        # on what the supplier list says, so the verdict cannot reach it.
+        self.assertNotIn("verdict",
+                         inspect.signature(resource_days).parameters)
+        self.assertIn("verdict", inspect.signature(wait_out_days).parameters)
+
 
 
 class TestAutonomyIsPerDimensionPerPart(unittest.TestCase):
@@ -356,16 +636,34 @@ class TestAutonomyIsPerDimensionPerPart(unittest.TestCase):
         covered = [score.part_number for score in lane["buffer_cover"]]
         self.assertEqual(covered, ["MISSING-M01", "ORPHAN-M01"])
 
-    def test_in_house_parts_never_reach_the_lane(self):
-        profile = ExposureProfile(
+    def _in_house_profile(self, stages):
+        return ExposureProfile(
             part_number="P",
-            lead_time_to_recover=lead_time_to_recover("P", "made_in_house", []),
+            wait_out_days=wait_out_days("P", "made_in_house", []),
+            resource_days=resource_days("P", "company", stages),
             blast_radius=blast_radius("P", (), Usage("P", Fraction(0),
                                                      USAGE_KNOWN)),
             buffer_cover=buffer_cover("P", 0, Usage("P", Fraction(0),
                                                     USAGE_KNOWN)),
             portability=portability("P", "company"))
-        self.assertEqual(abstention_lane([profile]), {})
+
+    def test_in_house_parts_never_reach_the_lane_for_a_purchase_lead_time(self):
+        # The dimension that does not apply cannot be resolved by fetching
+        # anything, so it must never queue. Every other dimension here is
+        # settled, so the lane is empty.
+        self.assertEqual(abstention_lane([self._in_house_profile(TIMED)]), {})
+
+    def test_an_in_house_part_still_queues_an_untimed_resourcing_chain(self):
+        """The asymmetry the split creates, and it is the right way round.
+
+        Nobody can fetch a purchase lead time for a part the company makes, so
+        `wait_out_days` is not applicable and never queues. Somebody CAN supply
+        how long it would take to stand an outside source up for that same part,
+        so an untimed chain is a fetchable gap and belongs in the lane. One part,
+        two recovery measures, opposite routing.
+        """
+        lane = abstention_lane([self._in_house_profile(None)])
+        self.assertEqual(list(lane), ["resource_days"])
 
 
 class TestNoComposite(unittest.TestCase):
@@ -479,17 +777,17 @@ class TestConcentrationSlotIsReserved(unittest.TestCase):
         self.assertIn("concentration", ExposureProfile.__dataclass_fields__)
         self.assertIsNone(profile.concentration)
 
-    def test_concentration_is_not_one_of_the_scored_four(self):
+    def test_concentration_is_not_one_of_the_scored_five(self):
         # Reserved is distinct from answered AND from abstained. Collapsing it
         # into either would be a claim about a stage that has not run.
         profile = fixture_profiles()["ONLY-M01"]
-        self.assertEqual(len(profile.scored()), 4)
+        self.assertEqual(len(profile.scored()), 5)
         self.assertNotIn("concentration",
                          [score.dimension for score in profile.scored()])
 
     def test_concentration_is_declared_as_a_dimension(self):
         self.assertIn("concentration", scoring.DIMENSIONS)
-        self.assertEqual(len(scoring.DIMENSIONS), 5)
+        self.assertEqual(len(scoring.DIMENSIONS), 6)
 
 
 class TestLogging(unittest.TestCase):
@@ -497,7 +795,7 @@ class TestLogging(unittest.TestCase):
     def test_one_event_per_dimension_with_the_right_kind(self):
         log = gov.DecisionLog()
         scoring.log_profile(log, fixture_profiles()["MISSING-M01"])
-        self.assertEqual(len(log), 4)
+        self.assertEqual(len(log), 5)
         kinds = {event.field: event.kind for event in log}
         self.assertEqual(kinds["blast_radius"], gov.KIND_DIMENSION_SCORED)
         self.assertEqual(kinds["buffer_cover"], gov.KIND_DIMENSION_ABSTAINED)
@@ -514,43 +812,55 @@ class TestLogging(unittest.TestCase):
 # ------------------------------------------------------------- known gap ----
 # Marked xfail(strict=True) so the gap stays visible, CI stays green, and the
 # test fails LOUDLY the day somebody closes it without noticing.
+#
+# REWRITTEN, NOT DELETED. The gap this slot used to hold was that recovery time
+# ignored qualification entirely: there was no qualification-lead-time field
+# anywhere in the schema, so a part needing forty weeks to requalify scored
+# identically to one resourceable in a fortnight. `resource_days` closes that
+# one: `TestTheTwoHalvesOfRecoveryStaySeparate` asserts the two parts now score
+# differently, and `recovery_inputs.csv` is where the durations live.
+#
+# What is left is the next layer down, and it is unrepresentable in the same way
+# the first one was.
 @pytest.mark.xfail(strict=True, reason=(
-    "The brief defines lead time to recover as how long to QUALIFY AN "
-    "ALTERNATIVE or wait out the disruption. The data carries quoted and p95 "
-    "purchase lead times, so this dimension answers the second half only. "
-    "There is no qualification-lead-time field anywhere in the schema, so the "
-    "first half is not merely uncomputed, it is unrepresentable. A part with a "
-    "30 day purchase lead time whose only supplier needs 40 weeks to qualify a "
-    "replacement scores identically to one that can be resourced in a "
-    "fortnight."))
-def test_lead_time_to_recover_covers_qualification_time():
-    """BEHAVIOURAL, and deliberately not `hasattr`.
+    "The resourcing chain is timed PER PART, never per candidate alternate "
+    "source. How long qualification takes depends on WHICH alternative you go "
+    "to: a supplier already running the process next door and one that has to "
+    "buy the capability are not the same programme, and the practitioner's "
+    "point that qualification varies significantly by part is equally a point "
+    "that it varies by source. Nothing in this schema represents a candidate "
+    "source, so the chain times a generic alternative, as though every "
+    "candidate were interchangeable. A part with one near-drop-in second "
+    "source and a part whose only candidate needs a new process score "
+    "identically."))
+def test_resource_days_distinguishes_between_candidate_alternate_sources():
+    """BEHAVIOURAL, and deliberately not `hasattr`, for the reason the
+    predecessor recorded: a bare name with no logic behind it satisfies an
+    attribute check and flips a strict xfail to XPASS while the measure still
+    answers the wrong question. That is a proxy standing in for the property,
+    which is the defect shape this project's corrections log is about.
 
-    The predecessor asserted `hasattr(model, "QUALIFICATION_LEAD_TIME_DAYS")`.
-    A bare constant satisfies that, flipping a strict xfail to XPASS and turning
-    the gate red while the dimension still answers half the brief's question, so
-    the cheapest route back to green is a name with no logic behind it. That is a
-    proxy standing in for the property, which is the defect shape this project's
-    corrections log is about.
-
-    This asserts the exact scenario the gap is named for. Two parts have
-    identical purchase lead times; one supplier needs 40 weeks to qualify a
-    replacement and the other a fortnight. The brief defines this dimension as
-    how long to QUALIFY an alternative or wait out the disruption, so the two
-    must not score the same. Qualification days ride in third position, which is
-    one shape the future input could take; today the function reads pairs and
-    ignores anything beyond them, so both parts score identically and this fails
-    on the assertion rather than on the input. That equality is the gap.
+    This asserts the scenario the gap is named for. Two parts have identical
+    stage durations for everything the schema can express. One has a candidate
+    already running the process and one does not, and the qualification
+    durations for those candidates differ by twenty to one. Candidates ride in
+    a `candidates` key, which is one shape the future input could take; today
+    the chain reads the flat stage fields and ignores anything else, so both
+    parts score identically and this fails on the assertion rather than on the
+    input. That equality is the gap.
     """
-    slow = scoring.lead_time_to_recover(
-        "SLOW-Q", "single_source", ((30, 45, 280),))
-    fast = scoring.lead_time_to_recover(
-        "FAST-Q", "single_source", ((30, 45, 14),))
+    near = scoring.resource_days("NEAR-Q", "supplier", dict(
+        TIMED, candidates=({"name": "already runs the process",
+                            "qualification_test_days": 14},)))
+    far = scoring.resource_days("FAR-Q", "supplier", dict(
+        TIMED, candidates=({"name": "has to buy the capability",
+                            "qualification_test_days": 280},)))
 
-    assert slow.value != fast.value, (
-        "a part whose only supplier needs 40 weeks to qualify a replacement "
-        "scores identically to one resourceable in a fortnight, so the "
-        "dimension answers only the wait-it-out half of its definition")
+    assert near.value != far.value, (
+        "a part whose only candidate source needs forty weeks to qualify "
+        "scores identically to one with a near drop-in alternative, so the "
+        "chain times a generic alternative rather than the one that would "
+        "actually be used")
 
 
 if __name__ == "__main__":  # keep last: classes below an entrypoint never run

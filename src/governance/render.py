@@ -30,7 +30,8 @@ from . import (ACT_RESOLVE_CONFLICT,
                STATUS_SUPERSEDED)
 
 DIMENSION_PROSE = {
-    "lead_time_to_recover": "lead time to recover",
+    "wait_out_days": "the wait-out time",
+    "resource_days": "the resourcing time",
     "blast_radius": "blast radius",
     "buffer_cover": "buffer cover",
     "portability": "portability",
@@ -48,7 +49,11 @@ COMPLETENESS_PROSE = {
     "upper_bound": "an upper bound",
     "lower_bound": "a lower bound",
     "cannot_tell": "not answerable from the data",
-    "no_recovery_path": "undefined because there is no recovery path at all",
+    # NARROWED with the recovery split. This state is reached only by
+    # `wait_out_days`, and what an empty supplier list rules out is the waiting,
+    # not the recovering: the resourcing chain is precisely the path such a part
+    # still has, and it is reported beside this.
+    "no_recovery_path": "undefined because there is nobody to wait on",
     "not_applicable": "not applicable to this part",
 }
 
@@ -275,7 +280,8 @@ BOUND_WORDS = {
 }
 
 RANKED_CLAUSE = {
-    "lead_time_to_recover": "{measure} days quoted lead time",
+    "wait_out_days": "{measure} days quoted lead time",
+    "resource_days": "{prefix}{measure} days to resource",
     "buffer_cover": "{prefix}{measure} days of cover",
     "blast_radius": "blocks {prefix}{measure} finished good units",
     "portability": "{measure}-owned tooling",
@@ -283,10 +289,17 @@ RANKED_CLAUSE = {
 }
 
 RANKED_ABSENT = {
-    "lead_time_to_recover": {
+    "wait_out_days": {
         "cannot_tell": "no quotable lead time on file",
-        "no_recovery_path": "no recovery path at all",
+        # NOT "no recovery path at all" any more, and the narrowing is the
+        # point. Nobody to buy from is a statement about the wait-it-out path
+        # only; the resourcing path is exactly what such a part still has, and
+        # the clause beside this one now says how long it takes.
+        "no_recovery_path": "nobody to wait on: the supplier list is empty",
         "not_applicable": "made in-house, so no purchase lead time",
+    },
+    "resource_days": {
+        "cannot_tell": "no stage of the resourcing chain is timed",
     },
     "buffer_cover": {
         "cannot_tell": "no on-hand record, so cover is unknown",
@@ -339,6 +352,32 @@ def _blocked_volume_absent(clause):
             f"units could be counted")
 
 
+def _resource_clause(clause, value):
+    """The resourcing chain in one clause: the total, the bound, the retry.
+
+    THREE THINGS A BARE NUMBER WOULD DROP. That the total counts only the stages
+    somebody timed, so it is a floor rather than a figure. That a second
+    qualification cycle changes it, where anybody has said how many to plan for.
+    And that the days rest on estimates rather than quotes, which is the
+    difference between a schedule and a hope. Each is stated in words, because
+    the reader who does not see them has no way to recover them.
+    """
+    detail = clause.get("detail") or {}
+    prefix = BOUND_WORDS.get(clause.get("completeness", ""), "")
+    text = f"{prefix}{_measure(value)} days to resource"
+    untimed = detail.get("stages_untimed") or ()
+    if untimed:
+        count = len(untimed)
+        text += f" with {count} stage{'' if count == 1 else 's'} untimed"
+    retry = detail.get("with_retry_days")
+    cycles = detail.get("qualification_cycles")
+    if retry is not None and cycles:
+        text += f" ({_measure(retry)} over {cycles} qualification cycles)"
+    elif cycles is None:
+        text += " (one qualification pass; no cycle count on file)"
+    return text
+
+
 def _ranked_clause(clause):
     """One clause of the ranked sentence, with its unit and its bound direction.
 
@@ -354,12 +393,14 @@ def _ranked_clause(clause):
     value = clause.get("value")
     if value is None:
         return ""
-    if dimension == "lead_time_to_recover":
+    if dimension == "wait_out_days":
         detail = clause.get("detail") or {}
         quoted, p95 = detail.get("quoted_days"), detail.get("p95_days")
         if quoted is None:
             return ""
         return f"{quoted} days quoted lead time ({p95} at p95)"
+    if dimension == "resource_days":
+        return _resource_clause(clause, value)
     if dimension == "buffer_cover" and value == "unbounded":
         return "unbounded cover, nothing consuming it"
     if dimension == "concentration" and clause.get("value") in (1, None):
@@ -527,7 +568,8 @@ FIELD_PROSE = {
     "tooling_owner": "a tooling owner",
     "verdict": "a confirmed supplier list",
     "concentration": "a resolved supplier name merge",
-    "lead_time_to_recover": "a lead time record",
+    "wait_out_days": "a lead time record",
+    "resource_days": "a timed resourcing chain",
 }
 
 ARCHETYPE_PROSE = {

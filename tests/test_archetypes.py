@@ -283,7 +283,7 @@ class TestBoundsAnswerDefinitelyInOneDirection(unittest.TestCase):
     def test_no_recovery_path_is_a_long_lead_time_definitely(self):
         prof = profile(verdict="no_qualified_supplier", lead_times=(),
                        tooling="supplier", on_hand=0)
-        self.assertEqual(prof.lead_time_to_recover.completeness,
+        self.assertEqual(prof.wait_out_days.completeness,
                          scoring.NO_RECOVERY_PATH)
         long_lead = [c for c in self.headline().conditions
                      if c.name == "long_lead"][0]

@@ -19,7 +19,7 @@ An internal review tool that answers one question: **which single points of
 failure in a bill of materials would actually stop production, and how badly.**
 
 It explodes a BOM, identifies parts with one real source, scores exposure along
-five dimensions it keeps separate, and hands a person a sentence they can act on.
+dimensions it keeps separate, and hands a person a sentence they can act on.
 
 Agent 3 of a multi-agent supply chain system. **Synthetic data only** — no real
 part numbers, no real supplier names, nothing company-specific.
@@ -136,7 +136,7 @@ reachable from exactly one page:
 
 | Level | What |
 |---|---|
-| **Executes** | explosion, the supplier join, exposure identification, the four per-part dimensions where inputs exist |
+| **Executes** | explosion, the supplier join, exposure identification, the five per-part dimensions where inputs exist |
 | **Recommends** | correlation and concentration flagging — a human confirms |
 | **Recommends permanently** | concentration grouping and the archetype catalogue |
 | **Never** | supplier qualification. Out of scope by design |
@@ -159,15 +159,26 @@ would agree with the bug.
 
 `sourcing_list_status` gates the verdict **only**. It never enters scoring.
 
-### 4.3 The five dimensions
+### 4.3 The six measures
 
-| Dimension | Unit |
+| Measure | Unit |
 |---|---|
-| `lead_time_to_recover` | days — a `(quoted, p95)` pair |
+| `wait_out_days` | days — a `(quoted, p95)` pair |
+| `resource_days` | days — a chain total, with the untimed stages named |
 | `blast_radius` | finished-good units |
 | `buffer_cover` | days |
 | `portability` | categorical |
 | `concentration` | parts |
+
+**Six, because the brief's first dimension was two questions sharing one name.**
+"How long to qualify an alternative or wait out the disruption" has two answers
+with different inputs, different confidence and different completeness, so they
+are separate measures. `wait_out_days` is the old `lead_time_to_recover`
+renamed; `resource_days` is new and reads the optional `recovery_inputs.csv`.
+See **Recovery is two measures** in the README, including why cover is not
+subtracted from recovery.
+
+Three of the six are in days and **none of them is added to another.**
 
 **They are never combined.** No total, no weight, no `__add__`, and no
 normalised variant of any value. Every measure keeps a physical unit, because a

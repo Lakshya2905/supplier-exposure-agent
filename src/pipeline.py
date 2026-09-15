@@ -1,6 +1,7 @@
 """End to end, from CSVs on disk to the three review surfaces.
 
-Reads only what a real consumer would have: the five CSVs. It never touches the
+Reads only what a real consumer would have: the six CSVs, plus
+`recovery_inputs.csv` where somebody has supplied one. It never touches the
 answer key, so the verdicts here come from `identify()` on observed data rather
 than from what the generator intended. That distinction matters, because a
 runner that quietly read truth would make the interface look correct while
@@ -18,8 +19,9 @@ from .explosion import explode, rows_by_part
 from .identify import identify_all
 from .interface import model as view
 from .readers import (read_bom, read_demand_plan, read_demand_rows,
-                      read_lead_times, read_part_master, read_sources,
-                      read_suppliers)
+                      read_lead_times, read_part_master, read_recovery_inputs,
+                      read_sources, read_suppliers)
+from .recovery import RECOVERY_INPUTS_FILE
 from .scoring import score_part
 from .synthetic import verdicts as V
 
@@ -95,6 +97,11 @@ def run(data_dir=None, config_path="config/archetypes.yaml"):
     lead_times = read_lead_times(data_dir / "lead_times.csv")
     extracts = read_sources(data_dir / "sources.csv")
     demand_row_numbers = read_demand_rows(data_dir / "demand_plan.csv")
+    # OPTIONAL, and absent from every dataset this repository generates. A
+    # missing file is not an empty plan: it means nobody has timed a single
+    # stage of the resourcing chain, and `resource_days` reports that rather
+    # than a chain of zeroes.
+    recovery_stages = read_recovery_inputs(data_dir / RECOVERY_INPUTS_FILE)
 
     rows = rows_by_part(explode(edges, known_parts=set(parts)))
     usage = usage_by_part(rows, demand)
@@ -120,7 +127,8 @@ def run(data_dir=None, config_path="config/archetypes.yaml"):
             usage=usage[part], on_hand_units=record["on_hand_units"],
             tooling_owner=record["tooling_owner"],
             lead_times=[(quoted, p95)
-                        for _, quoted, p95, _ in lead_times.get(part, ())])
+                        for _, quoted, p95, _ in lead_times.get(part, ())],
+            recovery_stages=recovery_stages.get(part))
     profiles = fill_profiles(profiles, report)
 
     evidence = {

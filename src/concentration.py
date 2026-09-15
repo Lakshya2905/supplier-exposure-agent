@@ -1,8 +1,8 @@
 """Concentration: correlated exposure across a SET of parts.
 
-A SHAPE CHANGE FROM THE FIRST FOUR DIMENSIONS. Lead time, blast radius, cover
-and portability are properties of one part and can be computed from that part
-alone. Concentration is a property of a group, and no part carries the answer by
+A SHAPE CHANGE FROM THE FIRST FIVE DIMENSIONS. Wait-out days, resourcing days,
+blast radius, cover and portability are properties of one part and can be
+computed from that part alone. Concentration is a property of a group, and no part carries the answer by
 itself. So the primary record here is the CLUSTER, and the per-part slot
 references it rather than restating it. Nine parts on one supplier is ONE
 finding, not nine, and a reviewer confirms it once.
@@ -129,7 +129,7 @@ class Cluster:
 class ConcentrationScore(DimensionScore):
     """One part's view of the clusters it belongs to.
 
-    A `DimensionScore` so it sits in the profile beside the other four, with one
+    A `DimensionScore` so it sits in the profile beside the other five, with one
     difference that is the entire point: `autonomy` is PINNED rather than
     derived. Overriding the property is what makes the ceiling structural, since
     there is then no completeness value that can produce `executes`.
@@ -395,8 +395,9 @@ def _not_applicable(part, verdict):
                   "is no supplier and no region for this part to share with "
                   "anything; correlation needs someone to correlate with. This "
                   "is not a downgrade of the finding: the exposure is carried "
-                  "in full by lead time to recover, which reports no recovery "
-                  "path for exactly these parts")
+                  "in full by wait out days, which reports nobody to wait on "
+                  "for exactly these parts, beside a resourcing time that is "
+                  "the only path such a part has")
     else:
         reason = ("the part is made in-house with no external suppliers, so "
                   "there is no supplier and no region to share; correlation "

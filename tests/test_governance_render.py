@@ -162,9 +162,18 @@ def part_ranked_event():
         evidence={
             "verdict": "single_source",
             "clauses": [
-                {"dimension": "lead_time_to_recover", "unit": "days",
+                {"dimension": "wait_out_days", "unit": "days",
                  "completeness": "known", "value": [182, 266],
                  "detail": {"quoted_days": 182, "p95_days": 266}},
+                # THE OTHER HALF OF RECOVERY, in the same sentence and never
+                # added to the one above. A lower bound with tooling untimed and
+                # two qualification cycles planned for: the richest shape the
+                # chain produces, so the golden pins all of it.
+                {"dimension": "resource_days", "unit": "days",
+                 "completeness": "lower_bound", "value": 300,
+                 "detail": {"stages_untimed": ["tooling_lead_time_days"],
+                            "qualification_cycles": 2,
+                            "with_retry_days": 360}},
                 {"dimension": "buffer_cover", "unit": "days",
                  "completeness": "upper_bound", "value": [389, 35],
                  "detail": {}},
