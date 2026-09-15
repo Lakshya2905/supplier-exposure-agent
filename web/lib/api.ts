@@ -10,8 +10,27 @@
  */
 import type { Comparison, DecisionEvent, ScoreResult } from './types';
 
-export const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE ?? 'http://127.0.0.1:8000';
+const CONFIGURED_BASE = process.env.NEXT_PUBLIC_API_BASE;
+
+export const API_BASE = CONFIGURED_BASE ?? 'http://127.0.0.1:8000';
+
+/**
+ * Whether this build was given an API address at all.
+ *
+ * `NEXT_PUBLIC_*` IS INLINED AT BUILD TIME, not read at runtime, so a variable
+ * added to a host's settings after the build has no effect until something
+ * redeploys. That is the single most confusing thing about deploying this: the
+ * setting is visibly correct in the dashboard and the page is visibly still
+ * wrong, and nothing connects the two.
+ */
+export const API_IS_CONFIGURED = Boolean(CONFIGURED_BASE);
+
+/** Whether the page itself is being served from somebody's own machine. */
+function servedLocally() {
+  if (typeof window === 'undefined') return true;
+  return ['localhost', '127.0.0.1', '0.0.0.0'].includes(
+    window.location.hostname);
+}
 
 export class ApiError extends Error {
   detail: unknown;
@@ -52,12 +71,28 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   try {
     response = await fetch(`${API_BASE}${path}`, init);
   } catch (offline) {
-    // NAMES THE ADDRESS IT TRIED. "Failed to fetch" sends somebody to the
-    // browser console; the address plus the start command is the whole fix.
+    // NAMES THE ADDRESS IT TRIED, AND SAYS WHOSE MACHINE THAT IS. The same
+    // failure has two completely different causes and the wrong advice is
+    // useless in both directions.
+    //
+    // On a developer's machine, `127.0.0.1:8000` is their backend and the fix
+    // is to start it. On a DEPLOYED page, `127.0.0.1` is the VISITOR'S machine:
+    // the browser is loyally trying to reach a server on the laptop of whoever
+    // opened the link. Telling them to run uvicorn is advice for somebody else.
+    // That case means the build never received NEXT_PUBLIC_API_BASE, and
+    // because it is inlined at build time, setting it now is not enough.
+    const deployedWithoutBackend = !API_IS_CONFIGURED && !servedLocally();
     throw new ApiError(
-      `The scoring API did not answer at ${API_BASE}. Start it with ` +
-      `"uvicorn src.api.main:app --port 8000", or set NEXT_PUBLIC_API_BASE ` +
-      `to where it is running.`, 0, { cause: String(offline) });
+      deployedWithoutBackend
+        ? 'This deployment was built without NEXT_PUBLIC_API_BASE, so the page '
+          + `is trying to reach a scoring API at ${API_BASE} — which is your `
+          + 'own machine, not the server. Set NEXT_PUBLIC_API_BASE to where '
+          + 'the backend is running and redeploy: the value is baked in at '
+          + 'build time, so saving it without a redeploy changes nothing.'
+        : `The scoring API did not answer at ${API_BASE}. Start it with `
+          + '"uvicorn src.api.main:app --port 8000", or set '
+          + 'NEXT_PUBLIC_API_BASE to where it is running.',
+      0, { cause: String(offline) });
   }
   if (!response.ok) {
     let detail: unknown = await response.text();
