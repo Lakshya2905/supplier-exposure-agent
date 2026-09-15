@@ -6,3 +6,6 @@ __pycache__/
 venv/
 .gstack/
 decisions/
+
+# API run store: inputs and records written at request time, like decisions/
+runs/

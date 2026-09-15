@@ -20,6 +20,15 @@ dependencies = [
     # was nothing for a chart library to do. plotly.js carries its own world
     # geometry, so the map needs no network call at render time.
     "plotly>=5.20",
+    # The scoring library over HTTP, so a frontend that is not Streamlit can
+    # reach it. RUNTIME, not a dev extra: the backend container serves this and
+    # nothing else, and a dependency the deployed process imports belongs in the
+    # set the deployed process installs.
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    # Multipart parsing, which FastAPI does not carry itself. Required by the
+    # upload path, so a deployment without it accepts a file and 500s.
+    "python-multipart>=0.0.9",
 ]
 
 [project.optional-dependencies]
@@ -30,6 +39,9 @@ dev = [
     # is one failure four times: a declaration is not a painted pixel. Dev only:
     # a deployed container renders the app and never inspects it.
     "playwright>=1.44",
+    # Starlette's TestClient transport. Dev only: the deployed process serves
+    # requests and never issues them.
+    "httpx2>=0.1",
 ]
 
 # Pinned deliberately. setuptools sees a `src/` directory and switches to
