@@ -1,1 +1,1 @@
-SEA-P-0031: buffer cover is 11 days, an upper bound, because 440 units on hand covers 11.0 days at the recorded consumption rate, and unrecorded demand can only reduce cover.
+SEA-P-0031: how long current stock lasts is at most 11 days, and possibly less, because 440 units on hand covers 11.0 days at the recorded consumption rate, and unrecorded demand can only reduce cover.

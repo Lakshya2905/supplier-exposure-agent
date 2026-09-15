@@ -278,23 +278,23 @@ class Archetype:
 CATALOGUE_AUTONOMY = gov.RECOMMENDS
 
 RESOURCING_TRAP = Archetype(
-    name="resourcing_trap", label="the resourcing trap",
+    name="resourcing_trap", label="one supplier, supplier-owned tooling",
     conditions=(SINGLE_SOURCE, SUPPLIER_TOOLING))
 
 NOBODY_TO_CALL = Archetype(
-    name="nobody_to_call", label="nobody to call",
+    name="nobody_to_call", label="no supplier on file",
     conditions=(NOBODY_QUALIFIED,))
 
 NO_QUOTABLE_SINGLE_SOURCE = Archetype(
-    name="no_quotable_single_source", label="single source, nobody quoting",
+    name="no_quotable_single_source", label="one supplier, nobody quoting",
     conditions=(SINGLE_SOURCE, NO_QUOTABLE_SOURCE))
 
 COUNTED_EMPTY_SINGLE_SOURCE = Archetype(
-    name="counted_empty_single_source", label="single source, counted empty",
+    name="counted_empty_single_source", label="one supplier, no stock left",
     conditions=(SINGLE_SOURCE, COUNTED_EMPTY))
 
 CORRELATED_RESOURCING_TRAP = Archetype(
-    name="correlated_resourcing_trap", label="the correlated resourcing trap",
+    name="correlated_resourcing_trap", label="one supplier, supplier-owned tooling, shared with other parts",
     conditions=(SINGLE_SOURCE, SUPPLIER_TOOLING, CORRELATED))
 
 STRUCTURAL_CATALOGUE = (
@@ -322,7 +322,7 @@ def magnitude_catalogue(thresholds):
     if lead_days is not None and cover_days is not None:
         built.append(Archetype(
             name="headline_exposure",
-            label="single source, long lead, thin cover, supplier tooling",
+            label="one supplier, long lead, low stock, supplier-owned tooling",
             threshold_source=f"archetypes.yaml {version}",
             conditions=(
                 SINGLE_SOURCE,
@@ -342,7 +342,7 @@ def magnitude_catalogue(thresholds):
     if lead_days is not None:
         built.append(Archetype(
             name="long_lead_single_source",
-            label="single source on a long lead time",
+            label="one supplier, long lead",
             threshold_source=f"archetypes.yaml {version}",
             conditions=(
                 SINGLE_SOURCE,

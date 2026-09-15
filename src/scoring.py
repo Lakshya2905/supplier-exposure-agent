@@ -270,9 +270,10 @@ def wait_out_days(part_number, verdict, lead_times):
         return DimensionScore(
             part_number=part_number, dimension=WAIT_OUT_DAYS,
             value=None, unit=DAYS, completeness=NO_RECOVERY_PATH,
-            reasons=("the supplier list was verified and contains nobody, so "
-                     "there is no recovery path to time rather than a missing "
-                     "lead time record",))
+            reasons=("somebody checked the supplier list and there is nobody "
+                     "on it, so there is no order to place and nothing to wait "
+                     "for. This is not a missing lead time: it is a part with "
+                     "no supplier",))
 
     if verdict == V.MADE_IN_HOUSE:
         # The dimension does not APPLY, which is not the same as lacking an
@@ -282,16 +283,17 @@ def wait_out_days(part_number, verdict, lead_times):
         return DimensionScore(
             part_number=part_number, dimension=WAIT_OUT_DAYS,
             value=None, unit=DAYS, completeness=NOT_APPLICABLE,
-            reasons=("the part is made in-house, so there is no purchase lead "
-                     "time to recover over; this dimension does not apply "
-                     "rather than being unknown",))
+            reasons=("we make this part ourselves, so there is no purchase "
+                     "lead time to wait out. This question does not apply to "
+                     "the part rather than being something nobody knows",))
 
     if not pairs:
         return DimensionScore(
             part_number=part_number, dimension=WAIT_OUT_DAYS,
             value=None, unit=DAYS, completeness=CANNOT_TELL,
-            reasons=("no supplier for this part has a lead time record, so how "
-                     "long recovery would take is not recorded anywhere",))
+            reasons=("no supplier on this part has a lead time on file, so we "
+                     "cannot say how long it would take for parts to flow "
+                     "again",))
 
     if verdict == V.SUPPLIER_LIST_UNKNOWN:
         # A lead time exists, but the list it came from is unconfirmed, so the
@@ -299,17 +301,16 @@ def wait_out_days(part_number, verdict, lead_times):
         return DimensionScore(
             part_number=part_number, dimension=WAIT_OUT_DAYS,
             value=None, unit=DAYS, completeness=CANNOT_TELL,
-            reasons=("the supplier list is unconfirmed, so a shorter recovery "
-                     "path may exist through a supplier that was never "
-                     "recorded",))
+            reasons=("nobody has confirmed the supplier list, so a faster "
+                     "supplier may exist that was never written down",))
 
     quoted = min(pair[0] for pair in pairs)
     p95 = min(pair[1] for pair in pairs)
     return DimensionScore(
         part_number=part_number, dimension=WAIT_OUT_DAYS,
         value=(quoted, p95), unit=DAYS, completeness=KNOWN,
-        reasons=(f"the fastest qualified supplier quotes {quoted} days, and "
-                 f"{p95} days at p95",),
+        reasons=(f"the fastest supplier quotes {quoted} days, and {p95} days "
+                 f"in the worst case",),
         detail={"quoted_days": quoted, "p95_days": p95,
                 "suppliers_with_lead_time": len(pairs)})
 
@@ -341,19 +342,20 @@ def blast_radius(part_number, rows, usage):
 
     if usage.completeness == USAGE_KNOWN:
         completeness = KNOWN
-        reason = (f"blocks {len(goods)} finished good(s) totalling "
+        reason = (f"stops {len(goods)} finished good(s), which is "
                   f"{usage.blocked_finished_good_units} units a year")
     elif usage.completeness == USAGE_PARTIAL:
         completeness = LOWER_BOUND
-        reason = (f"blocks {len(goods)} finished good(s); the "
+        reason = (f"stops {len(goods)} finished good(s). The "
                   f"{usage.blocked_finished_good_units} units a year counts "
-                  f"only the recorded ones, so it is a lower bound, because "
-                  f"unrecorded demand can only add to what is blocked")
+                  f"only the ones with demand on file, so the real figure can "
+                  f"only be higher: demand nobody recorded still stops")
     else:
         completeness = LOWER_BOUND
-        reason = (f"blocks {len(goods)} finished good(s), none of which is in "
-                  f"the demand plan, so the structural reach is known and the "
-                  f"blocked volume is a lower bound of zero recorded units")
+        reason = (f"stops {len(goods)} finished good(s), none of which has "
+                  f"demand on file. We know what it stops and cannot say how "
+                  f"many units that is, so zero here means nothing was "
+                  f"recorded rather than nothing is lost")
 
     return DimensionScore(
         part_number=part_number, dimension=BLAST_RADIUS,
@@ -399,15 +401,17 @@ def buffer_cover(part_number, on_hand_units, usage):
         return DimensionScore(
             part_number=part_number, dimension=BUFFER_COVER, value=None,
             unit=DAYS, completeness=CANNOT_TELL,
-            reasons=("there is no on-hand record for this part, so cover "
-                     "cannot be computed; this is not zero cover",))
+            reasons=("there is no stock count on file for this part, so we "
+                     "cannot say how long stock lasts. This is not the same as "
+                     "having no stock",))
 
     if usage.completeness == USAGE_CANNOT_TELL:
         return DimensionScore(
             part_number=part_number, dimension=BUFFER_COVER, value=None,
             unit=DAYS, completeness=CANNOT_TELL,
             reasons=usage.reasons + (
-                "so there is no known consumption rate to divide on-hand by",))
+                "so we do not know how fast this part is used, and cannot say "
+                "how long stock lasts",))
 
     if usage.value == 0:
         # On-hand with nothing consuming it. Unbounded cover is an ANSWER, and
@@ -416,8 +420,9 @@ def buffer_cover(part_number, on_hand_units, usage):
         return DimensionScore(
             part_number=part_number, dimension=BUFFER_COVER, value=UNBOUNDED,
             unit=DAYS, completeness=KNOWN,
-            reasons=(f"{on_hand_units} units on hand and no recorded annual "
-                     f"consumption, so cover is unbounded rather than unknown",),
+            reasons=(f"{on_hand_units} units in stock and nothing recorded as "
+                     f"using them, so the stock lasts indefinitely. That is an "
+                     f"answer, not a gap",),
             detail={"on_hand_units": on_hand_units, "unbounded": True,
                     "annual_usage": Fraction(0)})
 
@@ -429,14 +434,14 @@ def buffer_cover(part_number, on_hand_units, usage):
         # divisor bigger and the cover smaller. Opposite direction to blast
         # radius, from the identical missing row.
         completeness = UPPER_BOUND
-        reason = (f"{on_hand_units} units on hand covers {float(days):.1f} days "
-                  f"at the recorded consumption rate, and that is an upper "
-                  f"bound: " + usage.reasons[0] + ", and unrecorded demand can "
-                  f"only reduce cover")
+        reason = (f"{on_hand_units} units in stock lasts {float(days):.1f} "
+                  f"days at the usage on file, and the real figure can only be "
+                  f"lower: " + usage.reasons[0] + ", and usage nobody recorded "
+                  f"still consumes this part")
     else:
         completeness = KNOWN
-        reason = (f"{on_hand_units} units on hand covers {float(days):.1f} days "
-                  f"at {float(usage.value):.0f} units a year")
+        reason = (f"{on_hand_units} units in stock lasts {float(days):.1f} "
+                  f"days at {float(usage.value):.0f} units a year")
 
     return DimensionScore(
         part_number=part_number, dimension=BUFFER_COVER, value=days, unit=DAYS,
@@ -503,41 +508,43 @@ def resource_days(part_number, tooling_owner, stages=None):
         return DimensionScore(
             part_number=part_number, dimension=RESOURCE_DAYS, value=None,
             unit=DAYS, completeness=CANNOT_TELL,
-            reasons=("no stage of the resourcing chain has a duration on file, "
-                     "so how long it would take to stand an alternative source "
-                     "up is not recorded anywhere; the untimed stages are "
+            reasons=("nobody has recorded how long any step of approving a "
+                     "new supplier takes, so we cannot say how long it would "
+                     "take. The steps nobody has timed are "
                      + _stage_phrase(untimed),),
             detail=detail)
 
     reasons = []
     if untimed:
         reasons.append(
-            f"resourcing takes at least {first_pass} days across "
-            f"{_stage_phrase(timed)}, and that is a lower bound because "
-            f"nobody has timed {_stage_phrase(untimed)}")
+            f"approving a new supplier takes at least {first_pass} days for "
+            f"{_stage_phrase(timed)}. It could take longer: nobody has timed "
+            f"{_stage_phrase(untimed)}")
     else:
-        reasons.append(f"resourcing takes {first_pass} days across "
+        reasons.append(f"approving a new supplier takes {first_pass} days for "
                        f"{_stage_phrase(timed)}")
 
     if built.cycles is None:
         reasons.append(
-            "how many qualification cycles to plan for is not on file, so this "
-            "counts one pass and is a lower bound for that reason as well")
+            "nobody has said how many approval attempts to plan for, so this "
+            "counts one. If it takes two, it will be longer than the figure "
+            "above")
     elif with_retry is None:
         reasons.append(
-            f"{built.cycles} qualification cycles are planned for, and the "
-            f"stage that repeats has no duration on file, so what a second "
-            f"cycle adds cannot be said")
+            f"{built.cycles} approval attempts are planned for, and nobody has "
+            f"timed the step that repeats, so we cannot say what a second "
+            f"attempt would add")
     else:
-        planned = (f"the {built.cycles} cycles" if built.cycles > 1
-                   else "the single cycle")
+        planned = (f"the {built.cycles} attempts" if built.cycles > 1
+                   else "a single attempt")
         reasons.append(
-            f"{first_pass} days if qualification passes first time, "
-            f"{with_retry} days across {planned} planned for")
+            f"{first_pass} days if it is approved first time, {with_retry} "
+            f"days over {planned} planned for")
 
     if skipped:
-        reasons.append(f"{_stage_phrase(skipped)} is off the path for this part "
-                       f"and adds nothing, which is not the same as untimed")
+        reasons.append(f"{_stage_phrase(skipped)} does not happen for this "
+                       f"part and adds no time. That is different from a step "
+                       f"nobody has timed")
 
     completeness = LOWER_BOUND if (untimed or built.cycles is None) else KNOWN
     return DimensionScore(
@@ -559,16 +566,17 @@ def portability(part_number, tooling_owner):
         return DimensionScore(
             part_number=part_number, dimension=PORTABILITY, value=None,
             unit=CATEGORICAL, completeness=CANNOT_TELL,
-            reasons=("no tooling owner is recorded, so whether this part can be "
-                     "resourced quickly is unknown",))
+            reasons=("nobody has recorded who owns the tooling, so we cannot "
+                     "say how hard this part would be to move",))
 
     owner = tooling_owner.strip()
     if owner == TOOLING_SUPPLIER:
-        reason = ("the supplier owns the tooling, so resourcing means new "
-                  "tooling rather than a new purchase order")
+        reason = ("the supplier owns the tooling, so moving to another "
+                  "supplier means paying for new tooling, not just raising a "
+                  "purchase order somewhere else")
     else:
-        reason = ("the company owns the tooling, so it can move to another "
-                  "supplier without retooling")
+        reason = ("we own the tooling, so it can move to another supplier "
+                  "without anybody cutting new tooling")
     return DimensionScore(
         part_number=part_number, dimension=PORTABILITY, value=owner,
         unit=CATEGORICAL, completeness=KNOWN, reasons=(reason,))

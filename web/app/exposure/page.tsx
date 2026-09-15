@@ -85,7 +85,19 @@ export default function Exposure() {
       return {
         id: row.key,
         part: row.key,
-        pattern: row.archetypes.join(', '),
+        // THE MOST SPECIFIC MATCH, AND NOTHING IS LOST BY IT. The surface
+        // returns archetypes in dominance-layer order and dominance is strict
+        // subset inclusion of conditions, so the first match CONTAINS every
+        // later one: a part told "one supplier, supplier-owned tooling, shared
+        // with other parts" has already been told it has one supplier and
+        // supplier-owned tooling. Listing both put the same clause in the cell
+        // twice on every row and made the column unreadable.
+        //
+        // The count of the rest is shown rather than dropped, and the tearsheet
+        // lists them all, because "implied" is an argument a reader should be
+        // able to check.
+        pattern: row.archetypes[0],
+        alsoMatches: row.archetypes.length - 1,
         // THE STRUCTURAL REACH, WHERE THE VOLUME COULD NOT BE COUNTED. Blast
         // radius carries two facts: how many finished goods stop, which is
         // always known, and how many units that is, which inherits the demand
@@ -132,7 +144,9 @@ export default function Exposure() {
           own unit and nothing here is combined. The table arrives in part
           number order, which carries no meaning; sort a column to ask a
           question about that column. Select a part for the finding, the
-          workings, and what binds.
+          workings, and what binds. A part can match several patterns; the
+          column shows the most specific one, which contains the broader ones
+          it also matches.
         </p>
 
         {/* A THRESHOLD NOBODY HAS SET IS ITS OWN KIND OF UNKNOWN, and it is
@@ -205,6 +219,11 @@ export default function Exposure() {
                             scores: result.profiles[row.id] ?? {},
                             binding: result.binding[row.id],
                             verdict: result.verdicts[row.id] ?? '',
+                            patterns: source.__row.archetypes,
+                            verdictLabel:
+                              result.overview.verdict_labels[
+                                result.verdicts[row.id] ?? ''
+                              ] ?? result.verdicts[row.id] ?? '',
                             dimensions: result.dimensions,
                           })}
                         >
@@ -214,6 +233,13 @@ export default function Exposure() {
                                 && datum.value === UNKNOWN
                                 ? <Tag type="warm-gray" size="sm">{UNKNOWN}</Tag>
                                 : datum.value}
+                              {datum.info.header === 'pattern'
+                                && (source?.alsoMatches ?? 0) > 0 && (
+                                  <span style={{ color:
+                                    'var(--cds-text-helper)' }}>
+                                    {' '}(+{source?.alsoMatches} broader)
+                                  </span>
+                              )}
                             </TableCell>
                           ))}
                         </TableRow>

@@ -704,6 +704,71 @@ pill, and the rule here is square corners everywhere. `globals.scss` sets that
 radius to 0 and touches nothing else about the component, so the accessible
 markup, contrast and focus behaviour Carbon tested are all intact.
 
+**One chart is not Carbon, and the reason is geometry.** The region map is drawn
+with the same library the tested Streamlit implementation uses, because its
+shapes carry a decision this repository has already made and asserted: India is
+drawn **including its full claimed territory**, from a boundary vendored under
+CC BY 4.0, since the built-in `IND` polygon follows a different convention and
+stops around 35.5N. Carbon Charts would need world geometry supplied from
+somewhere else, and re-sourcing it is exactly how a decision like that gets lost
+without anything failing — the map would simply draw a smaller India.
+`tests/test_map_geometry.py` asserts the northern and eastern reach of the one
+copy, which the API serves at `/api/assets/india-claimed.geojson` so there is no
+second copy for that test to miss. The map's colours are Carbon tokens read from
+the live document, and the scale starts **above** the land colour so that the
+least-exposed region and "not a region at all" cannot render alike.
+
+### The words on the screen
+
+**The test applied to every string: a procurement analyst with no statistics
+background reads it once and knows what to do next.** The vocabulary was a
+modeller's, and each term was exact and told that reader nothing.
+
+| was | is |
+|---|---|
+| abstains instead of imputing | we do not have this data, so this part is not scored on it |
+| p95 lead time | worst case lead time |
+| lead time to recover | how long until parts flow again from this supplier |
+| blast radius | how much of the build stops |
+| buffer cover | how long current stock lasts |
+| portability | how hard it is to move to another supplier |
+| correlated exposure | shares a supplier or region with other exposed parts |
+| cannot tell / not established | not enough data to say |
+| hidden_single_source | several suppliers listed, only one can actually quote |
+| nobody to call | no supplier on file |
+| what should I go and find out | what to check next |
+| the resourcing trap | one supplier, supplier-owned tooling |
+
+**It is one rewrite, in `src/governance/render.py` and `src/scoring.py`.** Prose
+is produced by `render()` on demand and never stored, so both interfaces changed
+together and the golden files made every reworded sentence a reviewable diff
+rather than a surprise.
+
+**What deliberately did not get simplified.** Bound direction. An upper bound
+still reads "at most" and a lower bound "at least", now with the consequence
+spelled out: *at most 11 days, and possibly less*. They are never softened into
+a shared hedge like "roughly", because the whole system turns on those two
+pointing opposite ways from the identical missing row: unrecorded demand can
+only **reduce** cover and can only **add** to what is blocked. A reader who
+cannot tell which way a figure is wrong has a number they cannot use, which is
+worse than plain-sounding prose that means nothing. `test_scoring.py` asserts
+both directions by name.
+
+**One thing in the brief was not implemented as written.** It mapped "upper
+bound" to "at least this long, possibly longer". That is the wording for a
+*lower* bound; an upper bound means the true figure is at most the one shown.
+Implementing it verbatim would have inverted the direction on cover, which is
+the defect the corrections log exists to catch. Both directions are implemented
+correctly and the discrepancy is recorded here rather than silently resolved.
+
+**Internal keys are never rewritten, only presented.** `south_asia` is the
+identity a cluster is decided against and every row of the decision log joins on
+that exact string. `render.display_subject` title-cases a subject **only when it
+contains an underscore**, which separates a region key from a supplier name:
+supplier names carry spaces and their own capitals, and the dataset deliberately
+contains `calder corporation` lowercase, because a name as spelled is evidence
+and tidying it would hide the messiness the matcher exists to survive.
+
 ### Deploying it
 
 **The backend** needs a host that stays awake. `Dockerfile` and `Procfile` are

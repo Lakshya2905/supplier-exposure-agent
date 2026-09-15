@@ -263,7 +263,7 @@ class TestCoveragePanel(unittest.TestCase):
     def test_not_applicable_is_explained_as_not_asking_rather_than_no(self):
         note = [n for n in self.panel().notes
                 if "not applicable" in n.subject][0]
-        self.assertIn("does not attach", note.sentence)
+        self.assertIn("does not apply to them", note.sentence)
 
 
 class TestSentenceComesFromTheRenderer(unittest.TestCase):

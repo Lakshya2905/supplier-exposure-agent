@@ -48,16 +48,30 @@ ROW_ENTITIES = {EXPOSURE: PART, FIND_OUT: FIELD, CONFIRM: CLUSTER}
 
 SURFACE_QUESTION = {
     EXPOSURE: "What is worst?",
-    FIND_OUT: "What should I go and find out?",
-    CONFIRM: "Do I agree with your model?",
+    FIND_OUT: "What to check next",
+    CONFIRM: "Do you agree with how we grouped these?",
 }
-SURFACE_VERB = {EXPOSURE: "look at", FIND_OUT: "go and get",
+SURFACE_VERB = {EXPOSURE: "look at", FIND_OUT: "check next",
                 CONFIRM: "agree or disagree"}
 # Short names for cross-references. A reference carries the page NAME, never the
 # other page's question, so that one surface quoting another cannot be mistaken
 # for the two having been merged.
-SURFACE_TITLE = {EXPOSURE: "Exposure", FIND_OUT: "Find out",
-                 CONFIRM: "Confirm"}
+SURFACE_TITLE = {EXPOSURE: "Exposure", FIND_OUT: "What to check",
+                 CONFIRM: "Review"}
+
+# The fourth surface has no model of its own: it is aggregates over the other
+# three and owns no rows. Its name lives here anyway, so that everything which
+# has to spell a surface name reads from ONE map. The alternative, a literal in
+# the painter and another in the test harness, is what made a rewording error
+# every rendered-page check the first time one happened.
+OVERVIEW_TITLE = "Overview"
+
+SURFACE_SUBTITLE = {
+    EXPOSURE: "what is worst",
+    FIND_OUT: "what one check would settle",
+    CONFIRM: "judgments waiting for a person",
+}
+OVERVIEW_SUBTITLE = "the shape of the whole set"
 
 
 def _plain(value):
@@ -777,7 +791,7 @@ def find_out_surface(memberships, catalogue):
     """The work queue, INVERTED SO THE ROW IS A FIELD.
 
     Stage 6 groups the queue by archetype, which answers "what is undecided".
-    This surface answers "what should I go and get", and the answer is a list of
+    This surface answers "what to check next", and the answer is a list of
     trips to systems of record, not a list of parts. One row per field is what
     makes it that.
     """

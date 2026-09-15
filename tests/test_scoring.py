@@ -157,7 +157,7 @@ class TestMissingOnHandVersusRecordedZero(unittest.TestCase):
                          parts["ONLY-M02"]["on_hand_units"])
 
     def test_missing_cover_never_renders_as_a_number(self):
-        self.assertIn("not zero cover", self.missing.reasons[0])
+        self.assertIn("not the same as having no stock", self.missing.reasons[0])
 
 
 class TestBlastRadius(unittest.TestCase):
@@ -258,8 +258,12 @@ class TestTheBoundDirectionsInvert(unittest.TestCase):
 
     def test_each_bound_says_which_way_it_is_wrong(self):
         profile = fixture_profiles()["SHARED-M01"]
-        self.assertIn("only reduce cover", profile.buffer_cover.reasons[0])
-        self.assertIn("only add", profile.blast_radius.reasons[0])
+        # THE DIRECTION IN WORDS, and the plain-language pass had to keep it:
+        # cover can only be LOWER than stated and blocked units can only be
+        # HIGHER, from the identical missing row. A shared hedge like "roughly"
+        # would read more naturally and would destroy the distinction.
+        self.assertIn("can only be lower", profile.buffer_cover.reasons[0])
+        self.assertIn("can only be higher", profile.blast_radius.reasons[0])
 
 
 class TestPortability(unittest.TestCase):
@@ -373,7 +377,7 @@ class TestResourceDays(unittest.TestCase):
         self.assertEqual(score.detail["stages_untimed"],
                          (R.TOOLING,))
         self.assertIn("tooling", score.reasons[0])
-        self.assertIn("lower bound", score.reasons[0])
+        self.assertIn("could take longer", score.reasons[0])
 
     def test_a_chain_with_qualification_missing_is_a_lower_bound(self):
         score = self.profiles["ONLY-M01"].resource_days
@@ -387,8 +391,8 @@ class TestResourceDays(unittest.TestCase):
         self.assertEqual(score.detail["qualification_cycles"], 2)
         self.assertEqual(score.detail["with_retry_days"], 360)
         sentence = " ".join(score.reasons)
-        self.assertIn("300 days if qualification passes first time", sentence)
-        self.assertIn("360 days across the 2 cycles", sentence)
+        self.assertIn("300 days if it is approved first time", sentence)
+        self.assertIn("360 days over the 2 attempts", sentence)
 
     def test_an_absent_retry_cycle_is_said_rather_than_assumed(self):
         """The row that exists to prove one pass is never the default.
@@ -403,7 +407,8 @@ class TestResourceDays(unittest.TestCase):
         self.assertIsNone(score.detail["qualification_cycles"])
         self.assertIsNone(score.detail["with_retry_days"])
         self.assertEqual(score.completeness, LOWER_BOUND)
-        self.assertIn("not on file", " ".join(score.reasons))
+        self.assertIn("nobody has said how many approval attempts",
+                      " ".join(score.reasons))
 
     def test_with_retry_totals_match_the_hand_computed_values(self):
         for part in SCORED_PARTS:
@@ -522,7 +527,7 @@ class TestResourceDays(unittest.TestCase):
 
     def test_one_planned_cycle_reads_as_one_cycle(self):
         score = resource_days("P", "supplier", TIMED)
-        self.assertIn("the single cycle planned for", " ".join(score.reasons))
+        self.assertIn("a single attempt planned for", " ".join(score.reasons))
 
     # ------------------------------------------------------- no banding here --
     def test_nothing_here_bands_a_duration(self):
