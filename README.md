@@ -1000,12 +1000,33 @@ decision log that resets on deploy is the defect `governance/store.py` exists to
 close, one layer out.
 
 **The frontend** is static and goes on Vercel with `web/` as the root directory.
-Set `NEXT_PUBLIC_API_BASE` to wherever the backend answers. The two deploy
-separately on purpose: the frontend is the thing a link points at and Vercel
-does not sleep it, and the backend is the thing that must not sleep, which is a
-different requirement served by a different host.
+The two deploy separately on purpose: the frontend is the thing a link points at
+and Vercel does not sleep it, and the backend is the thing that must not sleep,
+which is a different requirement served by a different host.
 
-Neither has authentication and neither is built to have any.
+Three things catch people out, in the order they catch them:
+
+1. **Deployment Protection is on by default.** A fresh Vercel project puts every
+   deployment behind a Vercel login, so the link you send opens a sign-in page
+   for an account the recipient does not have. That is the same dead link this
+   whole move was meant to fix, wearing a different hat. Turn it off under
+   *Project → Settings → Deployment Protection → Vercel Authentication*, or add
+   a protection bypass, before you send the URL to anybody.
+
+2. **`NEXT_PUBLIC_API_BASE` is inlined at build time, not read at runtime.**
+   Adding it to the project settings does nothing to a deployment that is
+   already built. Set it, then **redeploy**. Without it the page tries to reach
+   `127.0.0.1:8000`, which is the *visitor's* machine; the error state says so
+   in those words rather than telling a stranger to run uvicorn.
+
+3. **The backend needs a host that stays awake and a volume.** Mount `/data`:
+   `SEA_RUNS_DIR` and `SEA_DECISIONS_DIR` are written at request time, and a
+   decision log that resets on deploy is the defect `governance/store.py` exists
+   to close, one layer out.
+
+Neither half has authentication and neither is built to have any. Deployment
+Protection is Vercel's, not this application's, and it protects the frontend
+only: an unprotected backend URL is an unprotected backend.
 
 ## Where the reasoning lives
 
