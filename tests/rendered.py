@@ -783,17 +783,24 @@ def read_sorting(browser, url):
     its own at whichever end letters fall. Nothing in this repository declared
     either behaviour. A source scan reads `isSortable` and sees a feature.
 
-    Returns `{column: {"ascending": [...], "descending": [...], "note": str}}`.
+    Returns `{column: {"ascending": ..., "descending": ...}}`, plus `__fixed`
+    listing the headers that offer no control at all.
     """
     page = browser.new_page(viewport={"width": 1440, "height": 1000})
     page.goto(url + EXPOSURE, wait_until="domcontentloaded")
     settle(page)
-    headers = page.eval_on_selector_all(
-        ".cds--data-table thead th", "nodes => nodes.map(n => n.innerText.trim())")
-    readings = {}
-    for header in headers:
-        if header in ("Part", "Pattern", "Supplier", "Region"):
-            continue        # names: alphabetical order of a name ranks nothing
+    # WHICHEVER COLUMNS OFFER A CONTROL, asked of the page rather than listed
+    # here. A column that stops sorting should drop out of this reading, and a
+    # column that starts sorting should arrive in it without anybody
+    # remembering to add it -- that is the half of the check that catches the
+    # next one rather than today's.
+    offered = page.eval_on_selector_all(
+        ".cds--data-table thead th",
+        """nodes => nodes.map(n => ({
+            header: n.innerText.trim(), sorts: !!n.querySelector('button') }))""")
+    readings = {"__fixed": [column["header"] for column in offered
+                            if not column["sorts"]]}
+    for header in [column["header"] for column in offered if column["sorts"]]:
         reading = {}
         for direction in ("ascending", "descending"):
             page.click(f'.cds--data-table thead th:has-text("{header}") button')

@@ -59,7 +59,16 @@ const HEADERS = [
   // DIRECTLY AFTER THE PATTERN, because it is the line a planner acts on. The
   // pattern says what kind of exposure this is; this says whether it bites
   // before a replacement order can land.
-  { key: 'runOut', header: 'Stock vs next delivery' },
+  //
+  // AND IT DOES NOT SORT, for the reason it was built with. Its own commit put
+  // the tag colours deliberately off the red-green axis: `too_close_to_call` is
+  // not "medium", it is a different kind of statement, and a ramp would invite
+  // averaging three categories that do not average. Alphabetical order does the
+  // same thing by accident and more convincingly -- measured on the demo set it
+  // reads "No supplier to order from, Not enough data to say, Runs out first,
+  // Stock outlasts it", which puts two abstentions at the top of what looks
+  // exactly like a severity order. A plausible default is read as a ranking.
+  { key: 'runOut', header: 'Stock vs next delivery', isSortable: false },
   { key: 'stops', header: 'How much of the build stops' },
   { key: 'cover', header: 'How long stock lasts' },
   { key: 'lead', header: 'Worst case lead time' },

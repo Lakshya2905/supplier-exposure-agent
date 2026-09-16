@@ -387,16 +387,56 @@ class TestTheTableRanksTheFigureAndNeverRanksAbsence(RenderedWeb):
     def number(self, text):
         return float(re.sub(r"[^\d.]", "", text.split()[0]) or 0)
 
+    #: Columns that name a thing rather than measure one. Alphabetical order of
+    #: a part number, an archetype, a supplier or a region is transparently
+    #: arbitrary: nobody reads "Braxton before Calder" as a judgment, and the
+    #: grouping it produces is the same scan aid the region filter offers.
+    #: Hand-written, so a NEW column has to be argued into one list or the
+    #: other rather than inheriting a sort by default.
+    IDENTIFIERS = ("Part", "Pattern", "Supplier", "Region")
+
     def columns(self):
-        return self.sorting.items()
+        """The sortable columns that carry a measure."""
+        return [(column, reading) for column, reading in self.sorting.items()
+                if column != "__fixed" and column not in self.IDENTIFIERS]
+
+    def sortable(self):
+        return [(column, reading) for column, reading in self.sorting.items()
+                if column != "__fixed"]
 
     def test_a_measure_column_was_actually_sorted(self):
-        self.assertTrue(self.sorting, "no column was measured")
+        self.assertTrue(self.columns(), "no measure column was measured")
         for column, reading in self.columns():
             with self.subTest(column=column):
                 self.assertEqual(reading["ascending"]["ariaSort"], "ascending")
                 self.assertEqual(reading["descending"]["ariaSort"], "descending")
                 self.assertGreater(len(reading["ascending"]["cells"]), 3)
+
+    def test_a_column_that_offers_a_sort_has_figures_to_sort(self):
+        """The rule that catches the NEXT one of these, not just today's.
+
+        A column of categories cannot be ordered by anything but its labels,
+        and alphabetical order of a label is arbitrary while looking like a
+        judgment. "Stock vs next delivery" read
+        `No supplier to order from, Not enough data to say, Runs out first,
+        Stock outlasts it` -- two abstentions on top of what any reader would
+        take for a severity ramp, assembled by nobody.
+
+        So a sortable column here carries figures, and a column of categories
+        offers no control. Anything added later is one of the two.
+        """
+        for column, reading in self.sortable():
+            if column in self.IDENTIFIERS:
+                continue
+            figures = [cell for cell in reading["ascending"]["cells"]
+                       if self.has_figure(cell["text"])
+                       and any(char.isdigit() for char in cell["text"])]
+            with self.subTest(column=column):
+                self.assertTrue(
+                    figures,
+                    f"{column!r} offers a sort, names no thing, and carries no "
+                    f"figure in any cell, so its order is alphabetical over "
+                    f"labels: arbitrary, and read as a ranking")
 
     def test_the_figures_are_ordered_by_their_value(self):
         """900 against 12,000, which is the defect stated as a property."""
