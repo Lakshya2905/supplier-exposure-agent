@@ -62,6 +62,20 @@ tool says so for every part instead of producing figures that look complete. See
 **Recovery is two measures** and **Four things a bill of materials this size
 needs** below.
 
+**Executes, added 2026-09-16.** The supplier view and the run-out comparison.
+Both are counts and orderings over facts already read: the supplier view counts
+the supplier field, and the run-out comparison asserts an ordering between two
+measures in the same unit only where their intervals do not overlap. Neither
+claims a shared fate and neither produces a magnitude, which is what keeps them
+off the ladder's upper rungs.
+
+**Recommends permanently, added 2026-09-16.** Every path out of a disruption
+that the scenario names. A part with a backup supplier AND a resourcing chain
+carries both, with both durations, and nothing selects between them. It cannot:
+that depends on price, quality history and capacity, and none of the three is in
+this data. Tests assert no `best` field exists and that the paths are not ordered
+by duration, because sorting by days would be the system choosing quietly.
+
 **Recommends permanently.** Concentration grouping, and the archetype catalogue.
 Correlated exposure can be defined as same supplier, same region, or same tier,
 and the three give different answers. There is an argument that once a definition
@@ -243,11 +257,32 @@ the purchase lead time.
 | stage | confidence class |
 |---|---|
 | finding and qualifying an alternate source | judgment |
+| commercial and contractual agreement | knowable |
 | tooling dedicated to the part | knowable |
 | engineering transfer of drawings and specs | judgment |
+| the alternate's own material and component lead time | knowable |
 | first article inspection | judgment |
 | qualification and reliability testing | judgment |
+| customer or regulatory approval of the source change | knowable |
+| a production slot at the alternate | knowable |
 | ramp to rate | judgment |
+
+**Six of these a practitioner named. Four were added on 2026-09-16**, and they
+are the ones a chain of engineering stages quietly omits, because each is
+somebody else's queue rather than your own work: nobody cuts metal before the
+contract is signed; the alternate has their own lead time on raw material;
+a source change often needs a customer or a regulator to accept it, which in a
+regulated programme can exceed every other stage combined; and qualified with no
+slot until Q3 is a different problem from not qualified, fixed by a different
+action. All four are `knowable` rather than `judgment` — every one is a fact
+somebody already holds and nobody in this dataset has been asked for.
+
+**Adding them made the chain more complete and its sequencing more pessimistic
+at once.** Ten sequential stages overlap more than six did: commercial
+negotiation runs alongside engineering transfer in any real programme, and a
+capacity slot is usually booked long before qualification finishes. Neither
+error cancels the other. A dependency graph rather than a chain is the fix, and
+it is not built.
 
 **Three confidence classes, kept apart.** A purchase lead time was *reported* by
 somebody with a system of record behind them. A tooling lead time is *knowable*:
@@ -886,9 +921,10 @@ power this system does not offer them.
 ### The interface
 
 `web/` is a Next.js application using IBM Carbon v11 at the Gray 10 theme. It
-replaces the Streamlit surface rather than wrapping it: the four surfaces are
-the same four, renamed for clarity, and every figure on them is computed in
-Python and served by the API.
+replaces the Streamlit surface rather than wrapping it. Four of the seven are
+the Streamlit four, renamed for clarity; **Suppliers** is new and has no
+Streamlit counterpart. Every figure on all of them is computed in Python and
+served by the API.
 
 ```
 cd web && npm install && npm run dev      # needs the API on :8000
@@ -898,9 +934,24 @@ cd web && npm install && npm run dev      # needs the API on :8000
 |---|---|---|
 | Overview | the shape of the whole set. Decides nothing | — |
 | Exposure | what is worst | a part |
+| Suppliers | what one supplier carries, and what its loss would do | a supplier |
 | What to check | what one fetch settles the most | a **field**, never a part |
 | Review | judgments waiting for a person | a cluster |
+| What changed | two runs, compared | a change |
 | Decision log | who decided what, when and why | an event |
+
+**Suppliers exists because every tool in this market makes the supplier the
+primary object and this one makes the part.** The part is right for the question
+this answers, and it left a buyer who owns a supplier relationship reading three
+hundred part rows to find out what they carry. What those tools ship with the
+supplier row is a supplier SCORE; there is none here. Both columns are counts of
+parts, so they share a unit and sit side by side with nothing blended, and the
+caption names the single axis the default order sorted on.
+
+It also does not claim the parts under a supplier share a fate. That is a
+modelling judgment — same supplier, same region and same tier disagree — and it
+waits for a person in Review. The page says so, because a table of parts grouped
+under one supplier looks like that claim whether or not it makes one.
 
 **Why Carbon.** Every competitor leads with a branded composite index. This
 tool's thesis is refusing to combine, so the interface has to make that refusal

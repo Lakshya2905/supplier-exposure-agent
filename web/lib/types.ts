@@ -169,6 +169,64 @@ export interface ScoreResult {
    *  and no magnitude, because a margin in days is the subtraction the README
    *  declines. See `src/runout.py`. */
   run_out: Record<string, RunOut>;
+  /** The supplier view, ordered by one named axis. */
+  suppliers: SupplierRow[];
+  /** What would happen if each supplier stopped, keyed by supplier. */
+  scenarios: Record<string, Affected[]>;
+  /** What that order sorted on. */
+  scenario_order: string;
+  /** What that order sorted on, stated rather than left to be inferred. */
+  supplier_order: string;
+}
+
+/** One supplier, two counts, and what neither count could settle.
+ *
+ *  TWO AXES, NEVER A SCORE. Both are counts of parts, so they sit side by side
+ *  without anything being blended. Nothing here is derived from both, and a
+ *  field that were would be the composite this product refuses per part,
+ *  reappearing one level up. See `src/portfolio.py`. */
+export interface SupplierRow {
+  supplier: string;
+  parts_supplied: number;
+  exposed_parts: number;
+  /** True when something on this supplier did not settle, so the count above
+   *  can only rise. An unsettled part is never an unexposed one. */
+  exposed_is_lower_bound: boolean;
+  parts_unsettled: number;
+  regions: string[];
+  part_numbers: string[];
+  exposed_part_numbers: string[];
+  autonomy: string;
+}
+
+/** One way out of a disruption, with how long it takes and how well that is
+ *  known.
+ *
+ *  NAMED, NEVER CHOSEN. `autonomy` is permanently `recommends`: choosing
+ *  between switching and qualifying needs price, quality history and capacity,
+ *  none of which are in this data. There is no "best" field and the paths are
+ *  not ordered by duration, because sorting by days would be the system
+ *  selecting quietly. See `src/scenario.py`. */
+export interface ScenarioPath {
+  kind: 'ride_it_out' | 'switch' | 'switch_untimed' | 'qualify';
+  label: string;
+  days: Measure;
+  completeness: string;
+  unit: string;
+  autonomy: string;
+}
+
+/** One part, and what the loss of a supplier would mean for it. */
+export interface Affected {
+  part_number: string;
+  verdict_now: string;
+  /** The verdict `identify()` gives with that supplier struck out. */
+  verdict_without: string;
+  suppliers_remaining: number;
+  remaining_can_quote: number;
+  outcome: 'stops' | 'sole_sourced' | 'unsettled' | 'still_multi'
+    | 'does_not_apply';
+  paths: ScenarioPath[];
 }
 
 export interface RunOut {

@@ -31,8 +31,10 @@ from .. import changes as diff
 from .. import governance as gov
 from .. import criticality as crit
 from .. import scoring
+from .. import portfolio
 from .. import readers
 from .. import runout
+from .. import scenario
 from ..governance import store
 from ..governance.render import VERDICT_PROSE
 from ..interface import actions
@@ -227,6 +229,20 @@ def score_payload(result, record):
             "what_to_check": encode(built[view.FIND_OUT]),
             "review": encode(built[view.CONFIRM]),
         },
+        # SUPPLIERS, AS A SIBLING OF `profiles` AND NOT A DIMENSION. Two
+        # counts of parts and the parts themselves; nothing is derived from
+        # both counts, and nothing asserts the parts share a fate.
+        "suppliers": encode(portfolio.by_supplier(
+            dash.supplier_rows(result), result.verdicts)),
+        "supplier_order": portfolio.order_label(),
+        # PRECOMPUTED, NOT AN ENDPOINT. Every supplier's counterfactual costs
+        # 0.08s for the whole set, so a scenario per request would buy nothing
+        # and would need the pipeline re-run to answer it. Keyed by supplier.
+        "scenarios": {row.supplier: encode(
+            scenario.if_supplier_stops(result, row.supplier))
+            for row in portfolio.by_supplier(
+                dash.supplier_rows(result), result.verdicts)},
+        "scenario_order": scenario.order_label(),
         # A TOP-LEVEL KEY, DELIBERATELY NOT INSIDE `profiles`. Everything in
         # there is a scored dimension and callers iterate it as such; a run-out
         # comparison sitting among them would be read as a sixth measure, and

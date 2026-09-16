@@ -57,6 +57,14 @@ def default_data_dir():
 
 
 @dataclass(frozen=True)
+class SourcingInputs:
+    """What `identify()` was given, per part, so it can be asked again."""
+    part_master: dict
+    supplier_names: dict
+    lead_time_names: dict
+
+
+@dataclass(frozen=True)
 class Result:
     verdicts: dict
     profiles: dict
@@ -73,6 +81,14 @@ class Result:
     # unscoped run, where it records that nothing was left out, because "we
     # assessed everything" is a claim a reader should be able to see made.
     scope: object = None
+    # THE INPUTS THAT PRODUCED THE VERDICTS, kept so a counterfactual can be
+    # computed by the SAME function that computed the actual one. `scenario.py`
+    # asks what the verdict would be with one supplier removed, and the only
+    # honest way to answer is to call `identify()` again with a shorter list
+    # rather than to reason about the answer it already gave. Reconstructing
+    # these from the evidence panel would be a second derivation of an input,
+    # and the two would drift.
+    sourcing_inputs: object = None
 
 
 def _dependencies(verdicts, suppliers, lead_times):
@@ -157,6 +173,9 @@ def run(data_dir=None, config_path="config/archetypes.yaml", criticality=None,
     lead_time_names = {part: [name for name, _, _, _ in entries]
                        for part, entries in lead_times.items()}
     findings = identify_all(part_master, supplier_names, lead_time_names)
+    sourcing_inputs = SourcingInputs(
+        part_master=part_master, supplier_names=supplier_names,
+        lead_time_names=lead_time_names)
     verdicts = {finding.subject: finding.verdict for finding in findings}
 
     dependencies = _dependencies(verdicts, suppliers, lead_times)
@@ -206,7 +225,8 @@ def run(data_dir=None, config_path="config/archetypes.yaml", criticality=None,
     return Result(verdicts=verdicts, profiles=profiles, report=report,
                   evidence=evidence, memberships=memberships,
                   catalogue=catalogue, thresholds=thresholds,
-                  extracts=extracts, data_dir=data_dir, scope=scope)
+                  extracts=extracts, data_dir=data_dir, scope=scope,
+                  sourcing_inputs=sourcing_inputs)
 
 
 def surfaces(result):
