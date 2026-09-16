@@ -26,6 +26,7 @@ import {
   TableToolbar, TableToolbarContent, TableToolbarSearch, Tag,
 } from '@carbon/react';
 import { useRun } from '@/components/RunProvider';
+import { SupplierScenario } from '@/components/SupplierScenario';
 import { Empty, Failed, Loading } from '@/components/States';
 import { downloadCsv } from '@/lib/csv';
 import { labelFor } from '@/lib/labels';
@@ -163,30 +164,16 @@ export default function Suppliers() {
                         key={`${row.id}-parts`}
                         colSpan={headers.length + 1}
                       >
-                        {/* THE DRILL-THROUGH. A supplier view that cannot reach
-                            the parts is the index this product refuses, one
-                            level up. Exposed parts are marked; the finding, the
-                            workings and what binds are on Exposure. */}
-                        <p className="sea-section__note">
-                          {source?.__row.part_numbers.length} parts, of which
-                          {' '}{exposedText(source!.__row)} have one real
-                          source. Open Exposure for the finding and the
-                          workings on any of them.
-                        </p>
-                        <div className="sea-inline-tags">
-                          {source?.__row.part_numbers.map((part) => (
-                            <Tag
-                              key={part}
-                              size="sm"
-                              type={
-                                source.__row.exposed_part_numbers.includes(part)
-                                  ? 'red' : 'cool-gray'
-                              }
-                            >
-                              {part}
-                            </Tag>
-                          ))}
-                        </div>
+{/* THE DRILL-THROUGH, AND IT ANSWERS THE QUESTION RATHER THAN
+                            LISTING PARTS. A tag cloud of part numbers told a
+                            reader which parts a supplier touches and nothing
+                            about what losing them would mean, which is the
+                            thing somebody opened the row to find out. */}
+                        <SupplierScenario
+                          supplier={row.id}
+                          affected={result.scenarios[row.id] ?? []}
+                          order={result.scenario_order}
+                        />
                       </TableExpandedRow>,
                     ];
                   })}

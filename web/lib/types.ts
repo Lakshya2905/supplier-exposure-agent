@@ -171,6 +171,10 @@ export interface ScoreResult {
   run_out: Record<string, RunOut>;
   /** The supplier view, ordered by one named axis. */
   suppliers: SupplierRow[];
+  /** What would happen if each supplier stopped, keyed by supplier. */
+  scenarios: Record<string, Affected[]>;
+  /** What that order sorted on. */
+  scenario_order: string;
   /** What that order sorted on, stated rather than left to be inferred. */
   supplier_order: string;
 }
@@ -193,6 +197,36 @@ export interface SupplierRow {
   part_numbers: string[];
   exposed_part_numbers: string[];
   autonomy: string;
+}
+
+/** One way out of a disruption, with how long it takes and how well that is
+ *  known.
+ *
+ *  NAMED, NEVER CHOSEN. `autonomy` is permanently `recommends`: choosing
+ *  between switching and qualifying needs price, quality history and capacity,
+ *  none of which are in this data. There is no "best" field and the paths are
+ *  not ordered by duration, because sorting by days would be the system
+ *  selecting quietly. See `src/scenario.py`. */
+export interface ScenarioPath {
+  kind: 'ride_it_out' | 'switch' | 'switch_untimed' | 'qualify';
+  label: string;
+  days: Measure;
+  completeness: string;
+  unit: string;
+  autonomy: string;
+}
+
+/** One part, and what the loss of a supplier would mean for it. */
+export interface Affected {
+  part_number: string;
+  verdict_now: string;
+  /** The verdict `identify()` gives with that supplier struck out. */
+  verdict_without: string;
+  suppliers_remaining: number;
+  remaining_can_quote: number;
+  outcome: 'stops' | 'sole_sourced' | 'unsettled' | 'still_multi'
+    | 'does_not_apply';
+  paths: ScenarioPath[];
 }
 
 export interface RunOut {

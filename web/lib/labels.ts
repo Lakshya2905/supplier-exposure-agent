@@ -42,6 +42,37 @@ export const RUN_OUT = {
   no_supplier_at_all: { label: 'No supplier to order from', tag: 'red' },
 } as const;
 
+/** What the loss of a supplier would do to a part, in a planner's words.
+ *
+ * NOMINAL, SO NO HUE. These are five outcomes with a stated worst-first
+ * sequence, not a scale, and DESIGN.md retired hue from nominal sets. The
+ * ORDER carries the severity and the words carry the meaning. */
+/** CHIP LENGTH, because that is where it is rendered. The longer form said
+ *  "Stops. Nobody left who could take the order" and Carbon truncated it to
+ *  "Stops. Nobody left who could tak...". The sentence beside the chip already
+ *  names how many suppliers remain, so nothing was lost by cutting it. */
+export const OUTCOME = {
+  stops: 'Stops',
+  sole_sourced: 'Down to one source',
+  unsettled: 'Cannot be settled',
+  still_multi: 'Other sources remain',
+  does_not_apply: 'Made in-house',
+} as const;
+
+/** The same five outcomes as a clause, for the one-line summary.
+ *
+ * A SECOND FORM RATHER THAN THE FIRST LOWERCASED. `OUTCOME.stops` is a
+ * sentence and lowercasing it produced "2 stops. nobody left who could take
+ * the order", which reads as a typo. A label that has to be reshaped to fit a
+ * sentence is two labels. */
+export const OUTCOME_CLAUSE = {
+  stops: 'would stop',
+  sole_sourced: 'would drop to one source',
+  unsettled: 'could not be settled',
+  still_multi: 'would still have other sources',
+  does_not_apply: 'are made in-house',
+} as const;
+
 export const PRODUCT_LEAD = 'Supplier Exposure';
 export const PRODUCT_TAIL = 'Agent';
 export const PRODUCT_NAME = `${PRODUCT_LEAD} ${PRODUCT_TAIL}`;

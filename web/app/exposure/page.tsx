@@ -42,7 +42,6 @@ const HEADERS = [
   // can actually quote" is eight of the twenty-one and is the one nobody
   // guesses from a supplier count.
   { key: 'why', header: 'Why it is exposed' },
-  { key: 'pattern', header: 'Pattern' },
   // DIRECTLY AFTER THE PATTERN, because it is the line a planner acts on. The
   // pattern says what kind of exposure this is; this says whether it bites
   // before a replacement order can land.
@@ -50,6 +49,11 @@ const HEADERS = [
   { key: 'stops', header: 'How much of the build stops' },
   { key: 'cover', header: 'How long stock lasts' },
   { key: 'lead', header: 'Worst case lead time' },
+  // AFTER THE MEASURES. This and "Why it is exposed" are both prose, and side
+  // by side they crowded each other and read as one restated twice. The reason
+  // is what a reader wants first; the conjunction of conditions is context for
+  // it and belongs past the figures.
+  { key: 'pattern', header: 'Pattern' },
   { key: 'supplier', header: 'Supplier' },
   { key: 'region', header: 'Region' },
 ];
