@@ -51,9 +51,9 @@
 #   ONLY-M01      no cycle count on file             none
 #   ONLY-M02      no cycle count on file             none
 #   MISSING-M01    70 + 2 x 30 = 130    over 3 cycles
-part_number,alternate_source_days,tooling_lead_time_days,engineering_transfer_days,first_article_days,qualification_test_days,ramp_to_rate_days,qualification_cycles
-SHARED-M01,45,120,30,20,60,25,2
-ZEROUSE-M01,30,,15,10,40,20,1
-ONLY-M01,35,,20,10,,15,
-ONLY-M02,25,,10,5,50,10,
-MISSING-M01,40,,,,30,,3
+part_number,alternate_source_days,commercial_agreement_days,tooling_lead_time_days,engineering_transfer_days,supplier_input_lead_time_days,first_article_days,qualification_test_days,customer_approval_days,capacity_slot_days,ramp_to_rate_days,qualification_cycles
+SHARED-M01,45,10,120,30,18,20,60,15,7,25,2
+ZEROUSE-M01,30,10,,15,18,10,40,15,7,20,1
+ONLY-M01,35,10,,20,18,10,,15,7,15,
+ONLY-M02,25,10,,10,18,5,50,15,7,10,
+MISSING-M01,40,,,,,,30,,,,3

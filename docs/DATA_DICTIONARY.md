@@ -105,10 +105,14 @@ alternative source to production, and they are read by `resource_days`.
 |---|---|---|
 | `part_number` | str | |
 | `alternate_source_days` | int or blank | finding and qualifying an alternate source. Judgment |
+| `commercial_agreement_days` | int or blank | contract, quality agreement, price. Knowable |
 | `tooling_lead_time_days` | int or blank | tooling dedicated to the part. Knowable |
 | `engineering_transfer_days` | int or blank | drawings, specs, redesign. Judgment |
+| `supplier_input_lead_time_days` | int or blank | the alternate's own material and component lead time. Knowable |
 | `first_article_days` | int or blank | first article inspection. Judgment |
 | `qualification_test_days` | int or blank | qualification and reliability testing. Judgment |
+| `customer_approval_days` | int or blank | customer or regulatory acceptance of the source change. Knowable |
+| `capacity_slot_days` | int or blank | wait for a production slot at the alternate. Knowable |
 | `ramp_to_rate_days` | int or blank | ramp to rate. Judgment |
 | `qualification_cycles` | int or blank | how many cycles to plan for. **Blank is not one cycle** |
 
