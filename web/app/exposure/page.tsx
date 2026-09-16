@@ -26,7 +26,7 @@ import { PartTearsheet } from '@/components/PartTearsheet';
 import type { PartDetail } from '@/components/PartTearsheet';
 import { boundPrefix } from '@/components/Absence';
 import { downloadCsv } from '@/lib/csv';
-import { labelFor } from '@/lib/labels';
+import { labelFor, RUN_OUT } from '@/lib/labels';
 import {
   boundIsTrivial, formatNumber, isUnbounded, toNumber,
 } from '@/lib/measure';
@@ -36,6 +36,10 @@ import type { DimensionScore } from '@/lib/types';
 const HEADERS = [
   { key: 'part', header: 'Part' },
   { key: 'pattern', header: 'Pattern' },
+  // DIRECTLY AFTER THE PATTERN, because it is the line a planner acts on. The
+  // pattern says what kind of exposure this is; this says whether it bites
+  // before a replacement order can land.
+  { key: 'runOut', header: 'Stock vs next delivery' },
   { key: 'stops', header: 'How much of the build stops' },
   { key: 'cover', header: 'How long stock lasts' },
   { key: 'lead', header: 'Worst case lead time' },
@@ -88,6 +92,17 @@ export default function Exposure() {
         // lists them all, because "implied" is an argument a reader should be
         // able to check.
         pattern: row.archetypes[0],
+        // THE LABEL ONLY. The outcome code is kept beside it for the tag type
+        // and never painted: a reader sees "Runs out first", not an enum.
+        // OPTIONAL ON THE MAP ITSELF, not only on the entry. The frontend and
+        // the backend are separate deployments on separate hosts and are
+        // updated independently, so a page can genuinely meet an API that
+        // predates a field. It did, during development, and the whole table
+        // threw rather than showing one column short. Falling back to
+        // `cannot_say` is honest here: an older API has not said.
+        runOut: RUN_OUT[result.run_out?.[row.key]?.outcome ?? 'cannot_say']
+          .label,
+        __runOut: result.run_out?.[row.key],
         alsoMatches: row.archetypes.length - 1,
         // THE STRUCTURAL REACH, WHERE THE VOLUME COULD NOT BE COUNTED. Blast
         // radius carries two facts: how many finished goods stop, which is
@@ -219,7 +234,18 @@ export default function Exposure() {
                         >
                           {row.cells.map((datum) => (
                             <TableCell key={datum.id}>
-                              {typeof datum.value === 'string'
+                              {datum.id.endsWith(':runOut')
+                                ? (
+                                  <Tag
+                                    type={RUN_OUT[
+                                      source?.__runOut?.outcome ?? 'cannot_say'
+                                    ].tag}
+                                    size="sm"
+                                  >
+                                    {String(datum.value)}
+                                  </Tag>
+                                )
+                                : typeof datum.value === 'string'
                                 && datum.value === UNKNOWN
                                 ? <Tag type="warm-gray" size="sm">{UNKNOWN}</Tag>
                                 : datum.value}
