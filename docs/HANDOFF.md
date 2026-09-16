@@ -540,7 +540,10 @@ near neighbour of the cost optimisation agent's job.
     `SkeletonText` and `SkeletonPlaceholder` carry `animation: … cds--skeleton`
     from inside Carbon. Item 5 is the same lesson in the direction where the
     repository declares something the page ignores; this is the direction where
-    the page paints something the repository never declared.
+    the page paints something the repository never declared. **The pulse is
+    still there and is now allowed** — the owner permitted it the same day, so
+    what was wrong was never the animation, it was a document claiming to have
+    checked something it had not.
 13. **A deployed container is not the repository.** `assets/` was committed and
     never copied by the Dockerfile, so the map endpoint 404d on every deployed
     page while every test passed: locally and in CI the whole repository is the
