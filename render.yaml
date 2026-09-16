@@ -35,7 +35,11 @@ services:
     #      a cosmetic loss.
     #
     # TO REVERSE IT: set `plan: starter` and uncomment the `disk:` block at the
-    # foot of this file. That is the entire change; nothing in `src/` moves.
+    # foot of this file. That is the entire change; nothing in `src/` moves --
+    # except one sentence. `Loading` in `web/components/States.tsx` tells the
+    # reader the service may take a minute to wake, which is true only while
+    # this says `free`. Reversing this makes that sentence false, so it comes
+    # out in the same commit.
     plan: free
 
     envVars:
