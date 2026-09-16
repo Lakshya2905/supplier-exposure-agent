@@ -31,6 +31,7 @@ from .. import changes as diff
 from .. import governance as gov
 from .. import criticality as crit
 from .. import scoring
+from .. import portfolio
 from .. import readers
 from .. import runout
 from ..governance import store
@@ -227,6 +228,12 @@ def score_payload(result, record):
             "what_to_check": encode(built[view.FIND_OUT]),
             "review": encode(built[view.CONFIRM]),
         },
+        # SUPPLIERS, AS A SIBLING OF `profiles` AND NOT A DIMENSION. Two
+        # counts of parts and the parts themselves; nothing is derived from
+        # both counts, and nothing asserts the parts share a fate.
+        "suppliers": encode(portfolio.by_supplier(
+            dash.supplier_rows(result), result.verdicts)),
+        "supplier_order": portfolio.order_label(),
         # A TOP-LEVEL KEY, DELIBERATELY NOT INSIDE `profiles`. Everything in
         # there is a scored dimension and callers iterate it as such; a run-out
         # comparison sitting among them would be read as a sixth measure, and
