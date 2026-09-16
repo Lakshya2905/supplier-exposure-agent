@@ -33,6 +33,7 @@ from .. import criticality as crit
 from .. import scoring
 from .. import portfolio
 from .. import readers
+from .. import runout
 from ..governance import store
 from ..governance.render import VERDICT_PROSE
 from ..interface import actions
@@ -233,6 +234,13 @@ def score_payload(result, record):
         "suppliers": encode(portfolio.by_supplier(
             dash.supplier_rows(result), result.verdicts)),
         "supplier_order": portfolio.order_label(),
+        # A TOP-LEVEL KEY, DELIBERATELY NOT INSIDE `profiles`. Everything in
+        # there is a scored dimension and callers iterate it as such; a run-out
+        # comparison sitting among them would be read as a sixth measure, and
+        # it is not one. It has no unit of its own, it combines nothing, and it
+        # answers a question about two dimensions rather than being one.
+        "run_out": {part: encode(runout.run_out(profile))
+                    for part, profile in result.profiles.items()},
         "clusters": encode(result.report.clusters),
         "unplaceable_parts": encode(result.report.unplaceable_parts),
         "extracts": encode(result.extracts),

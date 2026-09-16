@@ -162,6 +162,13 @@ export interface ScoreResult {
   /** What binds and what blocks, per part. Computed in `src/binding.py` from
    *  terminal STATES, never by comparing magnitudes across units. */
   binding: Record<string, BindingSummary>;
+  /** Does stock outlast the next delivery? An ORDERING, never a difference.
+   *
+   *  A SIBLING OF `profiles`, NEVER A MEMBER OF IT. Everything in there is a
+   *  scored dimension; this is a comparison of two of them. It carries no unit
+   *  and no magnitude, because a margin in days is the subtraction the README
+   *  declines. See `src/runout.py`. */
+  run_out: Record<string, RunOut>;
   /** The supplier view, ordered by one named axis. */
   suppliers: SupplierRow[];
   /** What that order sorted on, stated rather than left to be inferred. */
@@ -186,6 +193,17 @@ export interface SupplierRow {
   part_numbers: string[];
   exposed_part_numbers: string[];
   autonomy: string;
+}
+
+export interface RunOut {
+  part_number: string;
+  outcome: 'runs_out_first' | 'outlasts_it' | 'too_close_to_call'
+    | 'cannot_say' | 'does_not_apply' | 'no_supplier_at_all';
+  reasons: string[];
+  /** The two figures compared, carried as evidence. Nothing derived from both. */
+  cover_days: Measure | null;
+  quoted_days: number | null;
+  p95_days: number | null;
 }
 
 export interface BindingEntry {

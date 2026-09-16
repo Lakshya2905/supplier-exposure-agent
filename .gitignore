@@ -14,3 +14,5 @@ venv/
 # written, the page worked locally, and `git add -A` skipped it without a word.
 /decisions/
 /runs/
+.vercel
+.env*.local
