@@ -744,10 +744,79 @@ def read_surfaces(browser, url, reduced):
     return readings
 
 
+# The table whose ordering is measured, and the columns that carry a measure.
+# Read from the page rather than retyped: the headers are the app's own labels
+# and a reworded one should move the check with it.
+EXPOSURE = "/exposure"
+
+SORT_READING = r"""
+(header) => {
+  const table = document.querySelector('.cds--data-table');
+  const rows = [...table.querySelectorAll('tbody tr')];
+  const index = [...table.querySelectorAll('thead th')]
+    .findIndex(th => th.innerText.trim() === header);
+  return {
+    column: header,
+    ariaSort: table.querySelectorAll('thead th')[index]
+      ?.getAttribute('aria-sort') || 'none',
+    cells: rows.map(row => ({
+      part: row.cells[0].innerText.trim(),
+      text: row.cells[index].innerText.replace(/\s+/g, ' ').trim(),
+    })),
+    // The app's own claim about how many it declined to rank, which the
+    // assertions check the rendered order against.
+    note: (document.body.innerText.match(
+      /(\d+) of (\d+) parts have no figure for [^.]*\./) || [null])[0],
+  };
+}
+"""
+
+
+def read_sorting(browser, url):
+    """Click each measure column and read the order it produced.
+
+    WHY THIS IS A BROWSER CHECK AND COULD NOT BE ANYTHING ELSE. The defect it
+    guards was Carbon's DEFAULT comparator: `isSortable` with no `sortRow` runs
+    a locale collator over the rendered text, so "900 units a year" sorted above
+    "12,000 units a year" (the collator reads digit runs and the thousands
+    separator ends the first one) and "not enough data to say" took a rank of
+    its own at whichever end letters fall. Nothing in this repository declared
+    either behaviour. A source scan reads `isSortable` and sees a feature.
+
+    Returns `{column: {"ascending": [...], "descending": [...], "note": str}}`.
+    """
+    page = browser.new_page(viewport={"width": 1440, "height": 1000})
+    page.goto(url + EXPOSURE, wait_until="domcontentloaded")
+    settle(page)
+    headers = page.eval_on_selector_all(
+        ".cds--data-table thead th", "nodes => nodes.map(n => n.innerText.trim())")
+    readings = {}
+    for header in headers:
+        if header in ("Part", "Pattern", "Supplier", "Region"):
+            continue        # names: alphabetical order of a name ranks nothing
+        reading = {}
+        for direction in ("ascending", "descending"):
+            page.click(f'.cds--data-table thead th:has-text("{header}") button')
+            page.wait_for_function(
+                """(expected) => {
+                    const th = [...document.querySelectorAll(
+                        '.cds--data-table thead th')].find(
+                            n => n.innerText.trim() === expected[0]);
+                    return th && th.getAttribute('aria-sort') === expected[1];
+                }""", arg=[header, direction], timeout=30_000)
+            reading[direction] = page.evaluate(SORT_READING, header)
+        readings[header] = reading
+        # Back to unsorted, so each column is measured from the same start.
+        page.click(f'.cds--data-table thead th:has-text("{header}") button')
+    page.close()
+    return readings
+
+
 def collect_web():
     """Every surface measured in four states, from one boot.
 
-    Returns `{route: {state: probe}}` over `STATES`.
+    Returns `{"states": {route: {state: probe}}, "sorting": {column: ...}}`,
+    the first over `STATES` and the second from `read_sorting`.
 
     THE LOADING READING IS TAKEN FROM INSIDE A REQUEST. Playwright holds it open
     for as long as the handler runs, so the page is measured at a moment it is
@@ -780,7 +849,8 @@ def collect_web():
                 for path, states in read_surfaces(browser, url,
                                                   reduced).items():
                     readings[path].update(states)
+            sorting = read_sorting(browser, url)
             browser.close()
-        return readings
+        return {"states": readings, "sorting": sorting}
     finally:
         stop(*processes)

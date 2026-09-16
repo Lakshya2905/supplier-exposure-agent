@@ -38,6 +38,7 @@ still waiting.
 One boot for the whole module: one API, one frontend, one browser, four states
 of six routes.
 """
+import re
 import unittest
 
 from tests import rendered
@@ -53,11 +54,16 @@ class RenderedWeb(unittest.TestCase):
 
     readings = None
 
+    sorting = None
+
     @classmethod
     def setUpClass(cls):
         if RenderedWeb.readings is None:
-            RenderedWeb.readings = rendered.collect_web()
+            measured = rendered.collect_web()
+            RenderedWeb.readings = measured["states"]
+            RenderedWeb.sorting = measured["sorting"]
         cls.readings = RenderedWeb.readings
+        cls.sorting = RenderedWeb.sorting
 
     def states(self):
         """Every (route, state, probe) there is, loading included."""
@@ -347,6 +353,109 @@ class TestEveryFieldHasAVisibleBoundaryOnScreen(RenderedWeb):
                         f"the {side['side'].lower()} edge of {field['cls']!r} "
                         f"on {route} is {measured:.2f}:1 against what is "
                         f"behind it")
+
+
+class TestTheTableRanksTheFigureAndNeverRanksAbsence(RenderedWeb):
+    """Sorting a measure column, measured by clicking it.
+
+    TWO DEFECTS, ONE CAUSE, NEITHER VISIBLE TO A SOURCE READ. `isSortable` with
+    no comparator hands Carbon's default a rendered string:
+
+      ascending on "How much of the build stops" put **900 above 12,000**,
+      because the collator compares digit runs and a thousands separator ends
+      the first one
+
+      descending put **nine "not enough data to say" rows above 772.2 days**,
+      because a letter sorts after a digit
+
+    The second is the one this product cannot have: "Never impute a missing
+    value in order to rank something. A list ordered by a guessed value is a
+    forecast wearing a work queue's clothes." Nothing decided it; a locale
+    collator did, and `web/` said only `isSortable`.
+    """
+
+    #: A cell carries a figure when a number can be read from it. The structural
+    #: reading ("at least 1 finished good, none of them in the demand plan")
+    #: deliberately carries no figure on this axis and must not be ranked on it,
+    #: so it is identified by its own words rather than by its digits.
+    NO_FIGURE = ("not enough data to say", "does not apply here",
+                 "no supplier on file", "finished good")
+
+    def has_figure(self, text):
+        return not any(phrase in text for phrase in self.NO_FIGURE)
+
+    def number(self, text):
+        return float(re.sub(r"[^\d.]", "", text.split()[0]) or 0)
+
+    def columns(self):
+        return self.sorting.items()
+
+    def test_a_measure_column_was_actually_sorted(self):
+        self.assertTrue(self.sorting, "no column was measured")
+        for column, reading in self.columns():
+            with self.subTest(column=column):
+                self.assertEqual(reading["ascending"]["ariaSort"], "ascending")
+                self.assertEqual(reading["descending"]["ariaSort"], "descending")
+                self.assertGreater(len(reading["ascending"]["cells"]), 3)
+
+    def test_the_figures_are_ordered_by_their_value(self):
+        """900 against 12,000, which is the defect stated as a property."""
+        for column, reading in self.columns():
+            for direction, expected in (("ascending", 1), ("descending", -1)):
+                figures = [self.number(cell["text"])
+                           for cell in reading[direction]["cells"]
+                           if self.has_figure(cell["text"])]
+                for first, second in zip(figures, figures[1:]):
+                    with self.subTest(column=column, direction=direction,
+                                      pair=(first, second)):
+                        self.assertLessEqual(
+                            (first - second) * expected, 0,
+                            f"{first} then {second} reading {direction} down "
+                            f"{column!r}: the column is ordered by something "
+                            f"other than the number in it")
+
+    def test_a_row_with_no_figure_is_not_ranked(self):
+        """The direction-independence is the whole assertion.
+
+        A row that moves when the sort direction flips is a row being compared,
+        and there is nothing to compare: the figure is absent. So the unranked
+        rows must appear in the same order at the same end either way.
+        """
+        for column, reading in self.columns():
+            tails = {}
+            for direction in ("ascending", "descending"):
+                cells = reading[direction]["cells"]
+                tails[direction] = [cell["part"] for cell in cells
+                                    if not self.has_figure(cell["text"])]
+                ranked = [index for index, cell in enumerate(cells)
+                          if self.has_figure(cell["text"])]
+                unranked = [index for index, cell in enumerate(cells)
+                            if not self.has_figure(cell["text"])]
+                with self.subTest(column=column, direction=direction):
+                    if ranked and unranked:
+                        self.assertLess(
+                            max(ranked), min(unranked),
+                            f"a part with no figure for {column!r} is sitting "
+                            f"among the parts that have one")
+            with self.subTest(column=column):
+                self.assertEqual(
+                    tails["ascending"], tails["descending"],
+                    f"the unranked parts under {column!r} move when the sort "
+                    f"direction flips, so they are being compared")
+
+    def test_the_page_says_how_many_it_declined_to_rank(self):
+        for column, reading in self.columns():
+            unranked = [cell for cell in reading["ascending"]["cells"]
+                        if not self.has_figure(cell["text"])]
+            note = reading["ascending"]["note"]
+            with self.subTest(column=column):
+                if not unranked:
+                    continue    # nothing to state
+                self.assertIsNotNone(
+                    note, f"{len(unranked)} parts were left out of the ordering "
+                          f"under {column!r} and the page does not say so")
+                self.assertIn(str(len(unranked)), note)
+                self.assertIn(column.lower(), note.lower())
 
 
 if __name__ == "__main__":  # keep last: classes below an entrypoint never run
