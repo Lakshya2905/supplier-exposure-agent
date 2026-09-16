@@ -8,52 +8,51 @@ resolve in the browser to `animation: 3s ease-in-out infinite cds--skeleton`.
 Measured on the deployed page, that pulse was live on all six surfaces while the
 document said it did not exist.
 
-WHAT THIS CATCHES, AND WHAT IT DOES NOT. It reads `web/` source for components
-and declarations this repository controls. It cannot see what a dependency
-injects, which is the gap that let the original claim stand -- only a rendered
-page can, and `tests/rendered.py` measures the Streamlit surface rather than
-this one. It is sufficient for the rule it names, because rendering a skeleton
-is a thing this repository does in its own source, and it is not sufficient for
-Motion as a whole. That gap is stated here rather than implied by a green test.
+THE SKELETON ASSERTION IS GONE, AND THE RULE WENT WITH IT. On 2026-09-16 the
+owner permitted `SkeletonText` and `SkeletonPlaceholder` for the loading state,
+on the record, because the v2 build prompt asks for them by name. This file
+no longer forbids them -- the assertion was removed with the rule it enforced,
+the same way the source scan behind the retired nominal-encoding rule was
+removed with that one. It was NOT removed to make a red suite green: the rule
+it tested no longer exists, and DESIGN.md records who retired it and when.
+
+SO THE LOADING STATE ANIMATES, DELIBERATELY, and nothing here contradicts that.
+What survives is narrower and still worth holding: this repository declares no
+motion of its own anywhere in `web/`.
+
+WHAT THIS CATCHES, AND WHAT IT DOES NOT. It reads `web/` source for declarations
+this repository controls. It cannot see what a dependency injects, which is the
+gap that let the original claim stand -- only a rendered page can, and
+`tests/rendered.py` measures the Streamlit surface rather than this one. So a
+future component that animates because Carbon says so will pass here exactly as
+the skeletons once did. That gap is stated rather than implied by a green test.
 """
 import re
 import unittest
 from pathlib import Path
 
 WEB = Path(__file__).resolve().parent.parent / "web"
-SOURCES = sorted(p for p in WEB.rglob("*.tsx") if "node_modules" not in p.parts)
 STYLES = sorted(p for p in WEB.rglob("*.scss") if "node_modules" not in p.parts)
 
 
 def body(path):
     """The file with its comments stripped.
 
-    This file and the component it guards both explain the construct they
-    forbid, and the corrections log records that hazard twice: a system that
-    refuses a concept by name contains that name in its own refusal.
+    This file explains the constructs it forbids, and the corrections log
+    records that hazard twice: a system that refuses a concept by name contains
+    that name in its own refusal.
     """
     text = path.read_text()
     text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
     return re.sub(r"^\s*//.*$", "", text, flags=re.M)
 
 
-class TestNothingInTheInterfaceAnimates(unittest.TestCase):
+class TestThisRepositoryDeclaresNoMotionOfItsOwn(unittest.TestCase):
 
     def test_the_scan_has_something_to_read(self):
         # A scan that matches nothing passes forever, and this repository has
         # been bitten by that shape before.
-        self.assertTrue(SOURCES, "no .tsx found; the glob has rotted")
         self.assertTrue(STYLES, "no .scss found; the glob has rotted")
-
-    def test_no_surface_renders_a_skeleton(self):
-        """"No entrance animation, no spinner, no pulse, no skeleton."
-
-        Named for the defect it would have caught: `States.tsx` rendered two of
-        Carbon's skeletons, so every surface pulsed for as long as a load took.
-        """
-        for path in SOURCES:
-            with self.subTest(file=path.name):
-                self.assertNotRegex(body(path), r"\bSkeleton[A-Za-z]*\b")
 
     def test_no_stylesheet_declares_an_animation(self):
         for path in STYLES:

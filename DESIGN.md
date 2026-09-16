@@ -778,18 +778,44 @@ sections is `xl`; panel padding is `md`.
 - **Approach:** grid disciplined. Strict alignment, predictable columns, no asymmetry.
 - **Measure:** 104ch maximum for prose. Keep it: it is tuned and correct.
 - **Max content width:** full, with `xl` page gutters.
-- **Border radius:** `sm` 2px for data surfaces, `md` 3px for chips, buttons, alerts, `lg` 4px for panels. No radius above 4px anywhere. Nothing is pill shaped.
+- **Border radius: 0 everywhere.** Nothing is rounded and nothing is pill shaped. This line used to specify `sm` 2px, `md` 3px and `lg` 4px, which was wrong in two directions at once: the v2 build prompt says "0px border radius. Everywhere. Even 4px reads as wrong", and the app has always shipped 0 — measured on the deployed page on 2026-09-16, 238 elements across buttons, tiles, tags, inputs, notifications and tables, every one of them `0px`. The document was the only thing asking for a radius, and nothing had ever done it.
 - **Paired actions sit adjacent.** Opposing controls (Confirm and Reject) belong next to each other. They are currently separated by roughly 280px of empty column because the control row uses `st.columns(len(controls) + 1)`, which pins each button to the left edge of a one third column.
 - **Long identifiers and URLs never break mid token.** Set `word-break: keep-all` on identifiers and links.
 
 ## Motion [SHIPPED]
 
-> [SHIPPED] Zero transitions, zero animations, zero keyframes. Verified on the **rendered page** as of 2026-09-16. The previous verification was a source scan and it was wrong; see below.
+> [PARTIAL] This repository declares no transition, animation or keyframe of its own, asserted by `tests/test_web_motion.py`. **The loading state animates, by the owner's decision on 2026-09-16.** The earlier `[SHIPPED]` claim said a source scan had verified zero animation; it had not, and could not. Both corrections are below.
 
-- **Approach:** none.
-- No entrance animation, no spinner, no pulse, no skeleton. A page that animates while data settles implies the data is moving. It is not; it is a record.
-- The only permitted state change is instantaneous.
-- If a load is slow enough to need feedback, state it in words.
+- **Approach:** none, with one carved-out exception.
+- No entrance animation, no spinner, no pulse. A page that animates while data settles implies the data is moving. It is not; it is a record.
+- **Skeletons are the exception, and it is a decision rather than a gap.** `SkeletonText` and `SkeletonPlaceholder` carry `animation: 3s ease-in-out infinite cds--skeleton` from inside Carbon, so the loading state pulses. See **The skeleton exception** below for who allowed it and what it costs.
+- Outside that exception, the only permitted state change is instantaneous.
+- If a load is slow enough to need feedback, state it in words. This holds regardless of the exception, and the loading state does both: a skeleton can say something is coming and cannot say it will be a minute.
+
+### The skeleton exception [RETIRED 2026-09-16 by the owner]
+
+**The rule was: no skeleton, on the same grounds as no spinner and no pulse.**
+It was enforced for part of one day, by `tests/test_web_motion.py`, and then
+retired deliberately: the v2 build prompt asks for `SkeletonText` and
+`SkeletonPlaceholder` by name for this state, the owner was shown the conflict
+between the two documents and chose the build prompt.
+
+**The objection has not become wrong; it was overruled.** A skeleton is motion
+while a record settles, and this page publishes a record rather than a process.
+What was weighed against it: a skeleton holds the shape of what is coming, so
+the layout does not jump when it arrives.
+
+**What was given up, stated plainly so nobody has to reconstruct it.** The
+Motion section can no longer be cited as "nothing on this page moves", and a
+reader who is sensitive to motion now sees a three-second loop for the length of
+every load — up to a minute of it on a cold start, since the backend sleeps.
+Carbon's own mixin honours `prefers-reduced-motion: reduce`, which is the only
+reason this is a cost rather than an accessibility defect.
+
+**The assertion was removed with the rule, not to go green.** That is the same
+move as the source scan behind the retired nominal-encoding rule. What survives
+in `tests/test_web_motion.py` is narrower and still true: this repository
+declares no motion of its own.
 
 ### The loading state pulsed for six weeks [FIXED]
 
@@ -816,11 +842,12 @@ this repository makes that the page then ignores, and this is a declaration the
 repository never made that the page paints anyway. **A declaration is not a
 painted pixel, and neither is its absence.**
 
-The fix is the rule's own next line. The loading state now states the wait in
-words and draws nothing that moves. `tests/test_web_motion.py` guards it, and
-its docstring is explicit that a source scan still cannot see what a dependency
-injects — sufficient for "no skeleton", because rendering one is something this
-repository does in its own source, and not sufficient for Motion as a whole.
+**What was fixed here is the false claim, and only that.** The loading state
+also gained the sentence the rule's own next line asks for, and it keeps it. The
+pulse itself came back the same day under **The skeleton exception** above: the
+owner permitted the two components, so the page still animates while it loads.
+That is now a decision on the record rather than a rule being violated
+undetected, which is the whole of the difference this entry is about.
 
 **The gap that remains, stated rather than implied by a green test.**
 `tests/rendered.py` measures the Streamlit surface, so nothing measures `web/`
@@ -968,7 +995,7 @@ with numbers:
 - Boundary contrast at 3:1 for anything whose shape must be identifiable.
 - Hue, if ever reintroduced, is not a monotone function of enum declaration order under any rotation.
 - No banned widget appears in source (already enforced).
-- No surface renders a component that animates, and no stylesheet here declares a keyframe, an animation or a transition (`tests/test_web_motion.py`). **Asserted on source, which is not the same as asserted on the page.** A source scan cannot see what a dependency injects, which is how the Motion rule came to be marked `[SHIPPED]` while six surfaces pulsed. The test says so in its own docstring rather than leaving a green result to imply coverage it does not have.
+- No stylesheet here declares a keyframe, an animation or a transition (`tests/test_web_motion.py`). It does **not** assert that nothing on the page moves, and since 2026-09-16 that would be false: the skeletons pulse, by the owner's decision. **Asserted on source, which is not the same as asserted on the page.** A source scan cannot see what a dependency injects, which is how the Motion rule came to be marked `[SHIPPED]` while six surfaces pulsed undetected. The test says so in its own docstring rather than leaving a green result to imply coverage it does not have.
 - No dimension receives more area than another in any rendered layout.
 
 ## Decisions Log
@@ -1012,4 +1039,6 @@ with numbers:
 | 2026-08-07 | India drawn from vendored geometry including its full claimed territory | Plotly's built-in `IND` follows Natural Earth and stops near 35.5°N, and that shape ships inside plotly.js where no option reaches it. The claimed boundary is drawn on top, so areas Natural Earth assigns to neighbours are covered rather than split by a line |
 | 2026-09-16 | **Motion's `[SHIPPED]` claim corrected: the loading state had been pulsing all along** | The verification was a source scan of this repository's own CSS, and the animation came from Carbon. Measured on the deployed page, `cds--skeleton` ran on a 3s infinite loop on all six surfaces. A declaration is not a painted pixel, and neither is its absence |
 | 2026-09-16 | Loading states state the wait in words, drawing nothing that moves | What the Motion rule already prescribed. The free Render plan sleeps after 15 minutes and takes about a minute to wake, so a reader told nothing sees a page that looks broken for the length of a cold start |
+| 2026-09-16 | **Skeleton loading states permitted again, by the owner, on the record** | The v2 build prompt asks for `SkeletonText` and `SkeletonPlaceholder` by name; DESIGN.md forbade them. Shown the conflict, the owner chose the build prompt. The objection was overruled rather than refuted: the loading state now animates, and the Motion section can no longer be cited as "nothing moves" |
+| 2026-09-16 | Border radius corrected from 2/3/4px to 0 | The document was the only thing asking for a radius. Measured on the deployed page, all 238 elements checked were `0px`, and the build prompt asks for 0 explicitly. The specification had been wrong since it was written and nothing implemented it |
 | 2026-09-16 | The wait is stated once, not revealed on a timer | "Can take up to a minute" and "if the service has been idle" are both true at the first second of a 3s load and the fortieth of a cold start, so the hedge does what a timer would and no elapsed time has to be measured to keep the sentence honest |
