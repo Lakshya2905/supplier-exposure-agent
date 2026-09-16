@@ -25,6 +25,23 @@
  * name for its weight break and therefore needs the halves, so both are here
  * and the whole is derived rather than retyped.
  */
+/** The run-out comparison, in a planner's words.
+ *
+ * THE TAG TYPE IS NOMINAL, NOT A RAMP. `too_close_to_call` is deliberately off
+ * the red-green axis rather than sitting between them: it is not "medium
+ * risk", it is a different KIND of statement -- the data settles neither way.
+ * Putting it on the ramp would invite a reader to average three categories that
+ * do not average.
+ */
+export const RUN_OUT = {
+  runs_out_first: { label: 'Runs out first', tag: 'red' },
+  outlasts_it: { label: 'Stock outlasts it', tag: 'green' },
+  too_close_to_call: { label: 'Too close to call', tag: 'purple' },
+  cannot_say: { label: 'Not enough data to say', tag: 'warm-gray' },
+  does_not_apply: { label: 'Does not apply here', tag: 'cool-gray' },
+  no_supplier_at_all: { label: 'No supplier to order from', tag: 'red' },
+} as const;
+
 export const PRODUCT_LEAD = 'Supplier Exposure';
 export const PRODUCT_TAIL = 'Agent';
 export const PRODUCT_NAME = `${PRODUCT_LEAD} ${PRODUCT_TAIL}`;
