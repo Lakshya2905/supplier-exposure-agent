@@ -87,9 +87,8 @@ export default function WhatChanged() {
     <section className="sea-section">
       <h2 className="sea-section__heading">What changed</h2>
       <p className="sea-section__note">
-        Two runs, compared. A part that was not assessed this time did not get
-        better, and a figure that stopped being answerable has not fallen, so
-        those are kept apart from things that genuinely got worse.
+        Two runs, compared. Things that genuinely got worse are kept apart
+        from things nobody can compare, and each group says which it is.
       </p>
 
       {runs.length < 2 ? (
