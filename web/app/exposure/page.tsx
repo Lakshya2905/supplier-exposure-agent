@@ -61,7 +61,14 @@ const HEADERS = [
   // pattern column does not separate them: "several suppliers listed, only one
   // can actually quote" is eight of the twenty-one and is the one nobody
   // guesses from a supplier count.
-  { key: 'why', header: 'Why it is exposed' },
+  // NO SORT, FOR THE SAME REASON THE RUN-OUT COLUMN BELOW HAS NONE, and this
+  // column is the instance #50's guard predicted: "the next categorical column
+  // that inherits a sort fails rather than shipping". It was next. These are
+  // four nominal verdicts with no order among them, and alphabetically they
+  // read "no supplier on file, one supplier, one supplier and no lead time,
+  // several suppliers listed" -- a severity ramp assembled by accident out of
+  // a set that has no severity order. A plausible default is read as a ranking.
+  { key: 'why', header: 'Why it is exposed', isSortable: false },
   // DIRECTLY AFTER THE PATTERN, because it is the line a planner acts on. The
   // pattern says what kind of exposure this is; this says whether it bites
   // before a replacement order can land.
