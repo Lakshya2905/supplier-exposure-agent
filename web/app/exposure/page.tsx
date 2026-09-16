@@ -264,6 +264,20 @@ export default function Exposure() {
                     })}
                   </TableBody>
                 </Table>
+                {/* WHAT THE FILTER HIDES IS COUNTED ON SCREEN. A filtered list
+                    that does not say so is a shorter list presented as the
+                    whole, and every other surface still counts all of them: a
+                    reader who searches here and then reads a total anywhere
+                    else is comparing two different sets. `region_filter` in
+                    `review_app.py` states the same sentence for the same
+                    reason; this surface offered the filter without it. */}
+                {shown.length < rows.length && (
+                  <p className="sea-section__note" style={{ marginTop: '1rem' }}>
+                    {rows.length - shown.length} of {rows.length} exposed parts
+                    are hidden by this filter. Counts on every other surface are
+                    for all {rows.length}.
+                  </p>
+                )}
               </TableContainer>
             )}
           </DataTable>
