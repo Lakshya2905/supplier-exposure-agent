@@ -243,11 +243,32 @@ the purchase lead time.
 | stage | confidence class |
 |---|---|
 | finding and qualifying an alternate source | judgment |
+| commercial and contractual agreement | knowable |
 | tooling dedicated to the part | knowable |
 | engineering transfer of drawings and specs | judgment |
+| the alternate's own material and component lead time | knowable |
 | first article inspection | judgment |
 | qualification and reliability testing | judgment |
+| customer or regulatory approval of the source change | knowable |
+| a production slot at the alternate | knowable |
 | ramp to rate | judgment |
+
+**Six of these a practitioner named. Four were added on 2026-09-16**, and they
+are the ones a chain of engineering stages quietly omits, because each is
+somebody else's queue rather than your own work: nobody cuts metal before the
+contract is signed; the alternate has their own lead time on raw material;
+a source change often needs a customer or a regulator to accept it, which in a
+regulated programme can exceed every other stage combined; and qualified with no
+slot until Q3 is a different problem from not qualified, fixed by a different
+action. All four are `knowable` rather than `judgment` — every one is a fact
+somebody already holds and nobody in this dataset has been asked for.
+
+**Adding them made the chain more complete and its sequencing more pessimistic
+at once.** Ten sequential stages overlap more than six did: commercial
+negotiation runs alongside engineering transfer in any real programme, and a
+capacity slot is usually booked long before qualification finishes. Neither
+error cancels the other. A dependency graph rather than a chain is the fix, and
+it is not built.
 
 **Three confidence classes, kept apart.** A purchase lead time was *reported* by
 somebody with a system of record behind them. A tooling lead time is *knowable*:
