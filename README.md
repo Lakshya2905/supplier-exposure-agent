@@ -2,6 +2,13 @@
 
 [![gate](https://github.com/Lakshya2905/supplier-exposure-agent/actions/workflows/gate.yml/badge.svg)](https://github.com/Lakshya2905/supplier-exposure-agent/actions/workflows/gate.yml)
 
+**Live:** https://supplierexposure-lakshya-jains-projects-05564aa5.vercel.app
+
+The backend runs on a free plan that sleeps after fifteen minutes. It wakes on
+the request with nothing to click, so the first load after a quiet spell takes
+about a minute and the page says so while you wait. Everything after that is
+immediate.
+
 Which single points of failure in a bill of materials would actually stop
 production, and how badly. The agent explodes a BOM, identifies the parts with
 one real source, scores the exposure along dimensions it keeps separate, and
@@ -563,7 +570,7 @@ has to distinguish a guard from a breach.
 ## Running it
 
 ```
-python -m venv venv && source venv/bin/activate
+python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 python -m src.generate_data --seed 42
 python eval_harness.py          # the ship gate: tests, manifest, floors
@@ -998,6 +1005,9 @@ both here; the container is the fuller statement. Mount a volume at `/data`:
 `SEA_RUNS_DIR` and `SEA_DECISIONS_DIR` are written at request time, and a
 decision log that resets on deploy is the defect `governance/store.py` exists to
 close, one layer out.
+
+It is deployed: the frontend at https://supplierexposure-lakshya-jains-projects-05564aa5.vercel.app, the backend at https://supplier-exposure-api.onrender.com. `/api/health`
+on either answers without a credential and names the datasets it can see.
 
 **The frontend** is static and goes on Vercel with `web/` as the root directory.
 **The backend** is a container and goes somewhere that stays awake: `render.yaml`
