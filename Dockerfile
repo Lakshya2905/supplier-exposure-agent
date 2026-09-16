@@ -16,11 +16,21 @@ COPY src/ ./src/
 COPY config/ ./config/
 COPY demo/ ./demo/
 COPY evals/ ./evals/
+COPY assets/ ./assets/
 
 # The demo dataset is COPIED IN, on purpose. A cold container cannot generate
 # data during its first request, so without it the first caller gets an error
 # rather than a page. `evals/` rides along because it is the frozen set the
 # regression tests score against and it is small.
+#
+# `assets/` IS NOT DECORATION. It holds the vendored India boundary, and
+# `/api/assets/india-claimed.geojson` reads it from the working directory at
+# request time. Left out, that endpoint 404s on every request the map makes and
+# the page falls back to plotly's built-in geometry, which follows a different
+# territorial convention and draws India stopping around 35.5N. The frontend
+# says so rather than drawing it silently, which is the point of `RegionMap`'s
+# failed state -- but a deployment that shows that state permanently is one
+# nobody should have shipped. See `assets/README.md`.
 #
 # `data/` and `truth/` are NOT copied. They are gitignored and regenerated from
 # a documented seed, and a container carrying an unversioned copy of them would
