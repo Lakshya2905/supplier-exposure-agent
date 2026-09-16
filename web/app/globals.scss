@@ -225,16 +225,28 @@ html, body {
 // Five figures with no hierarchy read as unfinished unless the layout says
 // they are deliberately not combined. Equal width, equal weight, each with its
 // own unit printed under it, and no total anywhere on the row.
+// THE RULES ARE DRAWN BY THE TILES, NOT BY THE FIELD BEHIND THEM.
+//
+// This grid used to paint `border-subtle-01` across the whole container and let
+// a 1px gap expose it between tiles, which is the usual way to get hairlines.
+// It also exposed it everywhere there was no tile: seven measures in six
+// columns leaves five empty tracks, so the tearsheet drew a 600x145px slab of
+// the line colour under the last row. A token for a 1px rule, used as a field.
+//
+// The outline does the same job and stops at the tile. Outlines take no space,
+// so two neighbours meet inside the 1px gap and read as one line, the outer
+// edge is unchanged, and an empty track now paints nothing at all.
 .sea-measures {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
   gap: 1px;
-  background: var(--cds-border-subtle-01);
+  background: var(--cds-layer-01);
   border: 1px solid var(--cds-border-subtle-01);
 }
 
 .sea-measure {
   background: var(--cds-layer-01);
+  outline: 1px solid var(--cds-border-subtle-01);
   padding: $spacing-05;
   display: flex;
   flex-direction: column;
