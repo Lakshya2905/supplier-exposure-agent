@@ -33,11 +33,26 @@ html, body {
 //
 // This overrides SHAPE ONLY. Nothing here touches the Tag's colour, contrast,
 // focus ring or markup, so the component stays the accessible one Carbon
-// tested; it is the one restyle in this application and it is written down.
+// tested; it is one of the two restyles in this application and both are
+// written down.
 .cds--tag,
 .cds--tag--sm,
 .cds--tag__label {
   border-radius: 0;
+}
+
+// THE TABLE TOOLBAR'S SEARCH HAD NO BOUNDARY AT ALL.
+//
+// Found by measuring the rendered page rather than by reading anything: the
+// field paints white on a white toolbar and Carbon draws no border on it, so
+// there was nothing separating the box from the page — 1.00:1, the same defect
+// DESIGN.md already records for the Streamlit fields and the reason WCAG 1.4.11
+// asks 3:1 for the boundary of a UI component. Every other field in this
+// application already carries Carbon's own 1px bottom rule in
+// `border-strong-01`; this gives the search the one it was missing, in the same
+// token, so nothing here invents a colour.
+.cds--table-toolbar .cds--search-input {
+  border-bottom: 1px solid var(--cds-border-strong-01);
 }
 
 // TABULAR FIGURES EVERYWHERE A NUMBER IS COMPARED. Proportional digits make a
