@@ -70,12 +70,15 @@ Roughly in the order data moves through it.
 | `src/binding.py` | what binds and what blocks, by state |
 | `src/archetypes.py` · `src/ranking.py` | named patterns, and the orders that exist |
 | `src/changes.py` | two runs compared |
+| `src/portfolio.py` | the supplier row. Two counts of parts, and **no score** |
+| `src/runout.py` | does stock outlast the next delivery. An ordering, never a difference |
+| `src/scenario.py` | if this supplier stopped: what stops, is there a backup, how long |
 | `src/governance/` | the decision log and the renderer. **All prose lives here** |
 | `src/interface/` | surfaces, evidence, dashboard aggregates |
 | `src/pipeline.py` | CSVs on disk to the three review surfaces |
 | `src/api/` | HTTP. Encoding in `encode.py`, run store in `runs.py` |
 | `web/lib/` | the wire decoder, labels, CSV, the exposed-parts walk |
-| `web/components/` · `web/app/` | the Carbon shell and the six surfaces |
+| `web/components/` · `web/app/` | the Carbon shell and the seven surfaces |
 
 ---
 
@@ -342,16 +345,23 @@ sessions, no roles, and `decided_by` is still whatever the reviewer typed.
 
 ## 8. The interface
 
-Next.js App Router, IBM Carbon v11, **Gray 10**. Six surfaces in the rail.
+Next.js App Router, IBM Carbon v11, **Gray 10**. Seven surfaces in the rail.
 
 | surface | job | row is |
 |---|---|---|
 | Overview | the shape of the whole set. Decides nothing | — |
 | Exposure | what is worst | a part |
+| Suppliers | what one supplier carries, and what its loss would do | a supplier |
 | What to check | what one fetch settles the most | a **field** |
 | Review | judgments waiting for a person | a cluster |
 | What changed | two runs compared | a change |
 | Decision log | who decided what, when, why | an event |
+
+**The route list is read from `Shell.tsx`, not retyped.** `tests/rendered.py`
+parses `NAV` to decide what to measure, so adding a surface to the rail puts it
+under every browser check — motion, painted colour against the theme tokens,
+field boundaries — without a line of test being written. A surface cannot
+quietly escape the measurements, and `/suppliers` was added that way.
 
 **Why Carbon.** Every competitor leads with a branded composite index. This
 tool's thesis is refusing to combine, so the interface has to make that refusal
@@ -550,7 +560,7 @@ near neighbour of the cost optimisation agent's job.
 12. **A source scan cannot see what the component library injects, and its
     silence reads as a clean bill of health.** DESIGN.md's Motion section was
     marked `[SHIPPED]` with "zero animations, verified by source scan" while the
-    loading state pulsed on a 3s infinite loop on all six surfaces, because
+    loading state pulsed on a 3s infinite loop on every surface, because
     `SkeletonText` and `SkeletonPlaceholder` carry `animation: … cds--skeleton`
     from inside Carbon. Item 5 is the same lesson in the direction where the
     repository declares something the page ignores; this is the direction where
