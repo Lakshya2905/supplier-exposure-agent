@@ -882,6 +882,52 @@ each surface makes is held open and the page is read while it is provably still
 waiting. A route that settles before it is read fails a check of its own, because
 coverage that can quietly evaporate is the thing this whole section is about.
 
+### Sorting a column: what it is allowed to order [SHIPPED]
+
+> [SHIPPED] The Streamlit surface refuses sort controls (2026-08-05, below). The
+> Next.js surface offers them, which was never written down here, and the
+> implementation did not match the intent either way. Both are settled now.
+
+**The position, stated once.** A sort a reader asks for is a question about one
+measure, on the same footing as the region filter: "filtering is a stated
+question and the contract offers it freely". What the tool must not do is arrive
+pre-sorted, because a default order is read as a ranking within minutes and
+nobody checks which column it was. `exposure/page.tsx` has argued this in its
+own header since it was written; it had never reached this document, so the
+decisions log below still read as a flat refusal.
+
+**Three rules, and the implementation now holds all three.**
+
+- **The figure is ranked, never the text.** `isSortable` alone hands Carbon's
+  default comparator a rendered string, and a locale collator reads digit runs:
+  ascending on "How much of the build stops" put **900 above 12,000**, because
+  the thousands separator ends the first run. The comparator now reads the
+  figure Python computed, out of the same `DimensionScore` the cell renders.
+- **Absence is never ranked.** The same collator sorted "not enough data to say"
+  by its letters, so nine parts with no stock record sat **above 772.2 days**
+  when sorting descending. A row with no figure is now not ordered at all: it
+  holds its arrival position below the ranked rows in both directions, and the
+  page states how many there are. A row that moves when the direction flips is a
+  row being compared, and there is nothing there to compare.
+- **A column of mixed units does not sort at all.** On What changed, "Was" and
+  "Now" hold a value whose measure changes from row to row — days, then finished
+  units, then a count. No comparator can fix that, because there is no unit in
+  which the rows are comparable, so those two headers offer no control. What
+  sorts there is what the row is about: the kind of change, the part, the
+  measure's name.
+
+**The decision log's "When" was the fourth case.** It renders
+`toLocaleString`, and the collator read "9/16/2026" against "9/2/2027" field by
+field and put **2027 first**. An append-only record whose time column can be
+sorted into the wrong order is the one column in this application that must not
+be; it sorts on the instant now.
+
+**All four were found by clicking the columns in a browser, and none of them is
+visible to a source read**: every one was Carbon's default doing something
+reasonable with a string. `tests/test_rendered_web.py` clicks each measure
+column and asserts the order, both directions, and the regression was verified
+by removing the comparator and watching it fail.
+
 ### Fields had no boundary at all [FIXED]
 
 Every text input and select painted a 1px border in **the same colour as its own
@@ -1059,6 +1105,7 @@ with numbers:
 - Every keyframe running on the shipping surface is one the design accepted by name, read in the loading state as well as the settled one, because what only runs while data is in flight is invisible to a probe that waits for the page to settle.
 - Nothing animates under `prefers-reduced-motion: reduce`, asserted at full strength on all six surfaces, because that is what the skeleton exception rests on.
 - Every painted text colour on the shipping surface is a value some `--cds-` token holds, resolved from the live document rather than parsed.
+- A sorted measure column is ordered by its figures, and rows without a figure are not ordered at all: same parts, same order, at the same end in both directions.
 - No dimension receives more area than another in any rendered layout.
 
 ## Decisions Log
@@ -1108,4 +1155,9 @@ with numbers:
 | 2026-09-16 | **Rendered-page checks pointed at the Next.js app, in four states** | The surface that ships was measured by nothing in a browser, which is how a pulse nobody had decided on ran for six weeks. Two of the four states cannot be reached by waiting: what only animates while data is in flight is gone by the time a page settles, so the first request each surface makes is held open and the page read while it waits |
 | 2026-09-16 | The motion assertion is an accepted-keyframe list, not a ban | "Nothing animates" is a retired rule and a suite asserting it would be enforcing a document that no longer says it. Every keyframe running is checked against names somebody accepted, each carrying the decision that accepted it, so a second animating component arrives as a failure rather than silently |
 | 2026-09-16 | The reduced-motion guarantee measured rather than attested | It is the only reason the skeleton exception is a cost rather than an accessibility defect, and it had been checked once by hand. Four running animations per surface become zero on an identical 174-element document, so what changed is the motion and nothing else |
+| 2026-09-16 | **Column sort kept on the shipping surface, and made to rank the figure** | The August refusal was never carried into `web/`, and the copy there invites sorting. Rather than reverse either, the position is written down: a sort the reader asks for is a question, an arriving order is a ranking. What was actually broken was the implementation, which sorted rendered text and put 900 above 12,000 |
+| 2026-09-16 | Absence held out of every ordering, with its count stated | Sorting descending put nine "not enough data to say" rows above 772.2 days. Nothing decided that; a collator did. A value that moves with the sort direction is being compared, and an absent figure has nothing to compare |
+| 2026-09-16 | "Was" and "Now" on What changed stopped offering a sort | That column holds days on one row and finished units on the next. Ordering it is two dimensions on one axis, which no comparator can repair |
+| 2026-09-16 | The decision log's "When" sorts on the instant, not the rendered date | The collator read the day before the year and put a 2027 entry first. An append-only record is the one place a wrong time order is not a cosmetic fault |
+| 2026-09-16 | The tearsheet's measure grid draws its rules on the tiles | Seven measures in six columns left five empty tracks painting the container's line colour: a 600x145px slab of `border-subtle-01`, a 1px token used as a field |
 | 2026-09-16 | The toolbar search given the boundary every other field has | Found by the new check on its first run: white field on a white toolbar, no border on any side or ancestor, 1.00:1. The same defect as the Streamlit fields, two months later, on the surface that ships and in a different component library |
