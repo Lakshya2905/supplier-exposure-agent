@@ -18,7 +18,7 @@ import unittest
 from pathlib import Path
 
 from tests import rendered
-from tests.rendered import playwright_or_skip
+from tests.rendered import contrast, luminance, parse, playwright_or_skip
 
 ROOT = Path(__file__).resolve().parent.parent
 CSS = (ROOT / "review_app.py").read_text().split(
@@ -32,24 +32,6 @@ playwright_or_skip()   # decides skip-versus-fail before anything is served
 def rgb(hex_colour):
     text = hex_colour.lstrip("#")
     return tuple(int(text[i:i + 2], 16) for i in (0, 2, 4))
-
-
-def parse(value):
-    numbers = re.findall(r"[\d.]+", value or "")
-    return tuple(int(float(n)) for n in numbers[:3]) if len(numbers) >= 3 else None
-
-
-def luminance(channels):
-    def f(v):
-        v /= 255
-        return v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4
-    r, g, b = (f(c) for c in channels)
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b
-
-
-def contrast(one, other):
-    high, low = sorted((luminance(one), luminance(other)), reverse=True)
-    return (high + 0.05) / (low + 0.05)
 
 
 def token(name):
