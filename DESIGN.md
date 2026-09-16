@@ -784,12 +784,48 @@ sections is `xl`; panel padding is `md`.
 
 ## Motion [SHIPPED]
 
-> [SHIPPED] This formalises what already ships: zero transitions, zero animations, zero keyframes, verified by source scan.
+> [SHIPPED] Zero transitions, zero animations, zero keyframes. Verified on the **rendered page** as of 2026-09-16. The previous verification was a source scan and it was wrong; see below.
 
-- **Approach:** none. This is a formalisation, not a change: the app currently has zero transitions, zero animations, and zero keyframes.
+- **Approach:** none.
 - No entrance animation, no spinner, no pulse, no skeleton. A page that animates while data settles implies the data is moving. It is not; it is a record.
 - The only permitted state change is instantaneous.
 - If a load is slow enough to need feedback, state it in words.
+
+### The loading state pulsed for six weeks [FIXED]
+
+This section used to open by calling itself a formalisation rather than a
+change: "the app currently has zero transitions, zero animations, and zero
+keyframes, **verified by source scan**." Every clause of that was false in a
+browser.
+
+`web/components/States.tsx` rendered Carbon's `SkeletonText` and
+`SkeletonPlaceholder`, which resolve to:
+
+```
+.cds--skeleton__text::before        { 3s ease-in-out infinite  cds--skeleton }
+.cds--skeleton__placeholder::before { 3s ease-in-out infinite  cds--skeleton }
+```
+
+An endless three-second pulse, on all six surfaces, for the whole of every load.
+
+**The scan read this repository's own stylesheet.** The animation is injected by
+the component library, and no source read can see it. That is the same failure
+as *The Rendered Page Is Measured* below, one dependency further out, and it is
+the direction that section did not anticipate: it was written about declarations
+this repository makes that the page then ignores, and this is a declaration the
+repository never made that the page paints anyway. **A declaration is not a
+painted pixel, and neither is its absence.**
+
+The fix is the rule's own next line. The loading state now states the wait in
+words and draws nothing that moves. `tests/test_web_motion.py` guards it, and
+its docstring is explicit that a source scan still cannot see what a dependency
+injects — sufficient for "no skeleton", because rendering one is something this
+repository does in its own source, and not sufficient for Motion as a whole.
+
+**The gap that remains, stated rather than implied by a green test.**
+`tests/rendered.py` measures the Streamlit surface, so nothing measures `web/`
+in a browser. Pointing the rendered checks at the Next.js app is what would have
+caught this on the day it shipped.
 
 ### Fields had no boundary at all [FIXED]
 
@@ -932,6 +968,7 @@ with numbers:
 - Boundary contrast at 3:1 for anything whose shape must be identifiable.
 - Hue, if ever reintroduced, is not a monotone function of enum declaration order under any rotation.
 - No banned widget appears in source (already enforced).
+- No surface renders a component that animates, and no stylesheet here declares a keyframe, an animation or a transition (`tests/test_web_motion.py`). **Asserted on source, which is not the same as asserted on the page.** A source scan cannot see what a dependency injects, which is how the Motion rule came to be marked `[SHIPPED]` while six surfaces pulsed. The test says so in its own docstring rather than leaving a green result to imply coverage it does not have.
 - No dimension receives more area than another in any rendered layout.
 
 ## Decisions Log
@@ -973,3 +1010,6 @@ with numbers:
 | 2026-08-07 | Decision log persisted to disk, and moved to the head of Confirm | It lived in session state and was gone on reload, so the audit trail survived as long as a browser tab. The panel also sat below twenty-two clusters, where a reviewer finds it only after deciding again |
 | 2026-08-07 | The suite writes decisions to a temporary directory, per test | Running the tests appended a decision by a fixture name to the operator's live record, which is a test forging an entry in the log the product exists to be trusted for |
 | 2026-08-07 | India drawn from vendored geometry including its full claimed territory | Plotly's built-in `IND` follows Natural Earth and stops near 35.5°N, and that shape ships inside plotly.js where no option reaches it. The claimed boundary is drawn on top, so areas Natural Earth assigns to neighbours are covered rather than split by a line |
+| 2026-09-16 | **Motion's `[SHIPPED]` claim corrected: the loading state had been pulsing all along** | The verification was a source scan of this repository's own CSS, and the animation came from Carbon. Measured on the deployed page, `cds--skeleton` ran on a 3s infinite loop on all six surfaces. A declaration is not a painted pixel, and neither is its absence |
+| 2026-09-16 | Loading states state the wait in words, drawing nothing that moves | What the Motion rule already prescribed. The free Render plan sleeps after 15 minutes and takes about a minute to wake, so a reader told nothing sees a page that looks broken for the length of a cold start |
+| 2026-09-16 | The wait is stated once, not revealed on a timer | "Can take up to a minute" and "if the service has been idle" are both true at the first second of a 3s load and the fortieth of a cold start, so the hedge does what a timer would and no elapsed time has to be measured to keep the sentence honest |

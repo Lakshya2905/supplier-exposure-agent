@@ -533,10 +533,40 @@ near neighbour of the cost optimisation agent's job.
     refusal.** When `tier` became a legitimate grouping basis, the right move was
     to narrow the guard to the declared forms, not to delete the word from the
     list and leave nothing watching for `TIER_HIGH`.
+12. **A source scan cannot see what the component library injects, and its
+    silence reads as a clean bill of health.** DESIGN.md's Motion section was
+    marked `[SHIPPED]` with "zero animations, verified by source scan" while the
+    loading state pulsed on a 3s infinite loop on all six surfaces, because
+    `SkeletonText` and `SkeletonPlaceholder` carry `animation: … cds--skeleton`
+    from inside Carbon. Item 5 is the same lesson in the direction where the
+    repository declares something the page ignores; this is the direction where
+    the page paints something the repository never declared.
+13. **A deployed container is not the repository.** `assets/` was committed and
+    never copied by the Dockerfile, so the map endpoint 404d on every deployed
+    page while every test passed: locally and in CI the whole repository is the
+    working directory, so the read always succeeds. Run the app against a
+    directory holding only what the Dockerfile copies before trusting a deploy.
+14. **A host can stop honouring a guarantee the code still keeps.** Render's free
+    plan cannot attach a disk, so `SEA_DECISIONS_DIR` is emptied on every
+    spin-down and the decision log does not survive. `governance/store.py` is
+    unchanged and still correct. Read `render.yaml` before citing the live
+    deployment as evidence of persistence.
 
 ---
 
 ## 14. Deploying it
+
+**It is deployed, as of 2026-09-16.**
+
+| | where | what to know |
+|---|---|---|
+| frontend | https://supplierexposure-lakshya-jains-projects-05564aa5.vercel.app | Vercel, root directory `web/`. Deployment Protection is **off**, which is deliberate: on, the link opens a sign-in page for an account the recipient does not have |
+| backend | https://supplier-exposure-api.onrender.com | Render, **free plan**. Sleeps after 15 minutes idle and wakes on the request, taking about a minute |
+
+`/api/health` on either address answers without a credential and says which
+datasets that deployment can see. It is the fastest way to tell "nothing is
+listening" from "listening, and it refused", which is the distinction
+`web/app/api/[...path]/route.ts` exists to report and used to get wrong.
 
 The frontend is static and goes on Vercel from `web/`. The backend is a
 container and goes somewhere that **stays awake** — `fly.toml` pins a plan that
