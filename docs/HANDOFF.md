@@ -538,9 +538,16 @@ near neighbour of the cost optimisation agent's job.
 
 ## 14. Deploying it
 
-The frontend is static and goes on Vercel from `web/`. The backend is a container
-and goes somewhere that **stays awake** — `render.yaml` and `fly.toml` both pin a
-plan that does not scale to zero and mount a volume at `/data`.
+The frontend is static and goes on Vercel from `web/`. The backend is a
+container and goes somewhere that **stays awake** — `fly.toml` pins a plan that
+does not scale to zero and mounts a volume at `/data`.
+
+`render.yaml` did too until 2026-09-16, when the owner moved it to the free
+plan deliberately. It sleeps after fifteen minutes and loses its decision log on
+every spin-down, and it was still the right free option because it **wakes on
+the request**, where Streamlit Community Cloud makes the visitor press a button.
+The file states what was given up at the line that changed; read it before
+citing this deployment as evidence of anything about persistence.
 
 Three things catch people out, in the order they do:
 
@@ -549,5 +556,7 @@ Three things catch people out, in the order they do:
    dead link this whole move was meant to fix.
 2. **Set `SEA_API_URL` and `SEA_API_KEY` without a `NEXT_PUBLIC_` prefix**, or
    you publish the key to every visitor.
-3. **`/data` must be a volume.** A decision log that resets on deploy is the
-   defect `governance/store.py` exists to close, one layer out.
+3. **`/data` must be a volume**, and Render's free plan cannot attach one.
+   A decision log that resets is the defect `governance/store.py` exists to
+   close, one layer out. Fly mounts one; the free Render service does not have
+   the option, which is the accepted cost recorded in `render.yaml`.

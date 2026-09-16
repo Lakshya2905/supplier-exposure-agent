@@ -1006,9 +1006,21 @@ pin the settings that matter rather than leaving them to a dashboard.
 
 They deploy separately on purpose. The frontend is what a link points at and
 Vercel does not sleep it; the backend is what must not sleep, which is a
-different requirement served by a different host. Both host configs explicitly
-refuse the free tier's scale-to-zero, because a sleeping backend is the Streamlit
-problem this project moved to escape, with extra steps.
+different requirement served by a different host.
+
+**`fly.toml` still refuses the free tier's scale-to-zero. `render.yaml` no
+longer does, and that was a decision rather than a drift.** On 2026-09-16 the
+owner moved the Render blueprint to the free plan, knowing the two things it
+costs: about a minute on the first request after fifteen quiet minutes, and a
+decision log that does not survive a spin-down. The original objection was not
+withdrawn, it was overruled, and `render.yaml` carries the reasoning at the line
+that changed.
+
+What decided it between the free options is not the obvious axis. A sleeping
+free service on Render **wakes on the request**; Streamlit Community Cloud
+answers a sleeping app with a static shell and asks the visitor to press a
+button, which a stranger reads as broken. Slow is recoverable. A recipient
+being asked to diagnose the link is the dead link this move was meant to fix.
 
 ### The browser never holds the key
 
@@ -1042,10 +1054,12 @@ mechanism.
    and `SEA_API_KEY` are read by the proxy on the server. Prefixing either would
    publish it to every visitor.
 
-3. **`/data` must be a volume.** `SEA_RUNS_DIR` and `SEA_DECISIONS_DIR` are
-   written at request time, and a decision log that resets on deploy is the
-   defect `governance/store.py` exists to close, one layer out. Both host configs
-   mount one.
+3. **`/data` must be a volume, and on Render's free plan it cannot be.**
+   `SEA_RUNS_DIR` and `SEA_DECISIONS_DIR` are written at request time, and a
+   decision log that resets is the defect `governance/store.py` exists to close,
+   one layer out. `fly.toml` mounts a volume. `render.yaml` on the free plan
+   cannot attach one at all, so that deployment loses its decision log on every
+   spin-down — named in the file, and the cost the owner accepted above.
 
 ### What this authentication is, and is not
 

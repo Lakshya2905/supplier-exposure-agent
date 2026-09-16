@@ -48,3 +48,52 @@ class TestRequirementsMatchPyproject(unittest.TestCase):
 
 if __name__ == "__main__":  # keep last: classes below an entrypoint never run
     unittest.main()
+
+
+def copied_into_the_image():
+    """The top-level names the Dockerfile puts in /app."""
+    names = set()
+    for line in (ROOT / "Dockerfile").read_text().splitlines():
+        match = re.match(r"COPY\s+(\S+)", line.strip())
+        if match:
+            names.add(match.group(1).rstrip("/").split("/")[0])
+    return names
+
+
+class TestTheImageShipsWhatTheApiReads(unittest.TestCase):
+    """The same quiet failure as above, one layer over: files instead of
+    dependencies.
+
+    Endpoints read `assets/` and `evals/` from the working directory at request
+    time. Locally and in CI the whole repository is the working directory, so
+    every one of those reads succeeds and nothing in the suite runs against the
+    image. `assets/` was left out of the Dockerfile and the gate stayed green:
+    the map endpoint 404d on every request a deployed page made, and the page
+    fell back to plotly's built-in India, which follows a different territorial
+    convention. That is the exact substitution `assets/README.md` exists to
+    prevent, and the only thing that would have caught it was a deploy.
+    """
+
+    def test_every_path_the_api_reads_from_disk_is_in_the_image(self):
+        source = (ROOT / "src" / "api" / "main.py").read_text()
+        read = {literal.split("/")[0]
+                for literal in re.findall(r'Path\("([^"]+)"\)', source)}
+        # A scan that finds nothing passes forever. If the API stops writing
+        # its paths as literals this has to fail rather than go quiet.
+        self.assertTrue(read, "no relative paths found in the API source")
+        for name in sorted(read):
+            with self.subTest(path=name):
+                self.assertIn(name, copied_into_the_image())
+
+    def test_the_default_dataset_is_in_the_image(self):
+        """A cold container cannot generate data during its first request, so
+        without it the first caller gets an error rather than a page.
+
+        THE NAME IS READ, NEVER RETYPED. `test_demo_dataset.py` refuses any
+        test that writes that directory as a path constant, because nothing
+        which judges correctness may read the demo set. This asserts against
+        the Dockerfile and opens nothing, and taking the name from the module
+        that defines it keeps the guard whole rather than arguing with it.
+        """
+        from src.pipeline import DEMO_DIR
+        self.assertIn(DEMO_DIR.name, copied_into_the_image())
