@@ -31,6 +31,7 @@ from .. import changes as diff
 from .. import governance as gov
 from .. import criticality as crit
 from .. import scoring
+from .. import portfolio
 from .. import readers
 from ..governance import store
 from ..governance.render import VERDICT_PROSE
@@ -226,6 +227,12 @@ def score_payload(result, record):
             "what_to_check": encode(built[view.FIND_OUT]),
             "review": encode(built[view.CONFIRM]),
         },
+        # SUPPLIERS, AS A SIBLING OF `profiles` AND NOT A DIMENSION. Two
+        # counts of parts and the parts themselves; nothing is derived from
+        # both counts, and nothing asserts the parts share a fate.
+        "suppliers": encode(portfolio.by_supplier(
+            dash.supplier_rows(result), result.verdicts)),
+        "supplier_order": portfolio.order_label(),
         "clusters": encode(result.report.clusters),
         "unplaceable_parts": encode(result.report.unplaceable_parts),
         "extracts": encode(result.extracts),

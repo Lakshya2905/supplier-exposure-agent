@@ -28,6 +28,7 @@ import { RunSummary } from './RunSummary';
 const NAV = [
   { href: '/', label: 'Overview', hint: 'the shape of the whole set' },
   { href: '/exposure', label: 'Exposure', hint: 'what is worst' },
+  { href: '/suppliers', label: 'Suppliers', hint: 'what one supplier carries' },
   { href: '/check', label: 'What to check', hint: 'what one fetch settles' },
   { href: '/review', label: 'Review', hint: 'judgments waiting for a person' },
   { href: '/changes', label: 'What changed', hint: 'two runs, compared' },
