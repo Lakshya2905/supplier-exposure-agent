@@ -169,6 +169,30 @@ export interface ScoreResult {
    *  and no magnitude, because a margin in days is the subtraction the README
    *  declines. See `src/runout.py`. */
   run_out: Record<string, RunOut>;
+  /** The supplier view, ordered by one named axis. */
+  suppliers: SupplierRow[];
+  /** What that order sorted on, stated rather than left to be inferred. */
+  supplier_order: string;
+}
+
+/** One supplier, two counts, and what neither count could settle.
+ *
+ *  TWO AXES, NEVER A SCORE. Both are counts of parts, so they sit side by side
+ *  without anything being blended. Nothing here is derived from both, and a
+ *  field that were would be the composite this product refuses per part,
+ *  reappearing one level up. See `src/portfolio.py`. */
+export interface SupplierRow {
+  supplier: string;
+  parts_supplied: number;
+  exposed_parts: number;
+  /** True when something on this supplier did not settle, so the count above
+   *  can only rise. An unsettled part is never an unexposed one. */
+  exposed_is_lower_bound: boolean;
+  parts_unsettled: number;
+  regions: string[];
+  part_numbers: string[];
+  exposed_part_numbers: string[];
+  autonomy: string;
 }
 
 export interface RunOut {

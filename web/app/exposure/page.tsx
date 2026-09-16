@@ -35,6 +35,13 @@ import type { DimensionScore } from '@/lib/types';
 
 const HEADERS = [
   { key: 'part', header: 'Part' },
+  // THE REASON, FIRST AFTER THE PART, because it is what a reader is looking
+  // for and it was reachable only by opening the tearsheet. The four verdicts
+  // behind the 21 exposed parts are genuinely different findings and the
+  // pattern column does not separate them: "several suppliers listed, only one
+  // can actually quote" is eight of the twenty-one and is the one nobody
+  // guesses from a supplier count.
+  { key: 'why', header: 'Why it is exposed' },
   { key: 'pattern', header: 'Pattern' },
   // DIRECTLY AFTER THE PATTERN, because it is the line a planner acts on. The
   // pattern says what kind of exposure this is; this says whether it bites
@@ -91,6 +98,15 @@ export default function Exposure() {
         // The count of the rest is shown rather than dropped, and the tearsheet
         // lists them all, because "implied" is an argument a reader should be
         // able to check.
+        // NO HUE, AND THAT IS A RULE RATHER THAN A CHOICE OF PALETTE. The
+        // run-out column beside this one is red and green because it is one
+        // ordered axis, which the 2026-08-06 retirement permits. This is a
+        // NOMINAL set of four verdicts with no order among them, and DESIGN.md
+        // retired hue from exactly that: a reader tries to learn a mapping,
+        // and hue position tracks enum declaration order, which leaks a
+        // ranking back in through the channel the product had just cleaned.
+        why: result.overview.verdict_labels[result.verdicts[row.key] ?? '']
+          ?? result.verdicts[row.key] ?? 'not stated',
         pattern: row.archetypes[0],
         // THE LABEL ONLY. The outcome code is kept beside it for the tag type
         // and never painted: a reader sees "Runs out first", not an enum.
