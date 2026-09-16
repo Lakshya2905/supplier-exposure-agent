@@ -13,8 +13,26 @@
  * question about cover. What must not happen is the tool arriving pre-sorted by
  * something, because a default order is read as a ranking within minutes and
  * nobody checks which column it was.
+ *
+ * THE SORT RANKS THE NUMBER, NEVER THE TEXT, AND NEVER RANKS ABSENCE. Offering
+ * the control was the decision above; `isSortable` alone did not implement it.
+ * Carbon's default comparator runs a locale collator over the CELL TEXT, and
+ * two things followed, both measured in a browser on 2026-09-16:
+ *
+ *   ascending on "how much of the build stops" put 900 above 12,000, because
+ *   the collator reads digit runs and the thousands separator ends the first one
+ *
+ *   descending put nine "not enough data to say" rows above 772.2 days, because
+ *   a letter sorts after a digit -- absence given a rank, which is the one
+ *   thing this product refuses more firmly than any other
+ *
+ * So the comparator below reads the figure Python computed for that row, out of
+ * the same `DimensionScore` the cell renders, and a row with no figure is not
+ * ordered at all: it holds part number order below the ranked rows in BOTH
+ * directions, and the count of them is stated under the table. Nothing here
+ * decides what an absent value would have been, which is the point.
  */
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Button, DataTable, Table, TableBody, TableCell, TableContainer, TableHead,
   TableHeader, TableRow, TableToolbar, TableToolbarContent,
@@ -31,6 +49,8 @@ import {
   boundIsTrivial, formatNumber, isUnbounded, toNumber,
 } from '@/lib/measure';
 import { exposedRows } from '@/lib/exposed';
+import type { SortRowParams } from
+  '@carbon/react/lib/components/DataTable/state/sorting';
 import type { DimensionScore } from '@/lib/types';
 
 const HEADERS = [
@@ -41,11 +61,27 @@ const HEADERS = [
   // pattern column does not separate them: "several suppliers listed, only one
   // can actually quote" is eight of the twenty-one and is the one nobody
   // guesses from a supplier count.
-  { key: 'why', header: 'Why it is exposed' },
+  // NO SORT, FOR THE SAME REASON THE RUN-OUT COLUMN BELOW HAS NONE, and this
+  // column is the instance #50's guard predicted: "the next categorical column
+  // that inherits a sort fails rather than shipping". It was next. These are
+  // four nominal verdicts with no order among them, and alphabetically they
+  // read "no supplier on file, one supplier, one supplier and no lead time,
+  // several suppliers listed" -- a severity ramp assembled by accident out of
+  // a set that has no severity order. A plausible default is read as a ranking.
+  { key: 'why', header: 'Why it is exposed', isSortable: false },
   // DIRECTLY AFTER THE PATTERN, because it is the line a planner acts on. The
   // pattern says what kind of exposure this is; this says whether it bites
   // before a replacement order can land.
-  { key: 'runOut', header: 'Stock vs next delivery' },
+  //
+  // AND IT DOES NOT SORT, for the reason it was built with. Its own commit put
+  // the tag colours deliberately off the red-green axis: `too_close_to_call` is
+  // not "medium", it is a different kind of statement, and a ramp would invite
+  // averaging three categories that do not average. Alphabetical order does the
+  // same thing by accident and more convincingly -- measured on the demo set it
+  // reads "No supplier to order from, Not enough data to say, Runs out first,
+  // Stock outlasts it", which puts two abstentions at the top of what looks
+  // exactly like a severity order. A plausible default is read as a ranking.
+  { key: 'runOut', header: 'Stock vs next delivery', isSortable: false },
   { key: 'stops', header: 'How much of the build stops' },
   { key: 'cover', header: 'How long stock lasts' },
   { key: 'lead', header: 'Worst case lead time' },
@@ -59,6 +95,30 @@ const HEADERS = [
 ];
 
 const UNKNOWN = 'not enough data to say';
+
+/** The columns that carry a measure, and are therefore ranked by its figure. */
+const MEASURES = new Set(['stops', 'cover', 'lead']);
+
+type SortKeys = Record<string, number | null>;
+
+/**
+ * The figure a measure column is ranked by, or null for a row with none.
+ *
+ * THE ABSENCE BRANCHES ARE `cell`'s, IN THE SAME ORDER. A row whose cell says
+ * "not enough data to say" must be a row this returns null for, or the table
+ * would rank a part by a number the reader cannot see. They are built together
+ * from one score for that reason.
+ */
+function sortable(
+  score: DimensionScore | undefined,
+  pick: (s: DimensionScore) => number | null,
+): number | null {
+  if (!score) return null;
+  if (score.completeness === 'cannot_tell') return null;
+  if (score.completeness === 'not_applicable') return null;
+  if (score.completeness === 'no_recovery_path') return null;
+  return pick(score);
+}
 
 /** A cell that is a measure, with its absence stated rather than blanked. */
 function cell(
@@ -154,9 +214,63 @@ export default function Exposure() {
           ? labelFor(String(supplier.region), result.overview.region_labels)
           : 'no supplier on file',
         __row: row,
+        __sort: {
+          stops: sortable(scores.blast_radius, (s) => {
+            // The structural reading has no unit figure, so it is not a place
+            // on this axis. The cell says so in words and this says so by
+            // declining to rank it.
+            const goods = toNumber(s.detail.finished_goods_blocked);
+            if (boundIsTrivial(s.value, s.completeness) && goods) return null;
+            return toNumber(s.value);
+          }),
+          // UNBOUNDED IS AN ANSWER, NOT AN ABSENCE, and it is the largest one
+          // there is. Ranking it as such is reading the result, not guessing at
+          // a missing value.
+          cover: sortable(scores.buffer_cover, (s) => (
+            isUnbounded(s.value) ? Infinity : toNumber(s.value))),
+          // The WORST case, because that is the figure the cell draws.
+          lead: sortable(scores.wait_out_days, (s) => (
+            Array.isArray(s.value) ? toNumber(s.value[1]) : null)),
+        } as SortKeys,
       };
     });
   }, [result]);
+
+  const sortKeys = useMemo(
+    () => new Map(rows.map((row) => [row.id, row.__sort])), [rows]);
+
+  const sortRow = useCallback((
+    a: string | number, b: string | number, meta: SortRowParams,
+  ) => {
+    const ascending = meta.sortDirection === meta.sortStates.ASC;
+    // Part, pattern, supplier and region are names. Alphabetical order of a
+    // name ranks nothing, so Carbon's own comparator is right for them.
+    if (!MEASURES.has(meta.key)) {
+      return ascending ? meta.compare(a, b, meta.locale)
+                       : meta.compare(b, a, meta.locale);
+    }
+    // `rowIds` IS PASSED AND IS NOT IN THE PUBLISHED TYPE. `sortRows` in
+    // `@carbon/react/lib/components/DataTable/tools/sorting.js` hands the
+    // comparator `rowIds: [a, b]`; `SortRowParams` in the neighbouring `.d.ts`
+    // does not declare it. Narrowed here rather than worked around, because the
+    // alternative is reading the figure back out of the text that was rendered
+    // from it, and the two would drift the first time a format changed.
+    const { rowIds } = meta as SortRowParams & { rowIds: string[] };
+    const [idA, idB] = rowIds;
+    const left = sortKeys.get(idA)?.[meta.key] ?? null;
+    const right = sortKeys.get(idB)?.[meta.key] ?? null;
+    // ABSENCE IS NOT ORDERED. Not first, not last, not zero, not infinity:
+    // after the ranked rows in both directions, holding the order it arrived
+    // in. A row that changes position with the sort direction is a row being
+    // compared, and there is nothing here to compare.
+    if (left === null && right === null) return 0;
+    if (left === null) return 1;
+    if (right === null) return -1;
+    // Compared rather than subtracted, so unbounded against unbounded is 0
+    // instead of NaN, which would leave the sort undefined.
+    const order = left < right ? -1 : left > right ? 1 : 0;
+    return ascending ? order : -order;
+  }, [sortKeys]);
 
   if (loading && !result) return <Loading label="Scoring the dataset." />;
   if (!result) return <Failed error={error} onRetry={reload} />;
@@ -189,9 +303,22 @@ export default function Exposure() {
             not an empty screen.
           </Empty>
         ) : (
-          <DataTable rows={rows} headers={HEADERS} isSortable>
+          <DataTable rows={rows} headers={HEADERS} isSortable
+                     sortRow={sortRow}>
             {({ rows: shown, headers, getTableProps, getHeaderProps,
-                getRowProps, onInputChange }) => (
+                getRowProps, onInputChange }) => {
+              // Read once and reused below, because the note under the table
+              // and the headers themselves have to agree about which column is
+              // sorted; asking twice is two answers waiting to diverge.
+              const columns = headers.map((header) => ({
+                header, props: getHeaderProps({ header }),
+              }));
+              const sorted = columns.find(({ props }) => props.isSortHeader
+                && props.sortDirection !== 'NONE')?.header;
+              const unranked = sorted && MEASURES.has(sorted.key)
+                ? rows.filter((row) => row.__sort[sorted.key] === null).length
+                : 0;
+              return (
               <TableContainer>
                 <TableToolbar>
                   <TableToolbarContent>
@@ -216,10 +343,9 @@ export default function Exposure() {
                 <Table {...getTableProps()} size="sm">
                   <TableHead>
                     <TableRow>
-                      {headers.map((header) => {
-                        const props = getHeaderProps({ header }) as
-                          Record<string, unknown> & { key?: string };
-                        const { key: _drop, ...rest } = props;
+                      {columns.map(({ header, props }) => {
+                        const { key: _drop, ...rest } = props as typeof props
+                          & { key?: string };
                         return (
                           <TableHeader key={header.key} {...rest}>
                             {header.header}
@@ -297,8 +423,22 @@ export default function Exposure() {
                     for all {rows.length}.
                   </p>
                 )}
+                {/* THE UNRANKED ARE COUNTED, for the same reason the hidden
+                    are. A reader looking at a sorted column can see where the
+                    numbers stop, but not whether the rows below are the small
+                    ones or the unmeasured ones, and those are different facts.
+                */}
+                {unranked > 0 && sorted && (
+                  <p className="sea-section__note" style={{ marginTop: '1rem' }}>
+                    {unranked} of {rows.length} parts have no figure for{' '}
+                    {String(sorted.header).toLowerCase()}, so they are not
+                    ordered by
+                    it. They hold part number order below the parts that do.
+                  </p>
+                )}
               </TableContainer>
-            )}
+              );
+            }}
           </DataTable>
         )}
       </section>

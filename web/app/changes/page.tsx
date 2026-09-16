@@ -186,12 +186,20 @@ function Result({ comparison }: { comparison: Comparison }) {
   );
 }
 
+// WAS AND NOW DO NOT SORT, AND THAT IS THE ANTI-RANKING RULE RATHER THAN AN
+// OMISSION. Every other table here holds one measure per column; this one holds
+// a column of VALUES whose measure changes from row to row -- days on one line,
+// finished units on the next, a count on the one after. Ordering that column
+// puts two dimensions on one axis, which is the composite this tool refuses to
+// compute, and no comparator can fix it because there is no unit in which the
+// rows are comparable. What sorts instead is what the row is ABOUT: the kind of
+// change, the part, the measure's name.
 const HEADERS = [
   { key: 'what', header: 'What' },
   { key: 'subject', header: 'Part or group' },
   { key: 'measure', header: 'Measure' },
-  { key: 'before', header: 'Was' },
-  { key: 'after', header: 'Now' },
+  { key: 'before', header: 'Was', isSortable: false },
+  { key: 'after', header: 'Now', isSortable: false },
 ];
 
 function Group({ title, rows, note }: {
