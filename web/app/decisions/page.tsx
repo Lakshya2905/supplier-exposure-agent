@@ -19,6 +19,8 @@ import {
 import { Empty, Failed, Loading } from '@/components/States';
 import { fetchDecisions } from '@/lib/api';
 import { downloadCsv } from '@/lib/csv';
+import type { SortRowParams } from
+  '@carbon/react/lib/components/DataTable/state/sorting';
 import type { DecisionEvent } from '@/lib/types';
 
 const HEADERS = [
@@ -47,6 +49,27 @@ export default function Decisions() {
   if (error !== null) return <Failed error={error} onRetry={load} />;
   if (entries === null) return <Loading label="Reading the decision log." />;
 
+  // WHEN SORTS BY THE INSTANT, NOT BY THE TEXT OF THE DATE. `toLocaleString`
+  // renders "9/16/2026, 4:49:49 AM", and Carbon's default comparator collates
+  // that as characters: it reads 9 against 10 and puts September after October,
+  // and it has no idea the year is the third field. An append-only log whose
+  // "When" column can be sorted into the wrong order is the one column in this
+  // application that must not be.
+  const when = new Map(entries.map(
+    (entry) => [String(entry.event_id), Date.parse(entry.at)]));
+
+  const sortRow = (a: string | number, b: string | number, meta: SortRowParams) => {
+    const ascending = meta.sortDirection === meta.sortStates.ASC;
+    if (meta.key !== 'at') {
+      return ascending ? meta.compare(a, b, meta.locale)
+                       : meta.compare(b, a, meta.locale);
+    }
+    const { rowIds } = meta as SortRowParams & { rowIds: string[] };
+    const [left, right] = rowIds.map((id) => when.get(id) ?? 0);
+    const order = left < right ? -1 : left > right ? 1 : 0;
+    return ascending ? order : -order;
+  };
+
   const rows = entries.map((entry) => ({
     id: String(entry.event_id),
     at: new Date(entry.at).toLocaleString(),
@@ -73,7 +96,7 @@ export default function Decisions() {
           or rejecting one writes the first entry here.
         </Empty>
       ) : (
-        <DataTable rows={rows} headers={HEADERS} isSortable>
+        <DataTable rows={rows} headers={HEADERS} isSortable sortRow={sortRow}>
           {({ rows: shown, headers, getTableProps, getHeaderProps,
               getRowProps, onInputChange }) => (
             <TableContainer>
