@@ -81,23 +81,57 @@ class Stage:
 
 
 ALTERNATE_SOURCE = "alternate_source_days"
+COMMERCIAL = "commercial_agreement_days"
 TOOLING = "tooling_lead_time_days"
 ENGINEERING_TRANSFER = "engineering_transfer_days"
+SUPPLIER_INPUTS = "supplier_input_lead_time_days"
 FIRST_ARTICLE = "first_article_days"
 QUALIFICATION_TEST = "qualification_test_days"
+CUSTOMER_APPROVAL = "customer_approval_days"
+CAPACITY_SLOT = "capacity_slot_days"
 RAMP = "ramp_to_rate_days"
 
-# The activities the practitioner named, in the order they happen. Sequential
-# on purpose: see UNMODELLED at the foot of this file for what that costs.
+# The activities, in the order they happen. Sequential on purpose: see
+# UNMODELLED at the foot of this file for what that costs.
+#
+# SIX OF THESE THE PRACTITIONER NAMED. FOUR WERE ADDED ON 2026-09-16, and they
+# are the ones a chain of engineering stages quietly omits, because each is
+# somebody else's queue rather than your own work:
+#
+#   commercial      nobody cuts metal before the contract is signed, and a
+#                   quality agreement and a price can take longer than the
+#                   first article. Frequently the real bottleneck, and
+#                   invisible to a chain that models only technical work
+#   supplier inputs the alternate has their OWN lead time on raw material and
+#                   sub-components. Qualified and waiting for bar stock is
+#                   still waiting
+#   customer        a source change often needs the customer or a regulator to
+#                   accept it, and in a regulated programme that single stage
+#                   can exceed every other stage combined
+#   capacity        qualified with no slot until Q3 is a different problem from
+#                   not qualified, and only one of the two is fixed by
+#                   qualifying faster
+#
+# ALL FOUR ARE `KNOWABLE`, NOT `JUDGMENT`, and the distinction is the point:
+# every one of them is a fact somebody already holds -- a contracts lead, the
+# alternate supplier, the customer's quality function, the alternate's planner.
+# Nobody in this dataset has been asked. That is a different claim from
+# "how long will qualification take", which no amount of asking settles.
 STAGES = (
     Stage(ALTERNATE_SOURCE, "finding and qualifying an alternate source",
           JUDGMENT),
+    Stage(COMMERCIAL, "commercial and contractual agreement", KNOWABLE),
     Stage(TOOLING, "tooling dedicated to the part", KNOWABLE),
     Stage(ENGINEERING_TRANSFER, "engineering transfer of drawings and specs",
           JUDGMENT),
+    Stage(SUPPLIER_INPUTS, "the alternate's own material and component lead "
+          "time", KNOWABLE),
     Stage(FIRST_ARTICLE, "first article inspection", JUDGMENT),
     Stage(QUALIFICATION_TEST, "qualification and reliability testing",
           JUDGMENT),
+    Stage(CUSTOMER_APPROVAL, "customer or regulatory approval of the source "
+          "change", KNOWABLE),
+    Stage(CAPACITY_SLOT, "a production slot at the alternate", KNOWABLE),
     Stage(RAMP, "ramp to rate", JUDGMENT),
 )
 
@@ -288,6 +322,15 @@ def chain(tooling_owner, stages=None):
 #   already crashed. It also means the total is not a lower bound in the
 #   direction the untimed stages make it one, and those two errors do not
 #   cancel.
+#
+#   THAT COST ROSE ON 2026-09-16 AND IS WORTH NAMING SEPARATELY. Ten sequential
+#   stages overlap more than six did: commercial negotiation runs alongside
+#   engineering transfer in any programme worth the name, and a capacity slot is
+#   usually booked long before qualification finishes rather than after it. The
+#   four added stages make the chain more COMPLETE and its sequencing more
+#   pessimistic at the same time. Neither error was introduced by the other and
+#   neither cancels it; a dependency graph rather than a chain is what would fix
+#   the sequencing, and that is a different piece of work.
 #
 #   THE CHAIN IS PER PART, NOT PER CANDIDATE SOURCE. How long qualification
 #   takes depends on WHICH alternative you go to, and nothing in this schema

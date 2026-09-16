@@ -41,9 +41,17 @@ FIXTURES = Path(__file__).parent / "fixtures"
 
 # Every stage timed and a cycle count on file, written by hand. Used where a
 # test needs a SETTLED chain and nothing else about the chain matters.
-TIMED = {"alternate_source_days": 10, "tooling_lead_time_days": 20,
-         "engineering_transfer_days": 30, "first_article_days": 40,
-         "qualification_test_days": 50, "ramp_to_rate_days": 60,
+#
+# WRITTEN OUT IN FULL RATHER THAN DERIVED FROM `recovery.STAGES`. A fixture
+# built from the stage list would follow it wherever it went, so a stage added
+# and never timed would leave every "settled chain" test still passing while the
+# chain it asserts is settled had quietly become a lower bound. Adding a stage
+# is supposed to break this line and make somebody decide what it should hold.
+TIMED = {"alternate_source_days": 10, "commercial_agreement_days": 15,
+         "tooling_lead_time_days": 20, "engineering_transfer_days": 30,
+         "supplier_input_lead_time_days": 35, "first_article_days": 40,
+         "qualification_test_days": 50, "customer_approval_days": 55,
+         "capacity_slot_days": 45, "ramp_to_rate_days": 60,
          "qualification_cycles": 1}
 
 
@@ -364,7 +372,9 @@ class TestResourceDays(unittest.TestCase):
     def test_a_chain_with_every_stage_present_is_known(self):
         score = self.profiles["SHARED-M01"].resource_days
         self.assertEqual(score.completeness, KNOWN)
-        self.assertEqual(score.value, 300)
+        # 45 + 10 + 120 + 30 + 18 + 20 + 60 + 15 + 7 + 25, added by hand from
+        # tiny_recovery.csv. Ten stages since 2026-09-16; it was 300 over six.
+        self.assertEqual(score.value, 350)
         self.assertEqual(score.detail["stages_untimed"], ())
         self.assertEqual(score.autonomy, gov.EXECUTES)
 
@@ -373,7 +383,8 @@ class TestResourceDays(unittest.TestCase):
         # said how long it takes. The total under-counts by exactly that.
         score = self.profiles["ZEROUSE-M01"].resource_days
         self.assertEqual(score.completeness, LOWER_BOUND)
-        self.assertEqual(score.value, 115)
+        # 30 + 10 + 15 + 18 + 10 + 40 + 15 + 7 + 20, tooling absent. Was 115.
+        self.assertEqual(score.value, 165)
         self.assertEqual(score.detail["stages_untimed"],
                          (R.TOOLING,))
         self.assertIn("tooling", score.reasons[0])
@@ -382,17 +393,20 @@ class TestResourceDays(unittest.TestCase):
     def test_a_chain_with_qualification_missing_is_a_lower_bound(self):
         score = self.profiles["ONLY-M01"].resource_days
         self.assertEqual(score.completeness, LOWER_BOUND)
-        self.assertEqual(score.value, 80)
+        # 35 + 10 + 20 + 18 + 10 + 15 + 7 + 15, tooling and qualification
+        # absent. Was 80.
+        self.assertEqual(score.value, 130)
         self.assertIn(R.QUALIFICATION_TEST, score.detail["stages_untimed"])
         self.assertIn("qualification and reliability testing", score.reasons[0])
 
     def test_a_present_retry_cycle_reports_both_readings(self):
         score = self.profiles["SHARED-M01"].resource_days
         self.assertEqual(score.detail["qualification_cycles"], 2)
-        self.assertEqual(score.detail["with_retry_days"], 360)
+        # 350 settled, plus one more 60-day qualification cycle. Was 360.
+        self.assertEqual(score.detail["with_retry_days"], 410)
         sentence = " ".join(score.reasons)
-        self.assertIn("300 days if it is approved first time", sentence)
-        self.assertIn("360 days over the 2 attempts", sentence)
+        self.assertIn("350 days if it is approved first time", sentence)
+        self.assertIn("410 days over the 2 attempts", sentence)
 
     def test_an_absent_retry_cycle_is_said_rather_than_assumed(self):
         """The row that exists to prove one pass is never the default.
@@ -447,7 +461,8 @@ class TestResourceDays(unittest.TestCase):
             {k: v for k, v in TIMED.items() if k != R.ALTERNATE_SOURCE})
 
         self.assertEqual(timed_zero.value, untimed.value)
-        self.assertEqual(timed_zero.value, 200)
+        # 360 for the whole of TIMED, less the 10 that alternate_source carries.
+        self.assertEqual(timed_zero.value, 350)
         self.assertIn(R.ALTERNATE_SOURCE, timed_zero.detail["stages_timed"])
         self.assertEqual(timed_zero.detail["days_by_stage"][R.ALTERNATE_SOURCE],
                          0)
@@ -588,7 +603,9 @@ class TestTheTwoHalvesOfRecoveryStaySeparate(unittest.TestCase):
         chain = resource_days("P", "supplier", TIMED)
         self.assertEqual(wait.completeness, NO_RECOVERY_PATH)
         self.assertEqual(chain.completeness, KNOWN)
-        self.assertEqual(chain.value, 210)      # 10+20+30+40+50+60, hand-summed
+        # 10+15+20+30+35+40+50+55+45+60, hand-summed from TIMED. Ten stages
+        # since 2026-09-16; it was 210 over six.
+        self.assertEqual(chain.value, 360)
 
     def test_an_in_house_part_still_reports_a_resourcing_time(self):
         # You cannot place a purchase order on your own factory, but you can

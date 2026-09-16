@@ -2,6 +2,12 @@
 # and the sentence names tooling as the untimed step.
 # SAMPLE-P-05: every step timed AND a cycle count, so the chain is settled and
 # reports both "if it passes first time" and "if it takes two attempts".
-part_number,alternate_source_days,tooling_lead_time_days,engineering_transfer_days,first_article_days,qualification_test_days,ramp_to_rate_days,qualification_cycles
-SAMPLE-P-01,45,,30,20,60,25,
-SAMPLE-P-05,40,120,25,15,50,20,2
+#
+# The four stages added on 2026-09-16 -- commercial agreement, the alternate's
+# own input lead time, customer or regulatory approval, and a production slot --
+# are all things somebody else already knows and nobody was asked for. They are
+# timed on both rows here, because a worked example that left them blank would
+# teach a reader that a blank is normal.
+part_number,alternate_source_days,commercial_agreement_days,tooling_lead_time_days,engineering_transfer_days,supplier_input_lead_time_days,first_article_days,qualification_test_days,customer_approval_days,capacity_slot_days,ramp_to_rate_days,qualification_cycles
+SAMPLE-P-01,45,20,,30,35,20,60,30,15,25,
+SAMPLE-P-05,40,20,120,25,35,15,50,30,15,20,2
