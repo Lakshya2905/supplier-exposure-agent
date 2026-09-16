@@ -22,10 +22,18 @@ motion of its own anywhere in `web/`.
 
 WHAT THIS CATCHES, AND WHAT IT DOES NOT. It reads `web/` source for declarations
 this repository controls. It cannot see what a dependency injects, which is the
-gap that let the original claim stand -- only a rendered page can, and
-`tests/rendered.py` measures the Streamlit surface rather than this one. So a
-future component that animates because Carbon says so will pass here exactly as
-the skeletons once did. That gap is stated rather than implied by a green test.
+gap that let the original claim stand -- only a rendered page can. **That half
+now exists.** `tests/test_rendered_web.py` serves this app to a browser and reads
+every keyframe the page actually runs, on all six routes, in the loading state as
+well as the settled one and with and without `prefers-reduced-motion: reduce`. A
+future component that animates because Carbon says so fails there, against a list
+of keyframes somebody accepted by name, instead of passing here as the skeletons
+once did.
+
+The two are complementary rather than redundant, and neither replaces the other:
+this one names the construct, runs in a second, needs no browser and no build,
+and fails before anything is served; that one sees what the library injects and
+what survives compilation, and is the only one that could have caught the pulse.
 """
 import re
 import unittest

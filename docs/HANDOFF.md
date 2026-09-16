@@ -41,8 +41,11 @@ Three deployable pieces and one library.
 | `web/` | Next.js + IBM Carbon v11. Paints; decides nothing | Vercel |
 | `review_app.py` | the original Streamlit surface, still working | local |
 
-The Streamlit app has not been deleted. It reads the same library directly and
-is the thing `tests/rendered.py` measures; it is not the deliverable any more.
+The Streamlit app has not been deleted. It reads the same library directly; it is
+not the deliverable any more. `tests/rendered.py` measures both: Streamlit, where
+four painted-pixel defects were found, and `web/`, which nothing measured in a
+browser until a pulse nobody had decided on had run on all six of its surfaces
+for six weeks.
 
 **The split is load-bearing.** Every figure the frontend draws is computed in
 Python and asserted there. When you are tempted to compute something in
@@ -433,7 +436,7 @@ same commit.
 The **snapshot** is explicitly not a floor: those counts are produced by the
 system under test, so nothing there blocks a merge.
 
-**883 tests, 4 strict xfails, no skips.** Notable suites:
+**908 tests, 4 strict xfails, no skips.** Notable suites:
 
 | | |
 |---|---|
@@ -445,11 +448,13 @@ system under test, so nothing there blocks a merge.
 | `test_api.py` | the wrap changed no answer |
 | `test_evidence_anatomy.py` | a citation can be *followed* |
 | `test_design_properties.py` | colour claims as measurements, never notation |
-| `test_rendered_page.py` | what the browser actually painted |
+| `test_rendered_page.py` | what the browser actually painted, on Streamlit |
+| `test_rendered_web.py` | the same, on the surface that ships, loading and reduced motion included |
 | `test_eval_integrity.py` | the harness cannot reach the generator |
 
-CI runs two jobs: `gate` (Python, with `RENDER_CHECKS=required`) and `web`
-(typecheck + build). `main` requires `gate` with `enforce_admins` on.
+CI runs two jobs: `gate` (Python, with `RENDER_CHECKS=required`, which also
+builds `web/` because the rendered checks serve it) and `web` (typecheck +
+build). `main` requires `gate` with `enforce_admins` on.
 
 ---
 
@@ -479,6 +484,12 @@ contingent clusters.
 dev overlay, not by anything in CI, and the same is true of the measure decoder,
 the CSV escaping and the change grouping. This is the largest untested surface
 in the project.
+
+**What the frontend does have is measured from Python.** `tests/test_rendered_web.py`
+builds nothing itself: it serves the built app in front of the real API and reads
+`getComputedStyle` off six routes, so `cd web && npm ci && npm run build` is a
+precondition. Without it the checks skip locally and **fail** under
+`RENDER_CHECKS=required`, which is what CI sets.
 
 ---
 
@@ -514,7 +525,10 @@ near neighbour of the cost optimisation agent's job.
    every source-reading test passed. A declaration is not a painted pixel, and
    nothing that reads this repository can tell the two apart. Carbon does this
    too: `body.cds--g10` is a class and beats a bare `body`, which printed a grey
-   slab on every page of the PDF.
+   slab on every page of the PDF. **And a defect that exists only while data is
+   in flight is invisible to any probe that waits for the page to settle**, which
+   is why the rendered checks hold the first request a surface makes open and
+   read the page while it waits. Item 12 is the third form of the same lesson.
 6. **Restart Streamlit after editing `src/`.** Imported modules are cached; stale
    code throws phantom errors that look like real bugs.
 7. **Two implementations of one question will disagree, and the one nobody looks
@@ -543,7 +557,10 @@ near neighbour of the cost optimisation agent's job.
     the page paints something the repository never declared. **The pulse is
     still there and is now allowed** — the owner permitted it the same day, so
     what was wrong was never the animation, it was a document claiming to have
-    checked something it had not.
+    checked something it had not. `tests/test_rendered_web.py` checks it now, and
+    the shape of the check follows from that: not a ban, which is a retired rule,
+    but a list of keyframes somebody accepted by name, plus the reduced-motion
+    guarantee the exception rests on, measured rather than attested.
 13. **A deployed container is not the repository.** `assets/` was committed and
     never copied by the Dockerfile, so the map endpoint 404d on every deployed
     page while every test passed: locally and in CI the whole repository is the

@@ -784,7 +784,7 @@ sections is `xl`; panel padding is `md`.
 
 ## Motion [SHIPPED]
 
-> [PARTIAL] This repository declares no transition, animation or keyframe of its own, asserted by `tests/test_web_motion.py`. **The loading state animates, by the owner's decision on 2026-09-16.** The earlier `[SHIPPED]` claim said a source scan had verified zero animation; it had not, and could not. Both corrections are below.
+> [PARTIAL] This repository declares no transition, animation or keyframe of its own, asserted by `tests/test_web_motion.py` in the source and by `tests/test_rendered_web.py` on the running page. **The loading state animates, by the owner's decision on 2026-09-16.** The earlier `[SHIPPED]` claim said a source scan had verified zero animation; it had not, and could not. Both corrections are below, and the browser now reads every keyframe the page runs — **four `cds--skeleton` on each of the six surfaces while it loads, and none at all under `prefers-reduced-motion: reduce`.**
 
 - **Approach:** none, with one carved-out exception.
 - No entrance animation, no spinner, no pulse. A page that animates while data settles implies the data is moving. It is not; it is a record.
@@ -811,6 +811,23 @@ reader who is sensitive to motion now sees a three-second loop for the length of
 every load — up to a minute of it on a cold start, since the backend sleeps.
 Carbon's own mixin honours `prefers-reduced-motion: reduce`, which is the only
 reason this is a cost rather than an accessibility defect.
+
+**That last sentence is now measured rather than attested.** It was the whole
+foundation of the exception and it had been checked once, by hand, on one page.
+`TestNothingAnimatesForAReaderWhoAskedForLessMotion` opens a second browser
+context asking for reduced motion and reads every element and both
+pseudo-elements on all six surfaces in both states: **4 running animations per
+surface while loading becomes 0, on an identical document** — 174 elements
+against 174, so what changed is the motion and nothing else. It is asserted at
+full strength, no animation rather than fewer, because the claim being relied on
+is that a reader who asks for stillness gets it.
+
+**And the exception is held to its own boundary.** The rendered check does not
+forbid animation — that rule is retired — it asks whether every keyframe running
+is one somebody accepted, by name. `cds--skeleton` is accepted and carries this
+decision as its justification in the test. A second Carbon component that
+animates for its own reasons is exactly what no source scan can see, and it now
+fails a check that says so rather than arriving silently.
 
 **The assertion was removed with the rule, not to go green.** That is the same
 move as the source scan behind the retired nominal-encoding rule. What survives
@@ -849,10 +866,21 @@ owner permitted the two components, so the page still animates while it loads.
 That is now a decision on the record rather than a rule being violated
 undetected, which is the whole of the difference this entry is about.
 
-**The gap that remains, stated rather than implied by a green test.**
-`tests/rendered.py` measures the Streamlit surface, so nothing measures `web/`
-in a browser. Pointing the rendered checks at the Next.js app is what would have
-caught this on the day it shipped.
+**That gap is closed, and this is what closed it.** `tests/rendered.py` now
+serves the built Next.js app in front of the real scoring API, and
+`tests/test_rendered_web.py` reads six routes in four states. Verified by
+regression rather than by argument: reinstating a bare `SkeletonText` under a
+keyframe nothing has accepted fails the check on all six surfaces, in the
+loading state only, naming the element and the 3s infinite loop.
+
+**The loading state had to be measured on purpose, and that is the part worth
+keeping.** A skeleton exists only while data is in flight, so a probe that waits
+for the page to settle finds a clean document and reports one — 164 to 174
+elements of shell and loading copy against 552 to 1441 settled, and every
+animation this section is about lives in the first number. So the first request
+each surface makes is held open and the page is read while it is provably still
+waiting. A route that settles before it is read fails a check of its own, because
+coverage that can quietly evaporate is the thing this whole section is about.
 
 ### Fields had no boundary at all [FIXED]
 
@@ -910,7 +938,7 @@ initial, and file.
 
 ## The Rendered Page Is Measured, Not Only The Source [SHIPPED]
 
-> [SHIPPED] `tests/rendered.py` serves the real app to headless Chromium and reads `getComputedStyle` off it. Required in CI, skipped locally, loud either way.
+> [SHIPPED] `tests/rendered.py` serves **both** apps to headless Chromium and reads `getComputedStyle` off them: `review_app.py`, and the Next.js app in `web/` that actually ships. Required in CI, skipped locally, loud either way.
 
 **Four defects shipped that every source-reading test was happy with, and they
 are one failure rather than four: a declaration is not a painted pixel.**
@@ -933,6 +961,38 @@ What is asserted, each named for the defect it would have caught:
 - **every field boundary clears 3:1** against its own fill and against the surface behind it
 - **no large area is painted a colour nobody declared**
 - **the map draws the whole world**, paints no background of its own, and still carries India's own geometry as a second trace
+
+### The surface that ships was measured by none of it [FIXED]
+
+Everything above measures `review_app.py`, which docs/HANDOFF.md calls "not the
+deliverable any more". **The app a reader opens was measured by nothing in a
+browser**, and the cost is recorded in Motion above: a pulse nobody had decided
+on, running on all six surfaces for six weeks, invisible to every test here
+because the library injected it and the source never mentioned it.
+
+`tests/test_rendered_web.py` serves the built Next.js app in front of the real
+scoring API and measures six routes in four states. What it asserts:
+
+- **every running animation is one the design accepted**, by keyframe name, with the decision that accepted it written beside it — not "nothing animates", which is a rule that no longer exists
+- **nothing animates at all under `prefers-reduced-motion: reduce`**, which is the sentence the skeleton exception rests on
+- **this application declares no motion of its own**, attributed by the RULE that declares it rather than by the element it lands on, and reaching the compiled bundle and inline `style` props, neither of which a `.scss` scan sees
+- **every painted text colour is a value some `--cds-` token holds**, resolved from the live document rather than parsed, which is the same claim `globals.scss` makes about its source
+- **every field draws an edge, and every drawn edge clears 3:1** against the field's own fill and against what is behind it
+
+**Four states, because two of them cannot be reached by waiting.** Loading and
+settled, each with and without a motion preference. The loading readings are
+taken from inside the first request each surface makes, held open while the page
+is read, so "still waiting" is enforced rather than hoped for: holding
+`/api/score` specifically failed about one run in three, because What changed
+waits on `/api/runs` and the Decision log on `/api/decisions`.
+
+**It found a live defect on its first run.** The search field in the Exposure
+table toolbar painted white on a white toolbar with **no border on any side and
+none on any ancestor**: 1.00:1, nothing separating the box from the page. That is
+*Fields had no boundary at all* above, on the surface that ships, two months
+later and in a different component library. Fixed by giving it the same 1px
+`border-strong-01` bottom rule every other field in the application already had —
+**3.32:1** against its own fill and against the toolbar behind it.
 
 **Two of these were restated once already, and the reason is worth keeping.** The
 slab check first asked whether anything large was *light*, which was a defect
@@ -995,7 +1055,10 @@ with numbers:
 - Boundary contrast at 3:1 for anything whose shape must be identifiable.
 - Hue, if ever reintroduced, is not a monotone function of enum declaration order under any rotation.
 - No banned widget appears in source (already enforced).
-- No stylesheet here declares a keyframe, an animation or a transition (`tests/test_web_motion.py`). It does **not** assert that nothing on the page moves, and since 2026-09-16 that would be false: the skeletons pulse, by the owner's decision. **Asserted on source, which is not the same as asserted on the page.** A source scan cannot see what a dependency injects, which is how the Motion rule came to be marked `[SHIPPED]` while six surfaces pulsed undetected. The test says so in its own docstring rather than leaving a green result to imply coverage it does not have.
+- No stylesheet here declares a keyframe, an animation or a transition (`tests/test_web_motion.py`). It does **not** assert that nothing on the page moves, and since 2026-09-16 that would be false: the skeletons pulse, by the owner's decision. **Asserted on source, which is not the same as asserted on the page** — a source scan cannot see what a dependency injects, which is how the Motion rule came to be marked `[SHIPPED]` while six surfaces pulsed undetected. The page half now exists beside it (`tests/test_rendered_web.py`), and the two are complementary rather than redundant: the scan names the construct, needs no browser and no build, and fails in a second; the rendered check sees what the library injects and what survives compilation.
+- Every keyframe running on the shipping surface is one the design accepted by name, read in the loading state as well as the settled one, because what only runs while data is in flight is invisible to a probe that waits for the page to settle.
+- Nothing animates under `prefers-reduced-motion: reduce`, asserted at full strength on all six surfaces, because that is what the skeleton exception rests on.
+- Every painted text colour on the shipping surface is a value some `--cds-` token holds, resolved from the live document rather than parsed.
 - No dimension receives more area than another in any rendered layout.
 
 ## Decisions Log
@@ -1042,3 +1105,7 @@ with numbers:
 | 2026-09-16 | **Skeleton loading states permitted again, by the owner, on the record** | The v2 build prompt asks for `SkeletonText` and `SkeletonPlaceholder` by name; DESIGN.md forbade them. Shown the conflict, the owner chose the build prompt. The objection was overruled rather than refuted: the loading state now animates, and the Motion section can no longer be cited as "nothing moves" |
 | 2026-09-16 | Border radius corrected from 2/3/4px to 0 | The document was the only thing asking for a radius. Measured on the deployed page, all 238 elements checked were `0px`, and the build prompt asks for 0 explicitly. The specification had been wrong since it was written and nothing implemented it |
 | 2026-09-16 | The wait is stated once, not revealed on a timer | "Can take up to a minute" and "if the service has been idle" are both true at the first second of a 3s load and the fortieth of a cold start, so the hedge does what a timer would and no elapsed time has to be measured to keep the sentence honest |
+| 2026-09-16 | **Rendered-page checks pointed at the Next.js app, in four states** | The surface that ships was measured by nothing in a browser, which is how a pulse nobody had decided on ran for six weeks. Two of the four states cannot be reached by waiting: what only animates while data is in flight is gone by the time a page settles, so the first request each surface makes is held open and the page read while it waits |
+| 2026-09-16 | The motion assertion is an accepted-keyframe list, not a ban | "Nothing animates" is a retired rule and a suite asserting it would be enforcing a document that no longer says it. Every keyframe running is checked against names somebody accepted, each carrying the decision that accepted it, so a second animating component arrives as a failure rather than silently |
+| 2026-09-16 | The reduced-motion guarantee measured rather than attested | It is the only reason the skeleton exception is a cost rather than an accessibility defect, and it had been checked once by hand. Four running animations per surface become zero on an identical 174-element document, so what changed is the motion and nothing else |
+| 2026-09-16 | The toolbar search given the boundary every other field has | Found by the new check on its first run: white field on a white toolbar, no border on any side or ancestor, 1.00:1. The same defect as the Streamlit fields, two months later, on the surface that ships and in a different component library |
