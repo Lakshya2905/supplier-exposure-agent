@@ -32,6 +32,25 @@ jobs:
         # eventually only skips.
         run: python -m playwright install --with-deps chromium
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Build the frontend, so the rendered checks have it to measure
+        # THE APP THAT SHIPS IS NOW MEASURED IN A BROWSER TOO, and it cannot be
+        # served without being built. The `web` job below builds it as well and
+        # that duplication is deliberate: that job answers "does the frontend
+        # compile", this step produces an artifact for the gate to open and
+        # read `getComputedStyle` off. A skeleton pulsed on all six surfaces for
+        # weeks because nothing did.
+        #
+        # The built server, never `next dev`: development mode mounts Next's own
+        # overlay, which draws furniture no reader ever sees.
+        run: npm ci && npm run build
+        working-directory: web
+
       - name: Generate the working dataset
         # data/ is gitignored and regenerated from a documented seed. The eval
         # set under evals/ is NOT regenerated here; it is read as committed.
@@ -41,8 +60,9 @@ jobs:
         # Blocks on a failing test, a PASSING xfail (xfail_strict), a manifest
         # mismatch, or a missed floor. Does not block on the snapshot moving.
         env:
-          # Turns a missing browser from a skip into a failure. Locally the
-          # checks skip and the gate prints every skip reason; here they run.
+          # Turns a missing browser, or a frontend nobody built, from a skip
+          # into a failure. Locally either one skips and the gate prints every
+          # skip reason; here both are present and both sets run.
           RENDER_CHECKS: required
         run: python eval_harness.py
 
