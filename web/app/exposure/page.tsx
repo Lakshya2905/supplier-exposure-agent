@@ -131,9 +131,8 @@ export default function Exposure() {
       <section className="sea-section">
         <h2 className="sea-section__heading">Exposure</h2>
         <p className="sea-section__note">
-          One row per part that matched a named pattern. Every figure keeps its
-          own unit and nothing here is combined. The table arrives in part
-          number order, which carries no meaning; sort a column to ask a
+          One row per part that matched a named pattern. The table arrives in
+          part number order, which carries no meaning; sort a column to ask a
           question about that column. Select a part for the finding, the
           workings, and what binds. A part can match several patterns; the
           column shows the most specific one, which contains the broader ones
