@@ -7,6 +7,13 @@
  * try again is whether the tool names the file and the column or says "invalid
  * input". The API answers with the missing file names; this renders them, and
  * never rewrites them into something friendlier that says less.
+ *
+ * IT RENDERS THEM AS OF 2026-10-28, anyway. Until then the catch below could
+ * not fire: `RunProvider` caught every failure itself and resolved, so a
+ * refused extract ran `onDone` and closed this panel, and the refusal surfaced
+ * on the page behind it under "This did not load". Nothing was lost except the
+ * place it was useful. `loadUpload` now rethrows, which is the whole fix; this
+ * file was already written for it.
  */
 import { useState } from 'react';
 import {
