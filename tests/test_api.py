@@ -343,6 +343,48 @@ class TestScopingARun(unittest.TestCase):
                                                   "criticality": ""}).json()
         self.assertFalse(payload["scope"]["is_scoped"])
 
+    def test_an_upload_carries_a_scope_as_a_named_dataset_does(self):
+        """Re-scoring an extract at a narrower scope reads the same bytes.
+
+        THIS IS THE TRANSPORT HALF OF A DEFECT THAT LIVED IN THE FRONTEND. The
+        web app narrowed a scope by re-posting the demo dataset with the
+        reader's filter attached, so somebody who uploaded their extract and
+        asked for one tier was shown a count of zero over data they had never
+        supplied — and a count of zero reads as "nothing in my critical tier is
+        exposed", which is the one sentence this product exists not to say by
+        accident. The endpoint could always do this properly. Pinned here so
+        that the frontend has something true to rely on.
+
+        The digests are the assertion that matters: they say which bytes were
+        scored, and they are the uploaded ones.
+        """
+        files = [("files", (path.name, path.read_bytes(), "text/csv"))
+                 for path in sorted(FROZEN.glob("*.csv"))]
+        response = client.post("/api/score", files=files,
+                               data={"dataset": "an upload",
+                                     "criticality": "A"})
+        self.assertEqual(response.status_code, 200, response.text)
+        payload = response.json()
+        self.assertEqual(payload["run"]["dataset"], "an upload")
+        self.assertEqual(payload["scope"]["included"], ["A"])
+        self.assertEqual(payload["run"]["counts"]["parts_scored"], 0)
+        digests = {entry["name"]: entry["sha256"]
+                   for entry in payload["run"]["files"]}
+        self.assertEqual(digests["bom.csv"],
+                         runs.sha256(FROZEN / "bom.csv"))
+
+    def test_an_upload_scoped_to_every_tier_it_has_scores_all_of_it(self):
+        # The control for the test above: nothing scored is the scope, not the
+        # upload failing to arrive.
+        files = [("files", (path.name, path.read_bytes(), "text/csv"))
+                 for path in sorted(FROZEN.glob("*.csv"))]
+        payload = client.post("/api/score", files=files,
+                              data={"dataset": "an upload",
+                                    "criticality": "unclassified"}).json()
+        self.assertEqual(payload["run"]["counts"]["parts_scored"],
+                         scored_through_the_api()["run"]["counts"]
+                         ["parts_scored"])
+
     def test_scoping_never_reaches_a_score(self):
         # `criticality` decides which parts are presented. No DimensionScore has
         # ever heard of it, and the payload is where that would first show.
