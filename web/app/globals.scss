@@ -363,3 +363,41 @@ html, body {
   margin: 0 0 0 $spacing-05;
   list-style: disc;
 }
+
+// ------------------------------------------- the part number as a control --
+// THE WAY INTO THE TEARSHEET, and until 2026-10-28 the only way in was an
+// `onClick` on the `tr`, which a keyboard cannot reach.
+//
+// UNDERLINED, NOT MERELY COLOURED. The actionability rule in DESIGN.md is a
+// WCAG 1.4.1 rule and it is specific about the remedy: "links and expander
+// summaries an underline, buttons and the outlined chip a border". A ghost
+// button would have been one Carbon import and would have carried its
+// affordance in hue alone, which is the thing that rule forbids. A border on
+// every row of a 21-row table reads as 21 buttons, so this takes the link's
+// cue rather than the button's.
+//
+// It inherits the cell's own type and colour: the part number is still the
+// part number, and nothing about it should read as more important than the
+// part number in the row below.
+.sea-rowlink {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+// THE APP'S FOCUS RING, NOT THE BROWSER'S. Left alone this drew Chrome's
+// `outline: auto`, which is a different indicator from the one every other
+// control on the page carries and is whatever the UA decides rather than
+// something this repository can measure. `--cds-focus` is the token Carbon's
+// own buttons use, so the new control is indicated the same way its
+// neighbours are.
+.sea-rowlink:focus-visible {
+  outline: 2px solid var(--cds-focus);
+  outline-offset: 1px;
+}

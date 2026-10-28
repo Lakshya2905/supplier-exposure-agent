@@ -918,6 +918,99 @@ def read_refused_upload(browser, url):
     return reading
 
 
+KEYBOARD_READING = r"""
+() => {
+  const active = document.activeElement;
+  const sheet = document.querySelector('.c4p--tearsheet.is-visible');
+  return {
+    label: (active && active.getAttribute && active.getAttribute('aria-label'))
+      || '',
+    isRowControl: !!(active && active.classList
+      && active.classList.contains('sea-rowlink')),
+    focusVisible: !!(active && active.matches && active.matches(':focus-visible')),
+    outline: active ? (() => {
+      const style = getComputedStyle(active);
+      return [style.outlineStyle, style.outlineWidth,
+              style.outlineColor].join(' ');
+    })() : '',
+    sheetOpen: !!sheet,
+    sheetTitle: sheet ? (sheet.querySelector('h2, h3') || {}).innerText || '' : '',
+    focusInsideSheet: !!(sheet && active && sheet.contains(active)),
+  };
+}
+"""
+
+
+def read_row_keyboard(browser, url):
+    """Open a part's workings with nothing but the keyboard, and come back.
+
+    WHAT THIS GUARDS. The Exposure row carried a bare `onClick` on the `tr`:
+    no tabIndex, no role, no key handler. Everything the product is proudest
+    of -- the finding, the seven measures in their own units, what binds, the
+    evidence -- sat behind that click and had no other route to it, while the
+    note above the table told every reader to "select a part for the finding,
+    the workings, and what binds". CLAUDE.md requires an executed finding to
+    carry REACHABLE read-only evidence; a tearsheet a keyboard cannot open is
+    not reachable, and that is a correctness claim rather than a nicety.
+
+    COMING BACK IS HALF THE JOURNEY. Closing used to drop focus on `body`,
+    which costs a keyboard reader every tab stop between the top of the
+    document and the row they were in the middle of reading. A route in that
+    has no route back is not access.
+
+    IT CLOSES WITH THE CLOSE BUTTON RATHER THAN ESCAPE, deliberately. Escape
+    was measured as unreliable for the first several seconds after the
+    tearsheet opens -- ignored at one second, honoured at eight -- and it
+    behaves the same way for a mouse that opened it, so it is a property of
+    Carbon's Tearsheet rather than of this row. Asserting it here would be
+    this suite pinning somebody else's race.
+    """
+    page = browser.new_page(viewport={"width": 1440, "height": 1000})
+    page.goto(url + "/exposure", wait_until="domcontentloaded")
+    settle(page)
+    reading = {"controls": page.locator(".sea-rowlink").count()}
+    # REACHED BY TABBING, not by `focus()`. A control that only a script can
+    # focus is exactly the defect this is here about, and the bound makes a
+    # failure a readable number rather than a hang.
+    for stop in range(1, 61):
+        page.keyboard.press("Tab")
+        state = page.evaluate(KEYBOARD_READING)
+        if state["isRowControl"]:
+            reading["tab_stops_to_reach_it"] = stop
+            reading["focused"] = state
+            break
+    else:
+        reading["tab_stops_to_reach_it"] = None
+        reading["focused"] = page.evaluate(KEYBOARD_READING)
+        page.close()
+        return reading
+
+    page.keyboard.press("Enter")
+    page.wait_for_selector(".c4p--tearsheet.is-visible", timeout=30_000)
+    reading["after_enter"] = page.evaluate(KEYBOARD_READING)
+
+    page.keyboard.press("Enter")        # focus sits on the close button
+    page.wait_for_selector(".c4p--tearsheet.is-visible", state="detached",
+                           timeout=30_000)
+    # CAUGHT AND IGNORED ON PURPOSE. Carbon restores focus on a 10ms timer
+    # after the panel detaches, so reading the instant it goes is a race this
+    # loses nearly every time. Waiting for the restore instead would make a
+    # REGRESSION arrive as a timeout -- an error about this file rather than a
+    # finding about the page -- so the wait is bounded, the failure is
+    # swallowed, and the assertion reports whatever actually holds focus.
+    try:
+        page.wait_for_function(
+            "() => { const a = document.activeElement;"
+            "        return !!(a && a.classList"
+            "                  && a.classList.contains('sea-rowlink')); }",
+            timeout=5_000)
+    except Exception:
+        pass
+    reading["after_close"] = page.evaluate(KEYBOARD_READING)
+    page.close()
+    return reading
+
+
 def collect_web():
     """Every surface measured in four states, from one boot.
 
@@ -958,7 +1051,9 @@ def collect_web():
                     readings[path].update(states)
             sorting = read_sorting(browser, url)
             refusal = read_refused_upload(browser, url)
+            keyboard = read_row_keyboard(browser, url)
             browser.close()
-        return {"states": readings, "sorting": sorting, "refusal": refusal}
+        return {"states": readings, "sorting": sorting, "refusal": refusal,
+                "keyboard": keyboard}
     finally:
         stop(*processes)
