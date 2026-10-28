@@ -32,7 +32,7 @@
  * directions, and the count of them is stated under the table. Nothing here
  * decides what an absent value would have been, which is the point.
  */
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   Button, DataTable, Table, TableBody, TableCell, TableContainer, TableHead,
   TableHeader, TableRow, TableToolbar, TableToolbarContent,
@@ -138,6 +138,10 @@ function cell(
 export default function Exposure() {
   const { result, loading, error, reload } = useRun();
   const [open, setOpen] = useState<PartDetail | null>(null);
+  // WHICH CONTROL OPENED THE TEARSHEET, so that closing it puts the reader
+  // back where they were. Carbon does the restoring; it just has to be told
+  // what to restore to, and without it focus lands on `body`.
+  const launcher = useRef<HTMLButtonElement | null>(null);
 
   const rows = useMemo(() => {
     if (!result) return [];
@@ -360,27 +364,74 @@ export default function Exposure() {
                         Record<string, unknown> & { key?: string };
                       const { key: _drop, ...rest } = props;
                       const source = rows.find((entry) => entry.id === row.id);
+                      const show = (
+                        trigger?: HTMLButtonElement | null,
+                      ) => {
+                        launcher.current = trigger ?? null;
+                        return source && setOpen({
+                        row: source.__row,
+                        scores: result.profiles[row.id] ?? {},
+                        binding: result.binding[row.id],
+                        verdict: result.verdicts[row.id] ?? '',
+                        patterns: source.__row.archetypes,
+                        verdictLabel:
+                          result.overview.verdict_labels[
+                            result.verdicts[row.id] ?? ''
+                          ] ?? result.verdicts[row.id] ?? '',
+                          dimensions: result.dimensions,
+                        });
+                      };
                       return (
                         <TableRow
                           key={row.id}
                           {...rest}
                           style={{ cursor: 'pointer' }}
-                          onClick={() => source && setOpen({
-                            row: source.__row,
-                            scores: result.profiles[row.id] ?? {},
-                            binding: result.binding[row.id],
-                            verdict: result.verdicts[row.id] ?? '',
-                            patterns: source.__row.archetypes,
-                            verdictLabel:
-                              result.overview.verdict_labels[
-                                result.verdicts[row.id] ?? ''
-                              ] ?? result.verdicts[row.id] ?? '',
-                            dimensions: result.dimensions,
-                          })}
+                          // A click anywhere on the row still opens it, and
+                          // still hands over the row's own control, so the
+                          // mouse and the keyboard come back to one place.
+                          onClick={(event) => show(
+                            event.currentTarget.querySelector<HTMLButtonElement>(
+                              '.sea-rowlink'))}
                         >
                           {row.cells.map((datum) => (
                             <TableCell key={datum.id}>
-                              {datum.id.endsWith(':runOut')
+                              {/* THE PART NUMBER IS THE CONTROL, and the row's
+                                  click is a convenience on top of it.
+                                  `onClick` on the `tr` was the only way in:
+                                  no tabIndex, no role, no key handler, so
+                                  everything this product is proud of -- the
+                                  sentence, the seven measures, what binds, the
+                                  evidence -- was mouse-only. CLAUDE.md
+                                  requires that every executed finding carry
+                                  REACHABLE read-only evidence, and a tearsheet
+                                  a keyboard cannot open is not reachable.
+
+                                  A BUTTON IN A CELL, NOT A BUTTON-SHAPED ROW.
+                                  `role="button"` on a `tr` would have been
+                                  fewer lines and would have taken the cells
+                                  with it: a row announced as a button stops
+                                  announcing its columns, which trades one
+                                  group of readers for another and calls it a
+                                  fix. The control sits in the first cell, so
+                                  tab order follows reading order, and its
+                                  accessible name says what it opens rather
+                                  than reading out a part number alone. */}
+                              {datum.id.endsWith(':part') ? (
+                                <button
+                                  type="button"
+                                  className="sea-rowlink"
+                                  aria-label={`Show the workings for ${row.id}`}
+                                  onClick={(event) => {
+                                    // The row opens the same tearsheet, so
+                                    // without this the handler runs twice for
+                                    // one click.
+                                    event.stopPropagation();
+                                    show(event.currentTarget);
+                                  }}
+                                >
+                                  {datum.value}
+                                </button>
+                              ) : datum.id.endsWith(':runOut')
                                 ? (
                                   <Tag
                                     type={RUN_OUT[
@@ -444,7 +495,7 @@ export default function Exposure() {
       </section>
 
       <PartTearsheet detail={open} open={open !== null}
-                     onClose={() => setOpen(null)} />
+                     onClose={() => setOpen(null)} launcherRef={launcher} />
     </>
   );
 }

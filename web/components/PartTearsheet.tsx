@@ -154,13 +154,19 @@ function EvidencePanel({ evidence }: { evidence: Evidence }) {
   );
 }
 
-export function PartTearsheet({ detail, open, onClose }: {
+export function PartTearsheet({ detail, open, onClose, launcherRef }: {
   detail: PartDetail | null; open: boolean; onClose: () => void;
+  /** The control that opened this, so closing returns the reader to it.
+   *  Carbon restores focus itself when it is given one; without it focus
+   *  lands on `body`, which costs a keyboard reader twenty tab stops to get
+   *  back to the row they were reading. */
+  launcherRef?: React.RefObject<HTMLButtonElement | null>;
 }) {
   return (
     <Tearsheet
       open={open && detail !== null}
       onClose={onClose}
+      launcherButtonRef={launcherRef}
       title={detail?.row.key ?? ''}
       description={detail?.verdictLabel ?? ''}
       hasCloseIcon

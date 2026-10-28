@@ -58,6 +58,8 @@ class RenderedWeb(unittest.TestCase):
 
     refusal = None
 
+    keyboard = None
+
     @classmethod
     def setUpClass(cls):
         if RenderedWeb.readings is None:
@@ -65,9 +67,11 @@ class RenderedWeb(unittest.TestCase):
             RenderedWeb.readings = measured["states"]
             RenderedWeb.sorting = measured["sorting"]
             RenderedWeb.refusal = measured["refusal"]
+            RenderedWeb.keyboard = measured["keyboard"]
         cls.readings = RenderedWeb.readings
         cls.sorting = RenderedWeb.sorting
         cls.refusal = RenderedWeb.refusal
+        cls.keyboard = RenderedWeb.keyboard
 
     def states(self):
         """Every (route, state, probe) there is, loading included."""
@@ -561,3 +565,70 @@ class TestARefusedUploadStaysInThePanelThatSentIt(RenderedWeb):
 
     def test_the_files_are_still_chosen_so_the_set_can_be_corrected(self):
         self.assertTrue(self.refusal["stillHoldsTheFiles"])
+
+
+
+class TestThePartWorkingsCanBeOpenedWithoutAMouse(RenderedWeb):
+    """The evidence route, walked with the keyboard alone.
+
+    The Exposure table's own note tells the reader to "select a part for the
+    finding, the workings, and what binds". For a keyboard or a screen reader
+    that sentence was false: the row carried a bare `onClick` on the `tr`, with
+    no tabIndex, no role and no key handler, and `PartTearsheet` had no other
+    route to it. Everything this product is proudest of was behind a mouse.
+
+    CLAUDE.md makes that a correctness claim rather than a nicety -- "every
+    executed finding carries reachable, read-only evidence" -- and a panel a
+    keyboard cannot open is not reachable.
+
+    THE FIX IS A CONTROL IN A CELL, NOT A BUTTON-SHAPED ROW, and that is what
+    the first two assertions pin. `role="button"` on a `tr` would have been
+    fewer lines and would have taken the cells with it: a row announced as a
+    button stops announcing its columns, which trades one group of readers for
+    another and calls it a fix.
+    """
+
+    def test_the_table_offered_a_control_on_every_row(self):
+        # Guard first: a page that rendered no rows would pass what follows.
+        self.assertGreater(self.keyboard["controls"], 0)
+
+    def test_the_control_is_reached_by_tabbing(self):
+        self.assertIsNotNone(
+            self.keyboard["tab_stops_to_reach_it"],
+            "sixty tab presses never landed on a row control; the only way "
+            "into the workings is a mouse again")
+
+    def test_the_control_says_what_it_opens(self):
+        # A part number alone would be read out as a part number, which names
+        # the row rather than the action.
+        self.assertIn("Show the workings for", self.keyboard["focused"]["label"])
+
+    def test_it_carries_the_focus_ring_the_rest_of_the_page_carries(self):
+        focused = self.keyboard["focused"]
+        self.assertTrue(focused["focusVisible"])
+        # Carbon's own token, not the browser's `outline: auto`, which is
+        # whatever the user agent decides and nothing here can measure.
+        style, width, colour = focused["outline"].split(" ", 2)
+        self.assertEqual(style, "solid")
+        self.assertEqual(width, "2px")
+        # `--cds-focus` in Gray 10. Written as channels because `parse` reads
+        # what the browser reports, which is `rgb()` and never a hex string.
+        self.assertEqual(parse(colour), (15, 98, 254))
+
+    def test_enter_opens_the_workings_for_that_part(self):
+        after = self.keyboard["after_enter"]
+        self.assertTrue(after["sheetOpen"])
+        # The part the control named, not merely some part.
+        self.assertIn(after["sheetTitle"], self.keyboard["focused"]["label"])
+
+    def test_focus_moves_into_the_panel_that_opened(self):
+        self.assertTrue(self.keyboard["after_enter"]["focusInsideSheet"])
+
+    def test_closing_returns_the_reader_to_the_row_they_came_from(self):
+        after = self.keyboard["after_close"]
+        self.assertFalse(after["sheetOpen"])
+        self.assertTrue(
+            after["isRowControl"],
+            "closing dropped focus outside the table, which costs a keyboard "
+            "reader every tab stop back to the row they were reading")
+        self.assertEqual(after["label"], self.keyboard["focused"]["label"])
