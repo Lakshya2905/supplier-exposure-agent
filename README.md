@@ -984,7 +984,9 @@ pill, and the rule here is square corners everywhere. `globals.scss` sets that
 radius to 0 and touches nothing else about the component, so the accessible
 markup, contrast and focus behaviour Carbon tested are all intact.
 
-**One chart is not Carbon, and the reason is geometry.** The region map is drawn
+**The one chart in the interface is not Carbon, and the reason is geometry.**
+The region map is the only chart on any surface — the bar charts and histograms
+came out on 2026-10-28, and `@carbon/charts-react` with them. It is drawn
 with the same library the tested Streamlit implementation uses, because its
 shapes carry a decision this repository has already made and asserted: India is
 drawn **including its full claimed territory**, from a boundary vendored under

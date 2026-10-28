@@ -24,7 +24,8 @@
 import { Button } from '@carbon/react';
 import { Printer } from '@carbon/react/icons';
 import { exposedRows } from '@/lib/exposed';
-import { DIMENSION_LABEL, DIMENSION_UNIT, labelFor } from '@/lib/labels';
+import { labelFor } from '@/lib/labels';
+import { measureRows } from '@/lib/measures';
 import { STANDING_COPY } from './Measures';
 import type { ScoreResult } from '@/lib/types';
 
@@ -86,19 +87,18 @@ export function RunSummary({ result }: { result: ScoreResult }) {
           <tr><th>Measure</th><th>Unit</th><th>With a figure</th><th>Not established</th></tr>
         </thead>
         <tbody>
-          {overview.dimension_series.map((series) => {
-            const assessed = series.values.length
-              + Object.values(series.categories).reduce((a, b) => a + b, 0)
-              + series.unbounded;
-            return (
-              <tr key={series.dimension}>
-                <td>{DIMENSION_LABEL[series.dimension] ?? series.dimension}</td>
-                <td>{DIMENSION_UNIT[series.dimension] ?? series.unit}</td>
-                <td>{assessed.toLocaleString()}</td>
-                <td>{series.unknown.toLocaleString()}</td>
-              </tr>
-            );
-          })}
+          {/* THE SAME ROWS THE SCREEN DRAWS. The arithmetic lived here and
+              again in the Overview's chart captions, which is two derivations
+              of one count; `lib/exposed.ts` carries the note about what
+              happened last time this repository did that. */}
+          {measureRows(overview.dimension_series).map((row) => (
+            <tr key={row.dimension}>
+              <td>{row.label}</td>
+              <td>{row.unit}</td>
+              <td>{row.assessed.toLocaleString()}</td>
+              <td>{row.unknown.toLocaleString()}</td>
+            </tr>
+          ))}
         </tbody>
       </table>
       <p className="sea-print-standing">{STANDING_COPY}</p>

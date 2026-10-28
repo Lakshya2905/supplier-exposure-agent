@@ -373,9 +373,15 @@ radius everywhere, IBM Plex Sans, one accent (`#0f62fe`), surfaces `#ffffff` and
 at a 16px radius, which is a pill; `globals.scss` squares it and touches nothing
 else about the component.
 
-**One chart is not Carbon.** The region map uses the same library the tested
+**The region map is the only chart.** It uses the same library the tested
 Streamlit implementation uses, because its geometry carries a decision already
-made and asserted — see §9.3. Everything else is `@carbon/charts-react`.
+made and asserted — see §9.3.
+
+This used to read "everything else is `@carbon/charts-react`". On 2026-10-28 the
+bar charts and histograms were removed and the dependency with them: the
+Overview's seven histograms became a table, and the What-to-check bar chart was
+drawing the list immediately beneath it. Each route that carried the chart
+library dropped about 250 kB of first-load JavaScript.
 
 **Three kinds of unknown, three treatments**: fetchable is a warm-grey tag; a
 question that does not attach is cool-grey; a threshold nobody configured is an

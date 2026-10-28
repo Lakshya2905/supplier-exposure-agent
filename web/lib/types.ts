@@ -138,7 +138,6 @@ export interface ScoreResult {
     };
     coverage_counts: Array<[string, number]>;
     group_sizes: Array<[string, number]>;
-    field_sizes: Array<[string, number]>;
     cluster_sizes: Array<[string, number, string]>;
     region_labels: Record<string, string>;
     /** Verdict codes in plain words, from the renderer's own map. */

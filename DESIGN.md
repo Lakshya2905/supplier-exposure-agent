@@ -621,6 +621,8 @@ time a plausible testid has been wrong in this file, after
 ## The Dashboard Surface [SHIPPED]
 
 > [SHIPPED] Added 2026-08-06, when the owner retired the nominal-only encoding rule. Four figure tiles, a region choropleth, five small multiples and a supplier-to-part incidence grid.
+>
+> **[AMENDED 2026-10-28]** The small multiples are gone and the incidence grid never reached the Next.js surface. What ships is four figure tiles, a region choropleth, and a table of the seven measures. See **The charts came out** below.
 
 **A fourth surface, not a merger of the other three.** Each of those has one row
 entity and answers one question. This one has no row entity and answers none of
@@ -637,12 +639,15 @@ What it draws, and the one line each respects:
 |---|---|---|
 | Figure tiles | number | Every tile carries its denominator. A count with no denominator invites reading 21 as large or small when neither is knowable. No `delta`: there is no previous run, and an arrow pointing at a number that does not exist is worse than no arrow |
 | Region choropleth | sequential fill | The data has four regions and no coordinates. Countries are a **drawing convention**, and the surface says so above the map, because a map is the most believable thing on a page. India is drawn from vendored geometry; see below. See also the defects below |
-| Five small multiples | length | **Identical geometry, five separate axes.** Retiring the encoding rule allowed the charts; it did not make days and finished-good units the same quantity. Rows are padded to three columns so a row of two does not draw wider boxes |
+| ~~Five small multiples~~ | ~~length~~ | **Removed 2026-10-28.** The reasoning stands as history: identical geometry, five separate axes, and retiring the encoding rule did not make days and finished-good units the same quantity. What replaced them is a table of the same measures in the same fixed order, which carries the per-measure counts the captions carried and cannot be sorted into a ranking |
 | Incidence grid | presence | Binary. The shade carries nothing |
 
-**Absence keeps its own count in every series.** A histogram built by filtering
-out the unknowns is a picture of the answerable parts presented as a picture of
-the parts, so each chart states how many were not established beneath it.
+**Absence keeps its own count.** A histogram built by filtering out the unknowns
+is a picture of the answerable parts presented as a picture of the parts, so
+each chart stated how many were not established beneath it. Since 2026-10-28
+that count is a column — *Parts not established* — rather than a caption, which
+is the same commitment in a form a reader can compare across measures. Two rows
+now read `0` and `296`, and nobody had to read seven captions to find them.
 
 **The two reasons a part is missing from the incidence grid are not one fact.**
 A part can be absent because the grid is capped, or because it has no supplier
@@ -725,7 +730,15 @@ disappeared from the table as well. It now iterates the union and the table says
 found by reading `getComputedStyle` and the plotly layout off the running page —
 the same method that found the link colour and the two unpainted ramp steps.
 
-### Charts on the three decision surfaces [SHIPPED]
+### Charts on the three decision surfaces [STREAMLIT ONLY, as of 2026-10-28]
+
+> This section describes `review_app.py`. Only one of the five charts below ever
+> reached the Next.js surface — *parts per field* — and it came out on
+> 2026-10-28 along with the Overview's small multiples. The reasoning is kept
+> because it is still the reasoning: the orderings are the part that regresses
+> silently, and the tests that assert them still run. See **The charts came
+> out** below for why a surface that no longer draws them is not a reversal of
+> this argument.
 
 Once charts were permitted, the question stopped being *whether* and became
 *where*. Each one below answers a question the page was already asking; nothing
@@ -758,6 +771,48 @@ exactly the relation the analysis says they are not in.
 of the five dimensions. That is the one chart the retired rule and the surviving
 one agree about: it puts five units on one axis, which is the composite drawn
 rather than computed, and `src/scoring.py` still refuses to compute it.
+
+### The charts came out [SHIPPED 2026-10-28]
+
+> [SHIPPED] The Next.js surface draws one chart, the region map. The bar charts
+> and histograms were removed and `@carbon/charts-react` went with them.
+
+**This is not a reversal of the 2026-08-06 retirement.** Charts are still
+permitted, red/amber/green is still permitted, and nothing above is withdrawn.
+These two were measured against the test the build prompt set — *cut anything
+that does not change a decision* — and failed it in two different ways.
+
+**The What-to-check bar chart drew the list underneath it.** Same fields, same
+counts, same order, one above the other. Measured on the demo set it was two
+bars reading 26 and 9, sitting directly on top of a list reading 26 and 9. It
+was a second rendering of one ordering in the one place this product calls
+ranking legitimate, which is the duplication `lib/exposed.ts` carries a note
+about.
+
+**The Overview's seven histograms were read for their captions.** Each drew a
+distribution and then printed, underneath, how many parts the measure had a
+figure for. The distribution answered no question the page asked; the caption
+did. So the caption became a column and the drawing went.
+
+**What that bought, beyond the bytes.** Seven captions are seven separate reads.
+One table is a single comparison, and the first thing it shows on the demo set
+is two rows reading `0` and `296` — the resourcing chain and committed orders,
+unknown for every part. That finding was always on the page and nobody could see
+it, because it was spread across seven captions in seven boxes.
+
+**What it cost, stated plainly.** The shape of each distribution is gone. A
+reader can no longer see that lead times cluster low with a long tail, only that
+188 parts have one. If that shape is ever load-bearing, the chart comes back for
+that measure alone, in its own units, and this section says why.
+
+**The table is deliberately not sortable.** Ordering the measures by "not
+established" would rank them against each other, which is what the anti-ranking
+contract above forbids in the same words: a reviewer who sorts by dimension
+three has declared dimension three the ranking. It is a plain table, never a
+`DataTable`, so there is no control to press.
+
+**Each route that carried the chart library dropped about 250 kB** of first-load
+JavaScript: `/` went 435 kB → 183 kB and `/check` 430 kB → 178 kB.
 
 ## Spacing [TARGET]
 
@@ -1154,6 +1209,8 @@ with numbers:
 | 2026-09-16 | **Suppliers added as a seventh surface, with two counts and no score** | Every tool in this market makes the supplier the primary object; this one makes the part, and that left a buyer reading three hundred rows. What those tools ship with the supplier row is a score. Both columns here are counts of parts, so they share a unit and nothing is blended |
 | 2026-09-16 | The supplier surface says what it is NOT claiming, on screen | A table of parts grouped under one supplier looks like an assertion that they share a fate whether or not it makes one. The correlation judgment stays in Review at a permanent `recommends`, and the page says so; a module comment would not have covered it, because nobody reading the screen reads the module |
 | 2026-09-16 | "Why it is exposed" added to the Exposure table, with **no hue** | The verdict is the reason and it was reachable only inside the tearsheet. It is a NOMINAL set of four with no order, which is exactly what this document retired hue from: a reader starts learning a mapping, and hue position tracks enum declaration order. The run-out column beside it is red and green because that is one ordered axis, which the 2026-08-06 retirement permits |
+| 2026-10-28 | **The bar charts and histograms removed; the map is the only chart** | Measured against the build prompt's own test — cut anything that does not change a decision. The What-to-check chart drew the list beneath it, field for field and count for count. The Overview's seven histograms were read for the caption under each, so the caption became a column. `@carbon/charts-react` went with them, and two routes dropped about 250 kB each |
+| 2026-10-28 | The measures table is not sortable, and that is the point | Ordering seven measures by how many parts are unestablished ranks them against each other, which the anti-ranking contract forbids in the same words. A plain table rather than a `DataTable`, so no control exists to press |
 | 2026-09-16 | Pattern moved after the measures | It sat beside "Why it is exposed" and two columns of prose crowded each other, reading as one claim restated twice |
 | 2026-09-16 | The wait is stated once, not revealed on a timer | "Can take up to a minute" and "if the service has been idle" are both true at the first second of a 3s load and the fortieth of a cold start, so the hedge does what a timer would and no elapsed time has to be measured to keep the sentence honest |
 | 2026-09-16 | **Rendered-page checks pointed at the Next.js app, in four states** | The surface that ships was measured by nothing in a browser, which is how a pulse nobody had decided on ran for six weeks. Two of the four states cannot be reached by waiting: what only animates while data is in flight is gone by the time a page settles, so the first request each surface makes is held open and the page read while it waits |
