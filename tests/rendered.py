@@ -819,11 +819,111 @@ def read_sorting(browser, url):
     return readings
 
 
+# A set of files that is deliberately not a run: four of the six the contract
+# requires are missing. Read from the frozen inputs, which are committed and
+# never regenerated, so what this drives is the same bytes every other suite
+# reads.
+FROZEN_INPUTS = ROOT / "evals" / "inputs"
+INCOMPLETE = ("part_master.csv", "demand_plan.csv")
+
+RUN_STRIP = r"""
+() => {
+  const strip = {};
+  document.querySelectorAll('.sea-runbar__item').forEach((item) => {
+    strip[item.querySelector('.sea-runbar__label').innerText.trim()] =
+      item.querySelector('.sea-runbar__value').innerText.trim();
+  });
+  return strip;
+}
+"""
+
+REFUSAL_READING = r"""
+() => {
+  const panel = [...document.querySelectorAll('.cds--modal')]
+    .find(m => m.innerText.includes('Score your own extract'));
+  const strip = {};
+  document.querySelectorAll('.sea-runbar__item').forEach((item) => {
+    strip[item.querySelector('.sea-runbar__label').innerText.trim()] =
+      item.querySelector('.sea-runbar__value').innerText.trim();
+  });
+  return {
+    panelOpen: !!panel && panel.classList.contains('is-visible'),
+    notices: [...document.querySelectorAll('.cds--inline-notification')]
+      .map(n => ({
+        inThePanel: !!(panel && panel.contains(n)),
+        title: (n.querySelector('.cds--inline-notification__title')
+                || {}).innerText || '',
+        text: n.innerText.replace(/\s+/g, ' ').trim(),
+      })),
+    after: strip,
+    // The chosen files are still chosen, so the reader can fix the set in
+    // place rather than start the whole thing again.
+    stillHoldsTheFiles: [...document.querySelectorAll('button')]
+      .some(b => /^Score \d+ file/.test(b.textContent.trim())),
+  };
+}
+"""
+
+
+def read_refused_upload(browser, url):
+    """Upload something the contract refuses, and read WHERE the refusal went.
+
+    WHY THIS IS A BROWSER CHECK AND COULD NOT BE ANYTHING ELSE. The defect it
+    guards was a `catch` that could not fire. `UploadPanel` has always carried
+    its own refusal notification, and its doc comment calls that notification
+    the feature: "what decides whether they try again is whether the tool names
+    the file and the column". But `RunProvider` caught every failure itself and
+    RESOLVED, so the awaited call came back looking like success, `onDone` ran,
+    and the panel closed over a 422. The refusal surfaced on the page behind it
+    under "This did not load", which is the sentence for a run that failed to
+    load rather than for an extract that was refused.
+
+    Every source read of either file agrees with itself. `UploadPanel` has a
+    catch and a notification; `RunProvider` has a catch and a setter. Only the
+    two of them together are wrong, and only a browser puts them together.
+
+    The wait has to hold in BOTH worlds or this check cannot fail honestly: if
+    the panel closes, a wait for something inside the panel would time out and
+    report an error rather than the defect. So it waits for the submit button
+    to leave its "Scoring" state, which happens either way, and reads after.
+    """
+    page = browser.new_page(viewport={"width": 1440, "height": 1000})
+    statuses = []
+
+    def watch(response):
+        if "/api/score" in response.url:
+            statuses.append(response.status)
+
+    page.on("response", watch)
+    page.goto(url, wait_until="domcontentloaded")
+    settle(page)
+    before = page.evaluate(RUN_STRIP)
+    page.click('button:has-text("Data and coverage")')
+    page.fill("#dataset-name", "an extract with files missing")
+    page.set_input_files("input[type=file]",
+                         [str(FROZEN_INPUTS / name) for name in INCOMPLETE])
+    # The backslash is DOUBLED on purpose: Playwright's selector parser takes
+    # one level of escaping off the quoted string before the regex engine sees
+    # it, so a single `\d` arrives as a literal `d` and matches nothing. It
+    # fails as a timeout waiting for a button that is sitting right there.
+    page.click(r'button:text-matches("^Score \\d+ file")')
+    page.wait_for_function(
+        """() => ![...document.querySelectorAll('button')]
+                   .some(b => b.textContent.trim() === 'Scoring')""",
+        timeout=60_000)
+    reading = page.evaluate(REFUSAL_READING)
+    reading["before"] = before
+    reading["statuses"] = statuses
+    page.close()
+    return reading
+
+
 def collect_web():
     """Every surface measured in four states, from one boot.
 
-    Returns `{"states": {route: {state: probe}}, "sorting": {column: ...}}`,
-    the first over `STATES` and the second from `read_sorting`.
+    Returns `{"states": {route: {state: probe}}, "sorting": {column: ...},
+    "refusal": {...}}` -- the first over `STATES`, the second from
+    `read_sorting`, the third from `read_refused_upload`.
 
     THE LOADING READING IS TAKEN FROM INSIDE A REQUEST. Playwright holds it open
     for as long as the handler runs, so the page is measured at a moment it is
@@ -857,7 +957,8 @@ def collect_web():
                                                   reduced).items():
                     readings[path].update(states)
             sorting = read_sorting(browser, url)
+            refusal = read_refused_upload(browser, url)
             browser.close()
-        return {"states": readings, "sorting": sorting}
+        return {"states": readings, "sorting": sorting, "refusal": refusal}
     finally:
         stop(*processes)
