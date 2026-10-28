@@ -82,53 +82,77 @@ export function RunProvider({ children }: { children: ReactNode }) {
     try { window.localStorage.setItem(REVIEWER_KEY, name); } catch { /* ditto */ }
   }, []);
 
+  /**
+   * Score something and adopt it as the run on screen.
+   *
+   * THIS ONE THROWS, AND THAT IS THE DECISION. Where a failure belongs is not
+   * one question but two, and they have different answers: a re-score nobody
+   * is standing in front of belongs on the page beside the run it failed to
+   * replace, while a refused extract belongs in the panel the reader is
+   * working in, next to the files they are about to correct. Catching here
+   * answered both with the first, which made the second unreachable —
+   * `UploadPanel`'s refusal notification had never rendered once, and its
+   * modal closed on a 422 as though the upload had worked.
+   *
+   * So the swallow moved out to `refresh`, and the one caller who is waiting
+   * for an answer gets one.
+   */
   const score = useCallback(async (next: Source, labels: string[]) => {
     setLoading(true);
     setError(null);
     try {
-      setResult(next.kind === 'dataset'
+      const scored = next.kind === 'dataset'
         ? await scoreDataset(next.dataset, labels)
-        : await scoreUpload(next.files, next.name, labels));
-      // RECORDED ONLY ON SUCCESS, because this describes the run on screen and
-      // a failed re-score leaves the previous one there. A refused extract
-      // must not become the thing the next Re-score retries.
+        : await scoreUpload(next.files, next.name, labels);
+      // ALL THREE DESCRIBE THE RUN ON SCREEN, so all three move together and
+      // only once it is on screen. A refused extract must not become what the
+      // next Re-score retries, and must not leave the scope control reporting
+      // a scope this run was never scored at.
+      setResult(scored);
       setSource(next);
-    } catch (failure) {
-      // The result is NOT cleared. A failed re-score leaves the previous run on
-      // screen with the failure stated above it, because blanking the page
-      // throws away work the reader was in the middle of reading.
-      setError(failure);
+      setCriticalityState(labels);
     } finally {
       setLoading(false);
     }
   }, []);
 
+  /**
+   * A re-score with nobody waiting on it: the page carries the failure.
+   *
+   * The result is NOT cleared. A failed re-score leaves the previous run on
+   * screen with the failure stated above it, because blanking the page throws
+   * away work the reader was in the middle of reading.
+   */
+  const refresh = useCallback(
+    (next: Source, labels: string[]) => score(next, labels).catch(setError),
+    [score]);
+
   const loadDataset = useCallback(
-    (dataset: string) => score({ kind: 'dataset', dataset }, criticality),
-    [score, criticality]);
+    (dataset: string) => refresh({ kind: 'dataset', dataset }, criticality),
+    [refresh, criticality]);
 
   // AN UPLOAD ARRIVES UNSCOPED. Criticality tiers belong to the part master
   // that declares them, so carrying the last dataset's tiers over would score
   // somebody's extract against labels it may not contain, and a scope that
   // matches nothing looks exactly like a clean bill of health.
-  const loadUpload = useCallback((files: File[], name: string) => {
-    setCriticalityState([]);
-    return score({ kind: 'upload', files, name }, []);
-  }, [score]);
+  //
+  // NOT `refresh`: this is the path with somebody waiting on the other end.
+  const loadUpload = useCallback(
+    (files: File[], name: string) => score({ kind: 'upload', files, name }, []),
+    [score]);
 
-  const reload = useCallback(() => { void score(source, criticality); },
-                             [score, source, criticality]);
+  const reload = useCallback(() => { void refresh(source, criticality); },
+                             [refresh, source, criticality]);
 
   const setCriticality = useCallback((labels: string[]) => {
-    setCriticalityState(labels);
-    void score(source, labels);
-  }, [score, source]);
+    void refresh(source, labels);
+  }, [refresh, source]);
 
-  // ONCE, ON MOUNT, and `score` is stable so it stays once. It used to depend
-  // on `loadDataset`, which changes identity with the scope, so one trip
-  // through the scope picker scored the dataset twice: the explicit re-score
-  // and then this effect, firing again on the new identity.
-  useEffect(() => { void score(DEFAULT_SOURCE, []); }, [score]);
+  // ONCE, ON MOUNT, and `refresh` is stable so it stays once. It used to
+  // depend on `loadDataset`, which changes identity with the scope, so one
+  // trip through the scope picker scored the dataset twice: the explicit
+  // re-score and then this effect, firing again on the new identity.
+  useEffect(() => { void refresh(DEFAULT_SOURCE, []); }, [refresh]);
 
   const value = useMemo<RunState>(() => ({
     result, loading, error, reload, loadDataset, loadUpload,

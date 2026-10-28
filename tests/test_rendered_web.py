@@ -56,14 +56,18 @@ class RenderedWeb(unittest.TestCase):
 
     sorting = None
 
+    refusal = None
+
     @classmethod
     def setUpClass(cls):
         if RenderedWeb.readings is None:
             measured = rendered.collect_web()
             RenderedWeb.readings = measured["states"]
             RenderedWeb.sorting = measured["sorting"]
+            RenderedWeb.refusal = measured["refusal"]
         cls.readings = RenderedWeb.readings
         cls.sorting = RenderedWeb.sorting
+        cls.refusal = RenderedWeb.refusal
 
     def states(self):
         """Every (route, state, probe) there is, loading included."""
@@ -500,3 +504,60 @@ class TestTheTableRanksTheFigureAndNeverRanksAbsence(RenderedWeb):
 
 if __name__ == "__main__":  # keep last: classes below an entrypoint never run
     unittest.main()
+
+
+class TestARefusedUploadStaysInThePanelThatSentIt(RenderedWeb):
+    """Where a refusal lands, which is not the same question as what it says.
+
+    `UploadPanel`'s doc comment makes its notification the point of the file:
+    an enterprise running this on their own extract "will get it wrong the
+    first time, and what decides whether they try again is whether the tool
+    names the file and the column". That notification had never rendered.
+    `RunProvider` caught every failure and resolved, so the awaited upload came
+    back indistinguishable from a success: the panel ran `onDone`, closed over
+    a 422, and the refusal appeared on the page behind it titled "This did not
+    load" -- the sentence for a run that failed to refresh, over a run that had
+    not been asked to.
+
+    Nothing lost its words. The words moved somewhere they could not be acted
+    on, and the control the reader needed to act on them closed.
+
+    THE SHAPE OF THE DEFECT IS WHY IT IS MEASURED HERE. Each file read on its
+    own is correct and agrees with itself. Only the pair is wrong, and the only
+    place the pair exists is a running browser.
+    """
+
+    def test_the_upload_was_attempted_and_was_actually_refused(self):
+        # The first guard, in the spirit of the class above: a check that drove
+        # nothing would pass every assertion under it.
+        self.assertIn(422, self.refusal["statuses"],
+                      f"no refusal was provoked; the API answered "
+                      f"{self.refusal['statuses']}")
+        self.assertEqual(self.refusal["statuses"][-1], 422)
+
+    def test_the_panel_the_reader_is_standing_in_stays_open(self):
+        self.assertTrue(self.refusal["panelOpen"],
+                        "the upload panel closed on a refused extract, so the "
+                        "reader was returned to the page with their files "
+                        "gone")
+
+    def test_the_refusal_is_in_that_panel_and_names_the_missing_file(self):
+        inside = [n for n in self.refusal["notices"] if n["inThePanel"]]
+        self.assertEqual(len(inside), 1, self.refusal["notices"])
+        self.assertEqual(inside[0]["title"], "That extract was not scored")
+        # The whole claim of the panel: the file is named, not "invalid input".
+        self.assertIn("bom.csv", inside[0]["text"])
+        self.assertIn("required file is missing", inside[0]["text"])
+
+    def test_nothing_is_said_on_the_page_behind_it(self):
+        # A refused extract is not a failed run. The page is showing a run that
+        # is fine and was never asked to change, so "This did not load" over it
+        # would be false about the thing it sits on.
+        outside = [n for n in self.refusal["notices"] if not n["inThePanel"]]
+        self.assertEqual(outside, [])
+
+    def test_the_run_on_screen_did_not_move(self):
+        self.assertEqual(self.refusal["after"], self.refusal["before"])
+
+    def test_the_files_are_still_chosen_so_the_set_can_be_corrected(self):
+        self.assertTrue(self.refusal["stillHoldsTheFiles"])
