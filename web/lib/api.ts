@@ -96,16 +96,26 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+/**
+ * A SET OF LABELS, never a cut-off. Omitted entirely when nothing was chosen,
+ * because an empty parameter is somebody who left the box alone and scoring
+ * nothing at all is never what they meant.
+ *
+ * BOTH WAYS OF SCORING TAKE IT, which is the point of pulling it out here. A
+ * scope that only a named dataset could carry is a scope an uploaded extract
+ * loses, and the way it loses it is by being replaced with a dataset that can.
+ */
+function appendCriticality(body: FormData, criticality?: string[]) {
+  if (criticality && criticality.length) {
+    body.append('criticality', criticality.join(','));
+  }
+}
+
 export function scoreDataset(dataset: string,
                              criticality?: string[]): Promise<ScoreResult> {
   const body = new FormData();
   body.append('dataset', dataset);
-  // A SET OF LABELS, never a cut-off. Omitted entirely when nothing was chosen,
-  // because an empty parameter is somebody who left the box alone and scoring
-  // nothing at all is never what they meant.
-  if (criticality && criticality.length) {
-    body.append('criticality', criticality.join(','));
-  }
+  appendCriticality(body, criticality);
   return request<ScoreResult>('/api/score', { method: 'POST', body });
 }
 
@@ -121,10 +131,12 @@ export function fetchRuns(): Promise<{ runs: Array<{
   return request('/api/runs');
 }
 
-export function scoreUpload(files: File[], name: string): Promise<ScoreResult> {
+export function scoreUpload(files: File[], name: string,
+                            criticality?: string[]): Promise<ScoreResult> {
   const body = new FormData();
   files.forEach((file) => body.append('files', file, file.name));
   body.append('dataset', name);
+  appendCriticality(body, criticality);
   return request<ScoreResult>('/api/score', { method: 'POST', body });
 }
 

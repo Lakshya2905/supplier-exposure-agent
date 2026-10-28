@@ -37,7 +37,13 @@ export function ScopePicker() {
 
   return (
     <>
-      <Button kind="ghost" size="sm" onClick={() => setOpen(true)}>
+      {/* THE BOXES ARE SET FROM THE RUN EVERY TIME THIS OPENS, not once when
+          the component mounts. The scope can now change without this control:
+          an upload arrives unscoped, because another extract's tiers are not
+          this one's. A modal still showing the previous dataset's ticks would
+          re-apply them on submit, over data that may not carry them. */}
+      <Button kind="ghost" size="sm"
+              onClick={() => { setChosen(criticality); setOpen(true); }}>
         {criticality.length ? `Scope: ${criticality.join(', ')}` : 'Scope'}
       </Button>
       <Modal
