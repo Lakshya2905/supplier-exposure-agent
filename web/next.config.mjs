@@ -11,7 +11,6 @@ const nextConfig = {
                           'legacy-js-api', 'slash-div', 'color-functions'],
     quietDeps: true,
   },
-  transpilePackages: ['@carbon/charts', '@carbon/charts-react'],
 };
 
 export default nextConfig;

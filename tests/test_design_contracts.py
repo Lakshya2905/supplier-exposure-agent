@@ -229,6 +229,20 @@ if __name__ == "__main__":  # keep last: classes below an entrypoint never run
 
 
 class TestTheChartsOnTheDecisionSurfaces(unittest.TestCase):
+    """STREAMLIT ONLY, as of 2026-10-28.
+
+    These assert the ORDERINGS of the aggregates in `src/interface/dashboard.py`,
+    and every one of them still runs, because `review_app.py` still draws the
+    charts and still calls every helper below. What changed is the Next.js
+    surface, which now draws one chart: the region map.
+
+    So the class name names a thing that is true of one of the two surfaces.
+    The tests are not stale -- a wrongly sorted aggregate is still a ranking
+    asserted by accident, and `field_sizes` is still the one ranking this
+    product calls legitimate. The reasoning in each docstring is about where
+    those orderings get drawn, and for the shipping frontend that is now a
+    table rather than a bar chart.
+    """
     """Charts became permissible on 2026-08-06. Their ORDERINGS did not become
     arbitrary, and the orderings are the part that would regress silently: a
     bar chart sorted the wrong way asserts a ranking in the one place the

@@ -52,13 +52,12 @@ export function Loading({ label }: { label: string }) {
         needs clicking.
       </p>
       {/* The shape of what is coming, so the layout does not jump when it
-          arrives. Three, because every surface that loads draws at least three
-          charts. */}
-      <div className="sea-charts">
-        <SkeletonPlaceholder style={{ width: '100%', height: '12rem' }} />
-        <SkeletonPlaceholder style={{ width: '100%', height: '12rem' }} />
-        <SkeletonPlaceholder style={{ width: '100%', height: '12rem' }} />
-      </div>
+          arrives. It used to be three 12rem squares, because every surface
+          drew at least three charts; since the charts went, what every surface
+          actually draws is a table, so the placeholder is table-shaped. A
+          skeleton that does not match what settles is a layout jump wearing a
+          loading state. */}
+      <SkeletonPlaceholder style={{ width: '100%', height: '18rem' }} />
     </section>
   );
 }

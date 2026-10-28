@@ -21,7 +21,6 @@ import {
   StructuredListHead, StructuredListRow, StructuredListWrapper, Tag,
 } from '@carbon/react';
 import { useRun } from '@/components/RunProvider';
-import { CountBar } from '@/components/Charts';
 import { Empty, Failed, Loading } from '@/components/States';
 import { downloadCsv } from '@/lib/csv';
 import type { Measure } from '@/lib/measure';
@@ -71,18 +70,12 @@ export default function WhatToCheck() {
         </Empty>
       ) : (
         <>
-          <div className="sea-chart" style={{ marginBottom: '1.5rem' }}>
-            <div className="sea-chart__title">Parts one fetch would settle</div>
-            <div className="sea-chart__unit">parts</div>
-            <CountBar
-              unit="parts"
-              data={result.overview.field_sizes.map(([field, count]) => ({
-                label: FIELD_LABEL[field] ?? field.replace(/_/g, ' '),
-                value: count,
-              }))}
-            />
-          </div>
-
+          {/* THE CHART THAT USED TO SIT HERE DREW THE LIST BELOW IT. Same
+              fields, same counts, same order, one above the other. It read as
+              a second finding and was a second rendering, so it went: "cut
+              anything that does not change a decision". The list carries the
+              count, the parts behind it, and a way to copy them, which the
+              bars never did. */}
           <StructuredListWrapper isCondensed selection={false}>
             <StructuredListHead>
               <StructuredListRow head>

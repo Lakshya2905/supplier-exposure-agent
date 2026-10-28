@@ -13,12 +13,11 @@ import {
   TableHeader, TableRow, Tag,
 } from '@carbon/react';
 import { useRun } from '@/components/RunProvider';
-import { CountBar, ChartOrAbsence, Distribution } from '@/components/Charts';
 import { RegionMap } from '@/components/RegionMap';
 import { Failed, Loading } from '@/components/States';
 import { STANDING_COPY } from '@/components/Measures';
-import { DIMENSION_LABEL, DIMENSION_UNIT, labelFor } from '@/lib/labels';
-import type { DimensionSeries } from '@/lib/types';
+import { labelFor } from '@/lib/labels';
+import { measureRows } from '@/lib/measures';
 
 export default function Overview() {
   const { result, loading, error, reload } = useRun();
@@ -27,6 +26,7 @@ export default function Overview() {
   if (!result) return <Failed error={error} onRetry={reload} />;
 
   const { overview } = result;
+  const rows = measureRows(overview.dimension_series);
 
   return (
     <>
@@ -60,11 +60,54 @@ export default function Overview() {
           disruption out, resourcing around it and covering it from stock are
           all in days and are three different questions.
         </p>
-        <div className="sea-charts">
-          {overview.dimension_series.map((series) => (
-            <SeriesPanel key={series.dimension} series={series} />
-          ))}
-        </div>
+        {/*
+          A TABLE, AND DELIBERATELY NOT A SORTABLE ONE. Seven measures in seven
+          units, in the fixed order `scoring.DIMENSIONS` declares. A control
+          that ordered them by "not established" would rank the measures
+          against each other, which is the thing this page exists to refuse:
+          DESIGN.md's anti-ranking contract puts it plainly, "a reviewer who
+          sorts by dimension three has declared dimension three the ranking".
+          So this is a plain Carbon table with no toolbar and no header
+          buttons, never a DataTable.
+
+          IT REPLACED SEVEN HISTOGRAMS. What those drew was a distribution;
+          what they were read for was the caption underneath, which said how
+          many parts each measure had a figure for. The caption is a column
+          now, and seven of them read at a glance where seven captions did not.
+        */}
+        <Table size="sm">
+          <TableHead>
+            <TableRow>
+              <TableHeader>Measure</TableHeader>
+              <TableHeader>Unit</TableHeader>
+              <TableHeader>Parts with a figure</TableHeader>
+              <TableHeader>Parts not established</TableHeader>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {rows.map((row) => (
+              <TableRow key={row.dimension}>
+                <TableCell>{row.label}</TableCell>
+                <TableCell>{row.unit}</TableCell>
+                <TableCell>{row.assessed.toLocaleString()}</TableCell>
+                <TableCell>{row.unknown.toLocaleString()}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        {/* UNBOUNDED IS COUNTED AS A FIGURE, AND SAID OUT LOUD WHERE IT
+            HAPPENS. Stock with nothing consuming it lasts indefinitely, which
+            is an answer rather than an absence. It sits inside the figure
+            column, and this names it so that column is not quietly carrying
+            two kinds of thing. The charts had to mention it separately because
+            a histogram cannot draw infinity; a table has no such problem. */}
+        {rows.filter((row) => row.unbounded > 0).map((row) => (
+          <p key={row.dimension} className="sea-section__note">
+            {row.unbounded.toLocaleString()} of the figures for{' '}
+            {row.label.toLowerCase()} are unbounded, which is an answer and is
+            counted as one.
+          </p>
+        ))}
         <p className="sea-standing">{STANDING_COPY}</p>
       </section>
 
@@ -143,52 +186,5 @@ export default function Overview() {
         </div>
       </section>
     </>
-  );
-}
-
-function SeriesPanel({ series }: { series: DimensionSeries }) {
-  const categorical = Object.keys(series.categories).length > 0;
-  const assessed = series.values.length
-    + Object.values(series.categories).reduce((a, b) => a + b, 0)
-    + series.unbounded;
-
-  // A PAIR IS DRAWN AS ITS FIRST HALF AND SAYS SO. `wait_out_days` carries
-  // quoted and worst case, both in days. Drawing one without saying which would
-  // be the tool choosing which half counts; drawing both on one axis is fine
-  // because they are one measure, but a histogram of pairs is unreadable, so
-  // the quoted figure is charted and the caption names the choice.
-  const numbers = series.values.map(
-    (value) => (Array.isArray(value) ? value[0] : value));
-
-  return (
-    <div className="sea-chart">
-      <div className="sea-chart__title">
-        {DIMENSION_LABEL[series.dimension] ?? series.dimension}
-      </div>
-      <div className="sea-chart__unit">
-        {DIMENSION_UNIT[series.dimension] ?? series.unit.replace(/_/g, ' ')}
-        {series.values.length > 0 && Array.isArray(series.values[0])
-          && ' — quoted figure drawn'}
-      </div>
-      <ChartOrAbsence assessed={assessed} unknown={series.unknown}>
-        {categorical ? (
-          <CountBar
-            unit="parts"
-            data={Object.entries(series.categories).map(([label, value]) => ({
-              label: label.replace(/_/g, ' '), value,
-            }))}
-          />
-        ) : (
-          <Distribution values={numbers} unit={series.unit.replace(/_/g, ' ')} />
-        )}
-      </ChartOrAbsence>
-      <p className="sea-chart__unit" style={{ marginTop: '0.5rem',
-                                              marginBottom: 0 }}>
-        {assessed.toLocaleString()} parts have a figure,{' '}
-        {series.unknown.toLocaleString()} do not.
-        {series.unbounded > 0 &&
-          ` ${series.unbounded} have unbounded cover, which is an answer and is not drawn.`}
-      </p>
-    </div>
   );
 }

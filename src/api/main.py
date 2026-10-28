@@ -179,7 +179,17 @@ def overview_payload(result, built):
         "coverage_counts": encode(dash.coverage_counts(exposure.coverage))
         if exposure.coverage else [],
         "group_sizes": encode(dash.group_sizes(exposure)),
-        "field_sizes": encode(dash.field_sizes(built[view.FIND_OUT])),
+        # `field_sizes` WENT WITH THE CHART THAT WAS ITS ONLY READER. The
+        # What-to-check surface draws the same counts from
+        # `surfaces.what_to_check.rows`, which is the list a reader actually
+        # uses, so the aggregate had become a second derivation of one
+        # ordering in the one place this product calls ranking legitimate.
+        # `dash.field_sizes` itself stays: `review_app.py` still calls it.
+        #
+        # THREE MORE KEYS BELOW HAVE NO READER EITHER -- `incidence`,
+        # `coverage_counts` and `group_sizes` -- and they are left alone on
+        # purpose. They were already orphaned before this change and are a
+        # finding about the payload rather than part of it.
         "cluster_sizes": encode(dash.cluster_sizes(result.report)),
         # ONE ROW PER COUNTRY, so a map can fill shapes without the frontend
         # learning which countries stand for which region. That mapping is a
