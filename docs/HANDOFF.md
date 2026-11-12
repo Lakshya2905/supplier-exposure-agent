@@ -452,7 +452,7 @@ same commit.
 The **snapshot** is explicitly not a floor: those counts are produced by the
 system under test, so nothing there blocks a merge.
 
-**908 tests, 4 strict xfails, no skips.** Notable suites:
+**Roughly a thousand tests, 4 strict xfails, no skips.** Notable suites:
 
 | | |
 |---|---|
