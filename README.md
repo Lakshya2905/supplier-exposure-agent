@@ -523,7 +523,7 @@ the threshold makes the number a consequence of the case built to justify it.
 
 ## How it is verified
 
-Just under 500 tests, 4 strict xfails, no skips. The exact count is printed by
+Roughly a thousand tests, 4 strict xfails, no skips. The exact count is printed by
 `python eval_harness.py` on every run and is deliberately not repeated here: it
 changes on any commit that adds a test, which makes it the most drift-prone
 figure in this document. An earlier revision carried a stale one for a stage.
